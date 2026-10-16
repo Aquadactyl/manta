@@ -23,7 +23,7 @@ func (p *UploadPayload) GetPayload() *jwt.Payload {
 // return false. This allows us to use this JWT as a one-time token that
 // validates all of the request.
 func (p *UploadPayload) IsUniqueRequest() bool {
-	return getTokenStore().IsValidToken(p.UniqueId)
+	return p.ExpirationTime != nil && getTokenStore().IsValidUntil(p.UniqueId, p.ExpirationTime.Time)
 }
 
 // Denylisted returns true if this token was issued before the user's access to

@@ -1,0 +1,371 @@
+[
+  {
+    "metric": "Paper warm startup",
+    "unit": "ms",
+    "wings": 9588.991,
+    "manta": 8883.835,
+    "manta_change_percent": -7.353808132680495,
+    "wings_runs": 3,
+    "manta_runs": 3
+  },
+  {
+    "metric": "Paper reported offline",
+    "unit": "ms",
+    "wings": 505.592,
+    "manta": 909.183,
+    "manta_change_percent": 79.82543236443615,
+    "wings_runs": 3,
+    "manta_runs": 3
+  },
+  {
+    "metric": "Bedrock warm startup",
+    "unit": "ms",
+    "wings": 2726.164,
+    "manta": 2423.463,
+    "manta_change_percent": -11.103550630116166,
+    "wings_runs": 3,
+    "manta_runs": 3
+  },
+  {
+    "metric": "Bedrock reported offline",
+    "unit": "ms",
+    "wings": 505.251,
+    "manta": 1111.231,
+    "manta_change_percent": 119.9364276369567,
+    "wings_runs": 3,
+    "manta_runs": 3
+  },
+  {
+    "metric": "Server API, concurrency 1",
+    "unit": "ms",
+    "wings": 0.187,
+    "manta": 0.229,
+    "manta_change_percent": 22.459893048128343,
+    "wings_runs": 3,
+    "manta_runs": 3
+  },
+  {
+    "metric": "Server API, concurrency 1, p95",
+    "unit": "ms",
+    "wings": 0.324,
+    "manta": 0.354,
+    "manta_change_percent": 9.259259259259256,
+    "wings_runs": 3,
+    "manta_runs": 3
+  },
+  {
+    "metric": "Server API, concurrency 16",
+    "unit": "ms",
+    "wings": 0.202,
+    "manta": 0.259,
+    "manta_change_percent": 28.21782178217822,
+    "wings_runs": 3,
+    "manta_runs": 3
+  },
+  {
+    "metric": "Server API, concurrency 16, p95",
+    "unit": "ms",
+    "wings": 0.82,
+    "manta": 1.201,
+    "manta_change_percent": 46.46341463414636,
+    "wings_runs": 3,
+    "manta_runs": 3
+  },
+  {
+    "metric": "Server API, concurrency 32",
+    "unit": "ms",
+    "wings": 0.472,
+    "manta": 0.521,
+    "manta_change_percent": 10.381355932203395,
+    "wings_runs": 3,
+    "manta_runs": 3
+  },
+  {
+    "metric": "Server API, concurrency 32, p95",
+    "unit": "ms",
+    "wings": 1.683,
+    "manta": 2.507,
+    "manta_change_percent": 48.96019013666073,
+    "wings_runs": 3,
+    "manta_runs": 3
+  },
+  {
+    "metric": "List 1,000 files, concurrency 1",
+    "unit": "ms",
+    "wings": 11.723,
+    "manta": 9.706,
+    "manta_change_percent": -17.20549347436664,
+    "wings_runs": 3,
+    "manta_runs": 3
+  },
+  {
+    "metric": "List 1,000 files, concurrency 1, p95",
+    "unit": "ms",
+    "wings": 13.487,
+    "manta": 11.27,
+    "manta_change_percent": -16.438051456958558,
+    "wings_runs": 3,
+    "manta_runs": 3
+  },
+  {
+    "metric": "List 1,000 files, concurrency 16",
+    "unit": "ms",
+    "wings": 95.972,
+    "manta": 82.549,
+    "manta_change_percent": -13.98637102488225,
+    "wings_runs": 3,
+    "manta_runs": 3
+  },
+  {
+    "metric": "List 1,000 files, concurrency 16, p95",
+    "unit": "ms",
+    "wings": 227.55,
+    "manta": 187.225,
+    "manta_change_percent": -17.721379916501878,
+    "wings_runs": 3,
+    "manta_runs": 3
+  },
+  {
+    "metric": "List 1,000 files, concurrency 32",
+    "unit": "ms",
+    "wings": 187.871,
+    "manta": 157.725,
+    "manta_change_percent": -16.04611675032337,
+    "wings_runs": 3,
+    "manta_runs": 3
+  },
+  {
+    "metric": "List 1,000 files, concurrency 32, p95",
+    "unit": "ms",
+    "wings": 477.314,
+    "manta": 390.451,
+    "manta_change_percent": -18.198292947619386,
+    "wings_runs": 3,
+    "manta_runs": 3
+  },
+  {
+    "metric": "HTTP write 16 MiB",
+    "unit": "ms",
+    "wings": 15.248,
+    "manta": 13.056,
+    "manta_change_percent": -14.375655823714585,
+    "wings_runs": 3,
+    "manta_runs": 3
+  },
+  {
+    "metric": "HTTP read 16 MiB",
+    "unit": "ms",
+    "wings": 29.726,
+    "manta": 29.818,
+    "manta_change_percent": 0.3094933728049698,
+    "wings_runs": 3,
+    "manta_runs": 3
+  },
+  {
+    "metric": "SFTP write 16 MiB",
+    "unit": "ms",
+    "wings": 116.941,
+    "manta": 105.011,
+    "manta_change_percent": -10.20172565652766,
+    "wings_runs": 3,
+    "manta_runs": 3
+  },
+  {
+    "metric": "SFTP read 16 MiB",
+    "unit": "ms",
+    "wings": 59.0,
+    "manta": 62.443,
+    "manta_change_percent": 5.835593220338975,
+    "wings_runs": 3,
+    "manta_runs": 3
+  },
+  {
+    "metric": "WebSocket log delivery, 16 subscribers",
+    "unit": "ms",
+    "wings": 9.709,
+    "manta": 10.228,
+    "manta_change_percent": 5.345555669996904,
+    "wings_runs": 3,
+    "manta_runs": 3
+  },
+  {
+    "metric": "Chmod 1,000 files",
+    "unit": "ms",
+    "wings": 5.423,
+    "manta": 4.195,
+    "manta_change_percent": -22.6442928268486,
+    "wings_runs": 3,
+    "manta_runs": 3
+  },
+  {
+    "metric": "Rename 1,000 files",
+    "unit": "ms",
+    "wings": 16.827,
+    "manta": 16.933,
+    "manta_change_percent": 0.6299399774172265,
+    "wings_runs": 3,
+    "manta_runs": 3
+  },
+  {
+    "metric": "Compress 16 MiB + 1,000 files",
+    "unit": "ms",
+    "wings": 18.08,
+    "manta": 19.211,
+    "manta_change_percent": 6.255530973451329,
+    "wings_runs": 3,
+    "manta_runs": 3
+  },
+  {
+    "metric": "Extract 16 MiB + 1,000 files",
+    "unit": "ms",
+    "wings": 53.666,
+    "manta": 57.276,
+    "manta_change_percent": 6.72679163716321,
+    "wings_runs": 3,
+    "manta_runs": 3
+  },
+  {
+    "metric": "Daemon idle mean memory",
+    "unit": "MiB",
+    "wings": 50.64114583333333,
+    "manta": 59.221875,
+    "manta_change_percent": 16.944184467916614,
+    "wings_runs": 1,
+    "manta_runs": 1
+  },
+  {
+    "metric": "Daemon idle CPU",
+    "unit": "% of one core",
+    "wings": 0.45381551273079007,
+    "manta": 0.41803997233982226,
+    "manta_change_percent": -7.883278422038076,
+    "wings_runs": 1,
+    "manta_runs": 1
+  },
+  {
+    "metric": "Paper idle mean memory",
+    "unit": "MiB",
+    "wings": 744.1325520833333,
+    "manta": 740.7200520833334,
+    "manta_change_percent": -0.4585876522194887,
+    "wings_runs": 1,
+    "manta_runs": 1
+  },
+  {
+    "metric": "Paper idle CPU",
+    "unit": "% of one core",
+    "wings": 1.763876084180983,
+    "manta": 1.71879686141825,
+    "manta_change_percent": -2.5556910242742203,
+    "wings_runs": 1,
+    "manta_runs": 1
+  },
+  {
+    "metric": "Bedrock idle mean memory",
+    "unit": "MiB",
+    "wings": 185.70442708333334,
+    "manta": 185.671875,
+    "manta_change_percent": -0.01752897539633036,
+    "wings_runs": 1,
+    "manta_runs": 1
+  },
+  {
+    "metric": "Bedrock idle CPU",
+    "unit": "% of one core",
+    "wings": 2.467481471903371,
+    "manta": 2.5651915435097066,
+    "manta_change_percent": 3.9599110558250272,
+    "wings_runs": 1,
+    "manta_runs": 1
+  },
+  {
+    "metric": "Paper query during idle",
+    "unit": "ms",
+    "wings": 1.26,
+    "manta": 1.273,
+    "manta_change_percent": 1.031746031746028,
+    "wings_runs": 1,
+    "manta_runs": 1
+  },
+  {
+    "metric": "Bedrock query during idle",
+    "unit": "ms",
+    "wings": 0.332,
+    "manta": 0.339,
+    "manta_change_percent": 2.108433734939763,
+    "wings_runs": 1,
+    "manta_runs": 1
+  },
+  {
+    "metric": "Daemon command_load mean memory",
+    "unit": "MiB",
+    "wings": 50.118489583333336,
+    "manta": 52.67734375,
+    "manta_change_percent": 5.105609103426767,
+    "wings_runs": 1,
+    "manta_runs": 1
+  },
+  {
+    "metric": "Daemon command_load CPU",
+    "unit": "% of one core",
+    "wings": 1.55893987176793,
+    "manta": 1.6254929967051837,
+    "manta_change_percent": 4.269127125588135,
+    "wings_runs": 1,
+    "manta_runs": 1
+  },
+  {
+    "metric": "Paper command_load mean memory",
+    "unit": "MiB",
+    "wings": 767.4729166666667,
+    "manta": 763.165625,
+    "manta_change_percent": -0.5612304451568684,
+    "wings_runs": 1,
+    "manta_runs": 1
+  },
+  {
+    "metric": "Paper command_load CPU",
+    "unit": "% of one core",
+    "wings": 17.30686441278899,
+    "manta": 18.092994599563287,
+    "manta_change_percent": 4.542302799768749,
+    "wings_runs": 1,
+    "manta_runs": 1
+  },
+  {
+    "metric": "Bedrock command_load mean memory",
+    "unit": "MiB",
+    "wings": 251.12109375,
+    "manta": 250.71979166666668,
+    "manta_change_percent": -0.1598042113231779,
+    "wings_runs": 1,
+    "manta_runs": 1
+  },
+  {
+    "metric": "Bedrock command_load CPU",
+    "unit": "% of one core",
+    "wings": 11.30062184641357,
+    "manta": 11.328273575147085,
+    "manta_change_percent": 0.24469209844668605,
+    "wings_runs": 1,
+    "manta_runs": 1
+  },
+  {
+    "metric": "Paper query during command_load",
+    "unit": "ms",
+    "wings": 1.37,
+    "manta": 1.434,
+    "manta_change_percent": 4.671532846715309,
+    "wings_runs": 1,
+    "manta_runs": 1
+  },
+  {
+    "metric": "Bedrock query during command_load",
+    "unit": "ms",
+    "wings": 0.463,
+    "manta": 0.388,
+    "manta_change_percent": -16.198704103671712,
+    "wings_runs": 1,
+    "manta_runs": 1
+  }
+]

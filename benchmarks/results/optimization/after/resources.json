@@ -1,0 +1,334 @@
+[
+  {
+    "cpu_limit": 2,
+    "go_version": "go1.27.2",
+    "gomaxprocs": "2",
+    "image_id": "sha256:9545c9a42a426ca217c48ab56b6f3921982878d49bb302e40b96d8089b14a25d",
+    "memory_limit": 1073741824,
+    "servers": [
+      {
+        "id": 7,
+        "uuid": "fe109884-f53a-45de-9c33-e17677b52fd4",
+        "name": "Benchmark Manta Paper",
+        "kind": "paper",
+        "identifier": "serv_7yijrbhvhjc55hbt4f3hpnjp2q",
+        "port": 27015
+      },
+      {
+        "id": 8,
+        "uuid": "ea47b10b-e5d1-480f-86f1-79a410cae5b2",
+        "name": "Benchmark Manta Bedrock",
+        "kind": "bedrock",
+        "identifier": "serv_5jd3cc7f2fea7bxrpgsbbsxfwi",
+        "port": 27016
+      }
+    ],
+    "system": {
+      "architecture": "amd64",
+      "cpu_count": 28,
+      "kernel_version": "6.18.54.1-microsoft-standard-WSL2",
+      "os": "linux",
+      "version": "1.13.3-manta-local-20261015-perf"
+    },
+    "type": "metadata",
+    "variant": "manta"
+  },
+  {
+    "cpu_limit": 2,
+    "go_version": "go1.24.11",
+    "gomaxprocs": "2",
+    "image_id": "sha256:27827aeeebf6836e4bd61072ad256bba2a904bba799faf99166049a249ad4b5c",
+    "memory_limit": 1073741824,
+    "servers": [
+      {
+        "id": 9,
+        "uuid": "924cba47-6fd7-4739-b397-f912a262b8f5",
+        "name": "Benchmark Wings Paper",
+        "kind": "paper",
+        "identifier": "serv_sjglur3p25dttm4x7ejkeyvy6u",
+        "port": 27115
+      },
+      {
+        "id": 10,
+        "uuid": "551f5acf-7955-4ac5-9190-af251a9cf991",
+        "name": "Benchmark Wings Bedrock",
+        "kind": "bedrock",
+        "identifier": "serv_kupvvt3zkvfmlemqv4srvhhzse",
+        "port": 27116
+      }
+    ],
+    "system": {
+      "architecture": "amd64",
+      "cpu_count": 28,
+      "kernel_version": "6.18.54.1-microsoft-standard-WSL2",
+      "os": "linux",
+      "version": "1.13.3"
+    },
+    "type": "metadata",
+    "variant": "wings"
+  },
+  {
+    "cpu_core_percent": 0.4499685101890111,
+    "cpu_core_seconds": 0.136714,
+    "duration_s": 30.383015012,
+    "mean_working_mib": 48.819010416666664,
+    "peak_working_mib": 53.6796875,
+    "pids": 8,
+    "role": "daemon",
+    "test": "resources_idle",
+    "type": "measurement",
+    "variant": "manta"
+  },
+  {
+    "cpu_core_percent": 1.5993804426850802,
+    "cpu_core_seconds": 0.48594,
+    "duration_s": 30.383015012,
+    "mean_working_mib": 775.2591145833334,
+    "peak_working_mib": 775.828125,
+    "pids": 49,
+    "role": "paper",
+    "test": "resources_idle",
+    "type": "measurement",
+    "variant": "manta"
+  },
+  {
+    "cpu_core_percent": 2.623571096170579,
+    "cpu_core_seconds": 0.79712,
+    "duration_s": 30.383015012,
+    "mean_working_mib": 258.1333333333333,
+    "peak_working_mib": 258.359375,
+    "pids": 18,
+    "role": "bedrock",
+    "test": "resources_idle",
+    "type": "measurement",
+    "variant": "manta"
+  },
+  {
+    "cpu_core_percent": 0.45240079019712787,
+    "cpu_core_seconds": 0.137453,
+    "duration_s": 30.383015012,
+    "mean_working_mib": 70.90885416666667,
+    "peak_working_mib": 75.35546875,
+    "pids": 16,
+    "role": "daemon",
+    "test": "resources_idle",
+    "type": "measurement",
+    "variant": "wings"
+  },
+  {
+    "cpu_core_percent": 1.5487435984024323,
+    "cpu_core_seconds": 0.470555,
+    "duration_s": 30.383015012,
+    "mean_working_mib": 776.196875,
+    "peak_working_mib": 776.7109375,
+    "pids": 49,
+    "role": "paper",
+    "test": "resources_idle",
+    "type": "measurement",
+    "variant": "wings"
+  },
+  {
+    "cpu_core_percent": 2.694762187612482,
+    "cpu_core_seconds": 0.81875,
+    "duration_s": 30.383015012,
+    "mean_working_mib": 258.2192708333333,
+    "peak_working_mib": 258.4453125,
+    "pids": 18,
+    "role": "bedrock",
+    "test": "resources_idle",
+    "type": "measurement",
+    "variant": "wings"
+  },
+  {
+    "game": "paper",
+    "mean_ms": 1.5270599999999999,
+    "n": 50,
+    "p50_ms": 1.493,
+    "p95_ms": 1.976,
+    "p99_ms": 2.12,
+    "status": "Paper 26.3",
+    "test": "game_query_during_idle",
+    "type": "measurement",
+    "variant": "wings"
+  },
+  {
+    "game": "bedrock",
+    "mean_ms": 0.46096,
+    "n": 50,
+    "p50_ms": 0.451,
+    "p95_ms": 0.618,
+    "p99_ms": 0.704,
+    "status": "1.26.52",
+    "test": "game_query_during_idle",
+    "type": "measurement",
+    "variant": "wings"
+  },
+  {
+    "logs": "{\"data\":[\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-004\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-006\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-007\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-008\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-009\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-010\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-011\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-012\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-013\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-014\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-015\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-016\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-017\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-018\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-019\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-020\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-021\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-022\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-023\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-024\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-025\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-026\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-027\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-028\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-029\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-030\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-031\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-032\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-033\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-034\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-035\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-036\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-038\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-037\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-040\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-041\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-039\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-042\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-045\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-043\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-046\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-047\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-048\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-049\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-050\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-051\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-044\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-053\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-052\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-054\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-057\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-055\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-059\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-056\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-058\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-060\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-061\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-062\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-064\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-063\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-065\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-066\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-067\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-068\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-069\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-071\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-072\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-070\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-073\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-075\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-074\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-077\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-076\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-079\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-078\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-080\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-082\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-083\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-081\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-085\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-084\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-086\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-087\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-088\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-089\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-090\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-092\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-091\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-094\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-093\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-096\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-095\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-098\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-097\",\"[08:49:14 INFO]: [Not Secure] [Server] BENCHWS-1792050554049858381-099\",\"tps\",\"mspt\",\"[08:49:53 INFO]: \\u001b[33mTPS from last 1m, 5m, 15m: \\u001b[0m\\u001b[92m20.0\\u001b[0m, \\u001b[92m20.0\\u001b[0m, \\u001b[92m20.0\\u001b[0m\",\"[08:49:53 INFO]: \\u001b[33mServer tick times \\u001b[93m(\\u001b[37mavg\\u001b[93m/\\u001b[37mmin\\u001b[93m/\\u001b[37mmax\\u001b[93m)\\u001b[33m from last 5s\\u001b[37m,\\u001b[33m 10s\\u001b[37m,\\u001b[33m 1m\\u001b[93m:\\u001b[0m\",\"[08:49:53 INFO]: \\u001b[33m◴ \\u001b[37m\\u001b[92m0.1\\u001b[37m/\\u001b[92m0.1\\u001b[37m/\\u001b[92m0.3\\u001b[93m, \\u001b[92m0.1\\u001b[37m/\\u001b[92m0.1\\u001b[37m/\\u001b[92m0.3\\u001b[93m, \\u001b[92m0.1\\u001b[37m/\\u001b[92m0.1\\u001b[37m/\\u001b[92m3.1\\u001b[0m\"]}",
+    "test": "paper_ticks_idle",
+    "type": "game_console",
+    "variant": "wings"
+  },
+  {
+    "game": "paper",
+    "mean_ms": 1.3338799999999997,
+    "n": 50,
+    "p50_ms": 1.259,
+    "p95_ms": 1.872,
+    "p99_ms": 2.291,
+    "status": "Paper 26.3",
+    "test": "game_query_during_idle",
+    "type": "measurement",
+    "variant": "manta"
+  },
+  {
+    "game": "bedrock",
+    "mean_ms": 0.5245200000000001,
+    "n": 50,
+    "p50_ms": 0.523,
+    "p95_ms": 0.641,
+    "p99_ms": 0.689,
+    "status": "1.26.52",
+    "test": "game_query_during_idle",
+    "type": "measurement",
+    "variant": "manta"
+  },
+  {
+    "logs": "{\"data\":[\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-006\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-007\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-008\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-004\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-009\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-011\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-010\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-012\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-013\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-014\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-015\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-017\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-016\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-018\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-021\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-020\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-023\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-019\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-022\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-025\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-024\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-026\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-029\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-028\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-030\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-031\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-032\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-034\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-035\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-033\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-027\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-036\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-037\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-038\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-039\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-040\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-041\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-042\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-043\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-045\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-044\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-047\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-046\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-049\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-048\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-051\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-053\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-050\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-052\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-054\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-055\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-056\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-057\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-058\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-059\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-060\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-061\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-062\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-063\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-064\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-065\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-067\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-066\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-068\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-069\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-071\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-070\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-072\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-073\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-074\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-075\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-077\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-076\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-078\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-079\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-080\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-081\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-083\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-082\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-084\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-086\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-085\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-087\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-089\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-088\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-092\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-090\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-091\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-094\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-095\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-093\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-097\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-096\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-098\",\"[08:49:00 INFO]: [Not Secure] [Server] BENCHWS-1792050540782298076-099\",\"tps\",\"mspt\",\"[08:49:53 INFO]: \\u001b[33mTPS from last 1m, 5m, 15m: \\u001b[0m\\u001b[92m20.0\\u001b[0m, \\u001b[92m20.0\\u001b[0m, \\u001b[92m20.0\\u001b[0m\",\"[08:49:53 INFO]: \\u001b[33mServer tick times \\u001b[93m(\\u001b[37mavg\\u001b[93m/\\u001b[37mmin\\u001b[93m/\\u001b[37mmax\\u001b[93m)\\u001b[33m from last 5s\\u001b[37m,\\u001b[33m 10s\\u001b[37m,\\u001b[33m 1m\\u001b[93m:\\u001b[0m\",\"[08:49:53 INFO]: \\u001b[33m◴ \\u001b[37m\\u001b[92m0.1\\u001b[37m/\\u001b[92m0.1\\u001b[37m/\\u001b[92m1.2\\u001b[93m, \\u001b[92m0.1\\u001b[37m/\\u001b[92m0.1\\u001b[37m/\\u001b[92m1.2\\u001b[93m, \\u001b[92m0.1\\u001b[37m/\\u001b[92m0.1\\u001b[37m/\\u001b[92m2.0\\u001b[0m\"]}",
+    "test": "paper_ticks_idle",
+    "type": "game_console",
+    "variant": "manta"
+  },
+  {
+    "cpu_core_percent": 1.7114124895410314,
+    "cpu_core_seconds": 0.52074,
+    "duration_s": 30.42749794,
+    "mean_working_mib": 38.69947916666667,
+    "peak_working_mib": 52.2734375,
+    "pids": 8,
+    "role": "daemon",
+    "test": "resources_command_load",
+    "type": "measurement",
+    "variant": "manta"
+  },
+  {
+    "cpu_core_percent": 6.908652180817468,
+    "cpu_core_seconds": 2.10213,
+    "duration_s": 30.42749794,
+    "mean_working_mib": 782.5015625,
+    "peak_working_mib": 783.4921875,
+    "pids": 44,
+    "role": "paper",
+    "test": "resources_command_load",
+    "type": "measurement",
+    "variant": "manta"
+  },
+  {
+    "cpu_core_percent": 12.279336958193547,
+    "cpu_core_seconds": 3.736295,
+    "duration_s": 30.42749794,
+    "mean_working_mib": 259.3346354166667,
+    "peak_working_mib": 259.625,
+    "pids": 18,
+    "role": "bedrock",
+    "test": "resources_command_load",
+    "type": "measurement",
+    "variant": "manta"
+  },
+  {
+    "cpu_core_percent": 1.7099368506275543,
+    "cpu_core_seconds": 0.520291,
+    "duration_s": 30.42749794,
+    "mean_working_mib": 58.377604166666664,
+    "peak_working_mib": 70.765625,
+    "pids": 16,
+    "role": "daemon",
+    "test": "resources_command_load",
+    "type": "measurement",
+    "variant": "wings"
+  },
+  {
+    "cpu_core_percent": 6.810980659949721,
+    "cpu_core_seconds": 2.072411,
+    "duration_s": 30.42749794,
+    "mean_working_mib": 779.2231770833333,
+    "peak_working_mib": 779.9765625,
+    "pids": 44,
+    "role": "paper",
+    "test": "resources_command_load",
+    "type": "measurement",
+    "variant": "wings"
+  },
+  {
+    "cpu_core_percent": 12.33516146283568,
+    "cpu_core_seconds": 3.753281,
+    "duration_s": 30.42749794,
+    "mean_working_mib": 259.3450520833333,
+    "peak_working_mib": 259.76171875,
+    "pids": 18,
+    "role": "bedrock",
+    "test": "resources_command_load",
+    "type": "measurement",
+    "variant": "wings"
+  },
+  {
+    "game": "paper",
+    "mean_ms": 1.5519599999999993,
+    "n": 50,
+    "p50_ms": 1.476,
+    "p95_ms": 2.114,
+    "p99_ms": 2.205,
+    "status": "Paper 26.3",
+    "test": "game_query_during_command_load",
+    "type": "measurement",
+    "variant": "manta"
+  },
+  {
+    "game": "bedrock",
+    "mean_ms": 0.47232,
+    "n": 50,
+    "p50_ms": 0.444,
+    "p95_ms": 0.64,
+    "p99_ms": 0.805,
+    "status": "1.26.52",
+    "test": "game_query_during_command_load",
+    "type": "measurement",
+    "variant": "manta"
+  },
+  {
+    "logs": "{\"data\":[\"[08:50:15 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 stone replace\",\"[08:50:16 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 air replace\",\"[08:50:16 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 stone replace\",\"[08:50:16 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 air replace\",\"[08:50:16 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 stone replace\",\"[08:50:16 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 air replace\",\"[08:50:17 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 stone replace\",\"[08:50:17 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 air replace\",\"[08:50:17 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 stone replace\",\"[08:50:17 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 air replace\",\"[08:50:17 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 stone replace\",\"[08:50:18 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 air replace\",\"[08:50:18 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 stone replace\",\"[08:50:18 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 air replace\",\"[08:50:18 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 stone replace\",\"[08:50:18 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 air replace\",\"[08:50:19 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 stone replace\",\"[08:50:19 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 air replace\",\"[08:50:19 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 stone replace\",\"[08:50:19 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 air replace\",\"[08:50:19 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 stone replace\",\"[08:50:20 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 air replace\",\"[08:50:20 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 stone replace\",\"[08:50:20 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 air replace\",\"[08:50:20 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 stone replace\",\"[08:50:20 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 air replace\",\"[08:50:21 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 stone replace\",\"[08:50:21 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 air replace\",\"[08:50:21 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 stone replace\",\"[08:50:21 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 air replace\",\"[08:50:21 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 stone replace\",\"[08:50:22 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 air replace\",\"[08:50:22 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 stone replace\",\"[08:50:22 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 air replace\",\"[08:50:22 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 stone replace\",\"[08:50:22 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 air replace\",\"[08:50:23 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 stone replace\",\"[08:50:23 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 air replace\",\"[08:50:23 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 stone replace\",\"[08:50:23 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 air replace\",\"[08:50:23 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 stone replace\",\"[08:50:24 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 air replace\",\"[08:50:24 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 stone replace\",\"[08:50:24 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 air replace\",\"[08:50:24 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 stone replace\",\"tps\",\"mspt\",\"[08:50:24 INFO]: System chat: Successfully filled 4096 block(s)\",\"[08:50:24 INFO]: \\u001b[33mTPS from last 1m, 5m, 15m: \\u001b[0m\\u001b[92m20.0\\u001b[0m, \\u001b[92m20.0\\u001b[0m, \\u001b[92m20.0\\u001b[0m\",\"[08:50:24 INFO]: \\u001b[33mServer tick times \\u001b[93m(\\u001b[37mavg\\u001b[93m/\\u001b[37mmin\\u001b[93m/\\u001b[37mmax\\u001b[93m)\\u001b[33m from last 5s\\u001b[37m,\\u001b[33m 10s\\u001b[37m,\\u001b[33m 1m\\u001b[93m:\\u001b[0m\",\"[08:50:24 INFO]: \\u001b[33m◴ \\u001b[37m\\u001b[92m1.1\\u001b[37m/\\u001b[92m0.1\\u001b[37m/\\u001b[92m8.3\\u001b[93m, \\u001b[92m1.1\\u001b[37m/\\u001b[92m0.1\\u001b[37m/\\u001b[92m8.6\\u001b[93m, \\u001b[92m0.7\\u001b[37m/\\u001b[92m0.1\\u001b[37m/\\u001b[92m29.0\\u001b[0m\",\"fill 0 64 0 15 79 15 air replace\",\"[08:50:25 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 stone replace\",\"[08:50:25 INFO]: System chat: Successfully filled 4096 block(s)\"]}",
+    "test": "paper_ticks_command_load",
+    "type": "game_console",
+    "variant": "manta"
+  },
+  {
+    "game": "paper",
+    "mean_ms": 1.3766800000000001,
+    "n": 50,
+    "p50_ms": 1.315,
+    "p95_ms": 1.935,
+    "p99_ms": 2.034,
+    "status": "Paper 26.3",
+    "test": "game_query_during_command_load",
+    "type": "measurement",
+    "variant": "wings"
+  },
+  {
+    "game": "bedrock",
+    "mean_ms": 0.51558,
+    "n": 50,
+    "p50_ms": 0.515,
+    "p95_ms": 0.618,
+    "p99_ms": 0.654,
+    "status": "1.26.52",
+    "test": "game_query_during_command_load",
+    "type": "measurement",
+    "variant": "wings"
+  },
+  {
+    "logs": "{\"data\":[\"[08:50:16 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 air replace\",\"[08:50:16 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 stone replace\",\"[08:50:16 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 air replace\",\"[08:50:17 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 stone replace\",\"[08:50:17 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 air replace\",\"[08:50:17 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 stone replace\",\"[08:50:17 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 air replace\",\"[08:50:17 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 stone replace\",\"[08:50:18 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 air replace\",\"[08:50:18 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 stone replace\",\"[08:50:18 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 air replace\",\"[08:50:18 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 stone replace\",\"[08:50:18 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 air replace\",\"[08:50:19 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 stone replace\",\"[08:50:19 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 air replace\",\"[08:50:19 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 stone replace\",\"[08:50:19 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 air replace\",\"[08:50:19 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 stone replace\",\"[08:50:20 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 air replace\",\"[08:50:20 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 stone replace\",\"[08:50:20 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 air replace\",\"[08:50:20 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 stone replace\",\"[08:50:20 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 air replace\",\"[08:50:21 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 stone replace\",\"[08:50:21 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 air replace\",\"[08:50:21 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 stone replace\",\"[08:50:21 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 air replace\",\"[08:50:21 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 stone replace\",\"[08:50:22 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 air replace\",\"[08:50:22 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 stone replace\",\"[08:50:22 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 air replace\",\"[08:50:22 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 stone replace\",\"[08:50:22 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 air replace\",\"[08:50:23 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 stone replace\",\"[08:50:23 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 air replace\",\"[08:50:23 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 stone replace\",\"[08:50:23 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 air replace\",\"[08:50:23 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 stone replace\",\"[08:50:24 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 air replace\",\"[08:50:24 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 stone replace\",\"[08:50:24 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 air replace\",\"[08:50:24 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 stone replace\",\"[08:50:24 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 air replace\",\"[08:50:25 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 stone replace\",\"[08:50:25 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 air replace\",\"tps\",\"mspt\",\"[08:50:25 INFO]: System chat: Successfully filled 4096 block(s)\",\"[08:50:25 INFO]: \\u001b[33mTPS from last 1m, 5m, 15m: \\u001b[0m\\u001b[92m20.0\\u001b[0m, \\u001b[92m20.0\\u001b[0m, \\u001b[92m20.0\\u001b[0m\",\"[08:50:25 INFO]: \\u001b[33mServer tick times \\u001b[93m(\\u001b[37mavg\\u001b[93m/\\u001b[37mmin\\u001b[93m/\\u001b[37mmax\\u001b[93m)\\u001b[33m from last 5s\\u001b[37m,\\u001b[33m 10s\\u001b[37m,\\u001b[33m 1m\\u001b[93m:\\u001b[0m\",\"[08:50:25 INFO]: \\u001b[33m◴ \\u001b[37m\\u001b[92m1.1\\u001b[37m/\\u001b[92m0.1\\u001b[37m/\\u001b[92m9.0\\u001b[93m, \\u001b[92m1.0\\u001b[37m/\\u001b[92m0.1\\u001b[37m/\\u001b[92m9.0\\u001b[93m, \\u001b[92m0.7\\u001b[37m/\\u001b[92m0.1\\u001b[37m/\\u001b[93m48.6\\u001b[0m\",\"fill 0 64 0 15 79 15 stone replace\",\"[08:50:25 INFO]: System chat: Successfully filled 4096 block(s)\",\"fill 0 64 0 15 79 15 air replace\",\"[08:50:25 INFO]: System chat: Successfully filled 4096 block(s)\"]}",
+    "test": "paper_ticks_command_load",
+    "type": "game_console",
+    "variant": "wings"
+  }
+]

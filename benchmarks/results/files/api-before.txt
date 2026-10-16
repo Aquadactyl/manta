@@ -1,0 +1,21 @@
+goos: linux
+goarch: amd64
+pkg: github.com/pterodactyl/wings/router
+cpu: Intel(R) Core(TM) i7-14700KF
+BenchmarkServerStatus-4   	  146391	      4053 ns/op	    3528 B/op	      27 allocs/op
+BenchmarkServerStatus-4   	  149863	      4129 ns/op	    3528 B/op	      27 allocs/op
+BenchmarkServerStatus-4   	  147684	      3966 ns/op	    3528 B/op	      27 allocs/op
+BenchmarkServerStatus-4   	  145789	      4074 ns/op	    3529 B/op	      27 allocs/op
+BenchmarkServerStatus-4   	  144602	      4292 ns/op	    3529 B/op	      27 allocs/op
+BenchmarkDirectoryAPI/10-4         	    5680	    114461 ns/op	   64528 B/op	     243 allocs/op
+BenchmarkDirectoryAPI/10-4         	    5092	    126201 ns/op	   64541 B/op	     243 allocs/op
+BenchmarkDirectoryAPI/10-4         	    4538	    110189 ns/op	   64548 B/op	     243 allocs/op
+BenchmarkDirectoryAPI/10-4         	    5329	    102395 ns/op	   64540 B/op	     243 allocs/op
+BenchmarkDirectoryAPI/10-4         	    5379	    101349 ns/op	   64538 B/op	     243 allocs/op
+BenchmarkDirectoryAPI/1000-4       	      49	  11351427 ns/op	 6238825 B/op	   20097 allocs/op
+BenchmarkDirectoryAPI/1000-4       	      49	  11056719 ns/op	 6238680 B/op	   20096 allocs/op
+BenchmarkDirectoryAPI/1000-4       	      55	  10868692 ns/op	 6238715 B/op	   20096 allocs/op
+BenchmarkDirectoryAPI/1000-4       	      57	  10404177 ns/op	 6238583 B/op	   20096 allocs/op
+BenchmarkDirectoryAPI/1000-4       	      49	  10778475 ns/op	 6238740 B/op	   20097 allocs/op
+PASS
+ok  	github.com/pterodactyl/wings/router	8.905s

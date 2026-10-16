@@ -1,7 +1,6 @@
 package router
 
 import (
-	"bufio"
 	"context"
 	"io"
 	"net/http"
@@ -11,6 +10,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 
 	"emperror.dev/errors"
 	"github.com/apex/log"
@@ -24,7 +24,12 @@ import (
 	"github.com/pterodactyl/wings/router/tokens"
 	"github.com/pterodactyl/wings/server"
 	"github.com/pterodactyl/wings/server/filesystem"
+	"github.com/pterodactyl/wings/system"
 )
+
+// Streaming files through Gin's writer retains its byte accounting and response
+// behavior. A reusable buffer avoids 4 KiB read/write cycles for large files.
+var fileReadBuffers = sync.Pool{New: func() any { return new([64 << 10]byte) }}
 
 // getServerFileContents returns the contents of a file on the server.
 func getServerFileContents(c *gin.Context) {
@@ -64,7 +69,9 @@ func getServerFileContents(c *gin.Context) {
 	//
 	// @see https://github.com/pterodactyl/panel/issues/3131
 	r := io.LimitReader(f, st.Size())
-	if _, err = bufio.NewReader(r).WriteTo(c.Writer); err != nil {
+	buf := fileReadBuffers.Get().(*[64 << 10]byte)
+	defer fileReadBuffers.Put(buf)
+	if _, err = io.CopyBuffer(c.Writer, r, buf[:]); err != nil {
 		// Pretty sure this will unleash chaos on the response, but its a risk we can
 		// take since a panic will at least be recovered and this should be incredibly
 		// rare?
@@ -80,7 +87,11 @@ func getServerListDirectory(c *gin.Context) {
 	if stats, err := s.Filesystem().ListDirectory(dir); err != nil {
 		middleware.CaptureAndAbort(c, err)
 	} else {
-		c.JSON(http.StatusOK, stats)
+		out := make([]filesystem.StatResponse, len(stats))
+		for i := range stats {
+			out[i] = stats[i].ToAPIResponse()
+		}
+		c.JSON(http.StatusOK, out)
 	}
 }
 
@@ -88,6 +99,8 @@ type renameFile struct {
 	To   string `json:"to"`
 	From string `json:"from"`
 }
+
+const fileBatchConcurrency = 8
 
 // Renames (or moves) files for a server.
 func putServerRenameFiles(c *gin.Context) {
@@ -98,7 +111,7 @@ func putServerRenameFiles(c *gin.Context) {
 		Files []renameFile `json:"files"`
 	}
 	// BindJSON sends 400 if the request fails, all we need to do is return
-	if err := c.BindJSON(&data); err != nil {
+	if err := middleware.BindJSON(c, &data); err != nil {
 		return
 	}
 
@@ -110,8 +123,12 @@ func putServerRenameFiles(c *gin.Context) {
 	}
 
 	g, ctx := errgroup.WithContext(c.Request.Context())
+	g.SetLimit(fileBatchConcurrency)
 	// Loop over the array of files passed in and perform the move or rename action against each.
 	for _, p := range data.Files {
+		if ctx.Err() != nil {
+			break
+		}
 		pf := path.Join(data.Root, p.From)
 		pt := path.Join(data.Root, p.To)
 
@@ -142,7 +159,11 @@ func putServerRenameFiles(c *gin.Context) {
 		})
 	}
 
-	if err := g.Wait(); err != nil {
+	err := g.Wait()
+	if err == nil {
+		err = c.Request.Context().Err()
+	}
+	if err != nil {
 		if errors.Is(err, os.ErrExist) {
 			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
 				"error": "Cannot move or rename file, destination already exists.",
@@ -165,7 +186,7 @@ func postServerCopyFile(c *gin.Context) {
 		Location string `json:"location"`
 	}
 	// BindJSON sends 400 if the request fails, all we need to do is return
-	if err := c.BindJSON(&data); err != nil {
+	if err := middleware.BindJSON(c, &data); err != nil {
 		return
 	}
 
@@ -190,7 +211,7 @@ func postServerDeleteFiles(c *gin.Context) {
 		Files []string `json:"files"`
 	}
 
-	if err := c.BindJSON(&data); err != nil {
+	if err := middleware.BindJSON(c, &data); err != nil {
 		return
 	}
 
@@ -201,11 +222,15 @@ func postServerDeleteFiles(c *gin.Context) {
 		return
 	}
 
-	g, ctx := errgroup.WithContext(context.Background())
+	g, ctx := errgroup.WithContext(c.Request.Context())
+	g.SetLimit(fileBatchConcurrency)
 
 	// Loop over the array of files passed in and delete them. If any of the file deletions
 	// fail just abort the process entirely.
 	for _, p := range data.Files {
+		if ctx.Err() != nil {
+			break
+		}
 		pi := path.Join(data.Root, p)
 
 		g.Go(func() error {
@@ -218,7 +243,11 @@ func postServerDeleteFiles(c *gin.Context) {
 		})
 	}
 
-	if err := g.Wait(); err != nil {
+	err := g.Wait()
+	if err == nil {
+		err = c.Request.Context().Err()
+	}
+	if err != nil {
 		middleware.CaptureAndAbort(c, err)
 		return
 	}
@@ -284,7 +313,7 @@ func postServerPullRemoteFile(c *gin.Context) {
 		UseHeader  bool   `json:"use_header"`
 		Foreground bool   `json:"foreground"`
 	}
-	if err := c.BindJSON(&data); err != nil {
+	if err := middleware.BindJSON(c, &data); err != nil {
 		return
 	}
 
@@ -325,7 +354,7 @@ func postServerPullRemoteFile(c *gin.Context) {
 	})
 
 	download := func() error {
-		s.Log().WithField("download_id", dl.Identifier).WithField("url", u.String()).Info("starting pull of remote file to disk")
+		s.Log().WithField("download_id", dl.Identifier).WithField("url", system.LogURL(u.String())).Info("starting pull of remote file to disk")
 		if err := dl.Execute(); err != nil {
 			if !downloader.IsDownloadError(err) {
 				s.Log().WithField("download_id", dl.Identifier).WithField("error", err).Error("failed to pull remote file")
@@ -392,7 +421,7 @@ func postServerCreateDirectory(c *gin.Context) {
 		Path string `json:"path"`
 	}
 	// BindJSON sends 400 if the request fails, all we need to do is return
-	if err := c.BindJSON(&data); err != nil {
+	if err := middleware.BindJSON(c, &data); err != nil {
 		return
 	}
 
@@ -419,7 +448,7 @@ func postServerCompressFiles(c *gin.Context) {
 		Files    []string `json:"files"`
 	}
 
-	if err := c.BindJSON(&data); err != nil {
+	if err := middleware.BindJSON(c, &data); err != nil {
 		return
 	}
 
@@ -457,7 +486,7 @@ func postServerDecompressFiles(c *gin.Context) {
 		RootPath string `json:"root"`
 		File     string `json:"file"`
 	}
-	if err := c.BindJSON(&data); err != nil {
+	if err := middleware.BindJSON(c, &data); err != nil {
 		return
 	}
 
@@ -508,7 +537,7 @@ func postServerChmodFile(c *gin.Context) {
 		Files []chmodFile `json:"files"`
 	}
 
-	if err := c.BindJSON(&data); err != nil {
+	if err := middleware.BindJSON(c, &data); err != nil {
 		log.Debug(err.Error())
 		return
 	}
@@ -520,10 +549,14 @@ func postServerChmodFile(c *gin.Context) {
 		return
 	}
 
-	g, ctx := errgroup.WithContext(context.Background())
+	g, ctx := errgroup.WithContext(c.Request.Context())
+	g.SetLimit(fileBatchConcurrency)
 
 	// Loop over the array of files passed in and perform the move or rename action against each.
 	for _, p := range data.Files {
+		if ctx.Err() != nil {
+			break
+		}
 		g.Go(func() error {
 			select {
 			case <-ctx.Done():
@@ -549,7 +582,11 @@ func postServerChmodFile(c *gin.Context) {
 		})
 	}
 
-	if err := g.Wait(); err != nil {
+	err := g.Wait()
+	if err == nil {
+		err = c.Request.Context().Err()
+	}
+	if err != nil {
 		if errors.Is(err, errInvalidFileMode) {
 			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
 				"error": "Invalid file mode.",

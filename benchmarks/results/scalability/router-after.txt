@@ -1,0 +1,26 @@
+goos: linux
+goarch: amd64
+pkg: github.com/pterodactyl/wings/router
+cpu: Intel(R) Core(TM) i7-14700KF
+BenchmarkServerStatus-4        	  148201	      4038 ns/op	    3529 B/op	      27 allocs/op
+BenchmarkServerStatus-4        	  146875	      4060 ns/op	    3529 B/op	      27 allocs/op
+BenchmarkServerStatus-4        	  152850	      4201 ns/op	    3529 B/op	      27 allocs/op
+BenchmarkServerStatus-4        	  132452	      4039 ns/op	    3528 B/op	      27 allocs/op
+BenchmarkServerStatus-4        	  154617	      4014 ns/op	    3529 B/op	      27 allocs/op
+BenchmarkServerStatusScale/10-4         	  138841	      4165 ns/op	    3529 B/op	      27 allocs/op
+BenchmarkServerStatusScale/10-4         	  135698	      4136 ns/op	    3529 B/op	      27 allocs/op
+BenchmarkServerStatusScale/10-4         	  144447	      4011 ns/op	    3529 B/op	      27 allocs/op
+BenchmarkServerStatusScale/10-4         	  142245	      4043 ns/op	    3529 B/op	      27 allocs/op
+BenchmarkServerStatusScale/10-4         	  152131	      4149 ns/op	    3529 B/op	      27 allocs/op
+BenchmarkServerStatusScale/100-4        	  119793	      4375 ns/op	    3529 B/op	      27 allocs/op
+BenchmarkServerStatusScale/100-4        	  148686	      4118 ns/op	    3529 B/op	      27 allocs/op
+BenchmarkServerStatusScale/100-4        	  151828	      4117 ns/op	    3529 B/op	      27 allocs/op
+BenchmarkServerStatusScale/100-4        	  134602	      4299 ns/op	    3528 B/op	      27 allocs/op
+BenchmarkServerStatusScale/100-4        	  149185	      4096 ns/op	    3529 B/op	      27 allocs/op
+BenchmarkServerStatusScale/1000-4       	  148720	      3823 ns/op	    3524 B/op	      27 allocs/op
+BenchmarkServerStatusScale/1000-4       	  156392	      3803 ns/op	    3523 B/op	      27 allocs/op
+BenchmarkServerStatusScale/1000-4       	  138912	      3933 ns/op	    3523 B/op	      27 allocs/op
+BenchmarkServerStatusScale/1000-4       	  154273	      3648 ns/op	    3523 B/op	      27 allocs/op
+BenchmarkServerStatusScale/1000-4       	  168841	      3806 ns/op	    3523 B/op	      27 allocs/op
+PASS
+ok  	github.com/pterodactyl/wings/router	11.894s

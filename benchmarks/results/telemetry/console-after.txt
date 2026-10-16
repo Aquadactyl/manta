@@ -1,0 +1,16 @@
+goos: linux
+goarch: amd64
+pkg: github.com/pterodactyl/wings/server
+cpu: Intel(R) Core(TM) i7-14700KF
+BenchmarkConsoleInspection/running-4         	59529950	        10.11 ns/op	       0 B/op	       0 allocs/op
+BenchmarkConsoleInspection/running-4         	59666463	        10.07 ns/op	       0 B/op	       0 allocs/op
+BenchmarkConsoleInspection/running-4         	59149360	        10.13 ns/op	       0 B/op	       0 allocs/op
+BenchmarkConsoleInspection/running-4         	59691370	        10.07 ns/op	       0 B/op	       0 allocs/op
+BenchmarkConsoleInspection/running-4         	58569012	        10.16 ns/op	       0 B/op	       0 allocs/op
+BenchmarkConsoleInspection/starting-4        	 9119899	        62.86 ns/op	     160 B/op	       1 allocs/op
+BenchmarkConsoleInspection/starting-4        	 9701413	        62.32 ns/op	     160 B/op	       1 allocs/op
+BenchmarkConsoleInspection/starting-4        	 9357547	        63.68 ns/op	     160 B/op	       1 allocs/op
+BenchmarkConsoleInspection/starting-4        	 8550170	        65.73 ns/op	     160 B/op	       1 allocs/op
+BenchmarkConsoleInspection/starting-4        	 9156879	        62.82 ns/op	     160 B/op	       1 allocs/op
+PASS
+ok  	github.com/pterodactyl/wings/server	5.941s

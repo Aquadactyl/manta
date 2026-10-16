@@ -1,0 +1,1478 @@
+[
+  {
+    "cpu_limit": 2,
+    "go_version": "go1.27.2",
+    "gomaxprocs": "2",
+    "image_id": "sha256:c05d956c4bf5b8b0cbac8730893eb5986ae46a88010e9e17d061e7882788db46",
+    "memory_limit": 1073741824,
+    "servers": [
+      {
+        "id": 7,
+        "uuid": "fe109884-f53a-45de-9c33-e17677b52fd4",
+        "name": "Benchmark Manta Paper",
+        "kind": "paper",
+        "identifier": "serv_7yijrbhvhjc55hbt4f3hpnjp2q",
+        "port": 27015
+      },
+      {
+        "id": 8,
+        "uuid": "ea47b10b-e5d1-480f-86f1-79a410cae5b2",
+        "name": "Benchmark Manta Bedrock",
+        "kind": "bedrock",
+        "identifier": "serv_5jd3cc7f2fea7bxrpgsbbsxfwi",
+        "port": 27016
+      }
+    ],
+    "system": {
+      "architecture": "amd64",
+      "cpu_count": 28,
+      "kernel_version": "6.18.54.1-microsoft-standard-WSL2",
+      "os": "linux",
+      "version": "1.13.3-manta-local"
+    },
+    "type": "metadata",
+    "variant": "manta"
+  },
+  {
+    "cpu_limit": 2,
+    "go_version": "go1.27.2",
+    "gomaxprocs": "2",
+    "image_id": "sha256:774dc22b46225eb33a922b94088342b3da6ba71df8bb0d08822c2d30b8d65955",
+    "memory_limit": 1073741824,
+    "servers": [
+      {
+        "id": 9,
+        "uuid": "924cba47-6fd7-4739-b397-f912a262b8f5",
+        "name": "Benchmark Wings Paper",
+        "kind": "paper",
+        "identifier": "serv_sjglur3p25dttm4x7ejkeyvy6u",
+        "port": 27115
+      },
+      {
+        "id": 10,
+        "uuid": "551f5acf-7955-4ac5-9190-af251a9cf991",
+        "name": "Benchmark Wings Bedrock",
+        "kind": "bedrock",
+        "identifier": "serv_kupvvt3zkvfmlemqv4srvhhzse",
+        "port": 27116
+      }
+    ],
+    "system": {
+      "architecture": "amd64",
+      "cpu_count": 28,
+      "kernel_version": "6.18.54.1-microsoft-standard-WSL2",
+      "os": "linux",
+      "version": "1.13.4"
+    },
+    "type": "metadata",
+    "variant": "wings"
+  },
+  {
+    "first_uptime": 967480,
+    "game": "paper",
+    "last_stats": {
+      "memory_bytes": 800423936,
+      "memory_limit_bytes": 1852203008,
+      "cpu_absolute": 1.549,
+      "network": {
+        "rx_bytes": 180262,
+        "tx_bytes": 52882
+      },
+      "uptime": 969495
+    },
+    "last_uptime": 969495,
+    "pass": true,
+    "samples": 3,
+    "server_id": 7,
+    "test": "automatic_stats_16_viewers",
+    "type": "check",
+    "variant": "manta",
+    "viewer": 15
+  },
+  {
+    "first_uptime": 967480,
+    "game": "paper",
+    "last_stats": {
+      "memory_bytes": 800423936,
+      "memory_limit_bytes": 1852203008,
+      "cpu_absolute": 1.549,
+      "network": {
+        "rx_bytes": 180262,
+        "tx_bytes": 52882
+      },
+      "uptime": 969495
+    },
+    "last_uptime": 969495,
+    "pass": true,
+    "samples": 3,
+    "server_id": 7,
+    "test": "automatic_stats_16_viewers",
+    "type": "check",
+    "variant": "manta",
+    "viewer": 10
+  },
+  {
+    "first_uptime": 967480,
+    "game": "paper",
+    "last_stats": {
+      "memory_bytes": 800423936,
+      "memory_limit_bytes": 1852203008,
+      "cpu_absolute": 1.549,
+      "network": {
+        "rx_bytes": 180262,
+        "tx_bytes": 52882
+      },
+      "uptime": 969495
+    },
+    "last_uptime": 969495,
+    "pass": true,
+    "samples": 3,
+    "server_id": 7,
+    "test": "automatic_stats_16_viewers",
+    "type": "check",
+    "variant": "manta",
+    "viewer": 7
+  },
+  {
+    "first_uptime": 967480,
+    "game": "paper",
+    "last_stats": {
+      "memory_bytes": 800423936,
+      "memory_limit_bytes": 1852203008,
+      "cpu_absolute": 1.549,
+      "network": {
+        "rx_bytes": 180262,
+        "tx_bytes": 52882
+      },
+      "uptime": 969495
+    },
+    "last_uptime": 969495,
+    "pass": true,
+    "samples": 3,
+    "server_id": 7,
+    "test": "automatic_stats_16_viewers",
+    "type": "check",
+    "variant": "manta",
+    "viewer": 1
+  },
+  {
+    "first_uptime": 967480,
+    "game": "paper",
+    "last_stats": {
+      "memory_bytes": 800423936,
+      "memory_limit_bytes": 1852203008,
+      "cpu_absolute": 1.549,
+      "network": {
+        "rx_bytes": 180262,
+        "tx_bytes": 52882
+      },
+      "uptime": 969495
+    },
+    "last_uptime": 969495,
+    "pass": true,
+    "samples": 3,
+    "server_id": 7,
+    "test": "automatic_stats_16_viewers",
+    "type": "check",
+    "variant": "manta",
+    "viewer": 6
+  },
+  {
+    "first_uptime": 967480,
+    "game": "paper",
+    "last_stats": {
+      "memory_bytes": 800423936,
+      "memory_limit_bytes": 1852203008,
+      "cpu_absolute": 1.549,
+      "network": {
+        "rx_bytes": 180262,
+        "tx_bytes": 52882
+      },
+      "uptime": 969495
+    },
+    "last_uptime": 969495,
+    "pass": true,
+    "samples": 3,
+    "server_id": 7,
+    "test": "automatic_stats_16_viewers",
+    "type": "check",
+    "variant": "manta",
+    "viewer": 11
+  },
+  {
+    "first_uptime": 967480,
+    "game": "paper",
+    "last_stats": {
+      "memory_bytes": 800423936,
+      "memory_limit_bytes": 1852203008,
+      "cpu_absolute": 1.549,
+      "network": {
+        "rx_bytes": 180262,
+        "tx_bytes": 52882
+      },
+      "uptime": 969495
+    },
+    "last_uptime": 969495,
+    "pass": true,
+    "samples": 3,
+    "server_id": 7,
+    "test": "automatic_stats_16_viewers",
+    "type": "check",
+    "variant": "manta",
+    "viewer": 9
+  },
+  {
+    "first_uptime": 967480,
+    "game": "paper",
+    "last_stats": {
+      "memory_bytes": 800423936,
+      "memory_limit_bytes": 1852203008,
+      "cpu_absolute": 1.549,
+      "network": {
+        "rx_bytes": 180262,
+        "tx_bytes": 52882
+      },
+      "uptime": 969495
+    },
+    "last_uptime": 969495,
+    "pass": true,
+    "samples": 3,
+    "server_id": 7,
+    "test": "automatic_stats_16_viewers",
+    "type": "check",
+    "variant": "manta",
+    "viewer": 5
+  },
+  {
+    "first_uptime": 967480,
+    "game": "paper",
+    "last_stats": {
+      "memory_bytes": 800423936,
+      "memory_limit_bytes": 1852203008,
+      "cpu_absolute": 1.549,
+      "network": {
+        "rx_bytes": 180262,
+        "tx_bytes": 52882
+      },
+      "uptime": 969495
+    },
+    "last_uptime": 969495,
+    "pass": true,
+    "samples": 3,
+    "server_id": 7,
+    "test": "automatic_stats_16_viewers",
+    "type": "check",
+    "variant": "manta",
+    "viewer": 0
+  },
+  {
+    "first_uptime": 967480,
+    "game": "paper",
+    "last_stats": {
+      "memory_bytes": 800423936,
+      "memory_limit_bytes": 1852203008,
+      "cpu_absolute": 1.549,
+      "network": {
+        "rx_bytes": 180262,
+        "tx_bytes": 52882
+      },
+      "uptime": 969495
+    },
+    "last_uptime": 969495,
+    "pass": true,
+    "samples": 3,
+    "server_id": 7,
+    "test": "automatic_stats_16_viewers",
+    "type": "check",
+    "variant": "manta",
+    "viewer": 14
+  },
+  {
+    "first_uptime": 967480,
+    "game": "paper",
+    "last_stats": {
+      "memory_bytes": 800423936,
+      "memory_limit_bytes": 1852203008,
+      "cpu_absolute": 1.549,
+      "network": {
+        "rx_bytes": 180262,
+        "tx_bytes": 52882
+      },
+      "uptime": 969495
+    },
+    "last_uptime": 969495,
+    "pass": true,
+    "samples": 3,
+    "server_id": 7,
+    "test": "automatic_stats_16_viewers",
+    "type": "check",
+    "variant": "manta",
+    "viewer": 13
+  },
+  {
+    "first_uptime": 967480,
+    "game": "paper",
+    "last_stats": {
+      "memory_bytes": 800423936,
+      "memory_limit_bytes": 1852203008,
+      "cpu_absolute": 1.549,
+      "network": {
+        "rx_bytes": 180262,
+        "tx_bytes": 52882
+      },
+      "uptime": 969495
+    },
+    "last_uptime": 969495,
+    "pass": true,
+    "samples": 3,
+    "server_id": 7,
+    "test": "automatic_stats_16_viewers",
+    "type": "check",
+    "variant": "manta",
+    "viewer": 8
+  },
+  {
+    "first_uptime": 967480,
+    "game": "paper",
+    "last_stats": {
+      "memory_bytes": 800423936,
+      "memory_limit_bytes": 1852203008,
+      "cpu_absolute": 1.549,
+      "network": {
+        "rx_bytes": 180262,
+        "tx_bytes": 52882
+      },
+      "uptime": 969495
+    },
+    "last_uptime": 969495,
+    "pass": true,
+    "samples": 3,
+    "server_id": 7,
+    "test": "automatic_stats_16_viewers",
+    "type": "check",
+    "variant": "manta",
+    "viewer": 2
+  },
+  {
+    "first_uptime": 967480,
+    "game": "paper",
+    "last_stats": {
+      "memory_bytes": 800423936,
+      "memory_limit_bytes": 1852203008,
+      "cpu_absolute": 1.549,
+      "network": {
+        "rx_bytes": 180262,
+        "tx_bytes": 52882
+      },
+      "uptime": 969495
+    },
+    "last_uptime": 969495,
+    "pass": true,
+    "samples": 3,
+    "server_id": 7,
+    "test": "automatic_stats_16_viewers",
+    "type": "check",
+    "variant": "manta",
+    "viewer": 4
+  },
+  {
+    "first_uptime": 967480,
+    "game": "paper",
+    "last_stats": {
+      "memory_bytes": 800423936,
+      "memory_limit_bytes": 1852203008,
+      "cpu_absolute": 1.549,
+      "network": {
+        "rx_bytes": 180262,
+        "tx_bytes": 52882
+      },
+      "uptime": 969495
+    },
+    "last_uptime": 969495,
+    "pass": true,
+    "samples": 3,
+    "server_id": 7,
+    "test": "automatic_stats_16_viewers",
+    "type": "check",
+    "variant": "manta",
+    "viewer": 12
+  },
+  {
+    "first_uptime": 967480,
+    "game": "paper",
+    "last_stats": {
+      "memory_bytes": 800423936,
+      "memory_limit_bytes": 1852203008,
+      "cpu_absolute": 1.549,
+      "network": {
+        "rx_bytes": 180262,
+        "tx_bytes": 52882
+      },
+      "uptime": 969495
+    },
+    "last_uptime": 969495,
+    "pass": true,
+    "samples": 3,
+    "server_id": 7,
+    "test": "automatic_stats_16_viewers",
+    "type": "check",
+    "variant": "manta",
+    "viewer": 3
+  },
+  {
+    "first_uptime": 960407,
+    "game": "bedrock",
+    "last_stats": {
+      "memory_bytes": 270286848,
+      "memory_limit_bytes": 617398272,
+      "cpu_absolute": 3.255,
+      "network": {
+        "rx_bytes": 63833,
+        "tx_bytes": 31303
+      },
+      "uptime": 962425
+    },
+    "last_uptime": 962425,
+    "pass": true,
+    "samples": 3,
+    "server_id": 8,
+    "test": "automatic_stats_16_viewers",
+    "type": "check",
+    "variant": "manta",
+    "viewer": 15
+  },
+  {
+    "first_uptime": 960407,
+    "game": "bedrock",
+    "last_stats": {
+      "memory_bytes": 270286848,
+      "memory_limit_bytes": 617398272,
+      "cpu_absolute": 3.255,
+      "network": {
+        "rx_bytes": 63833,
+        "tx_bytes": 31303
+      },
+      "uptime": 962425
+    },
+    "last_uptime": 962425,
+    "pass": true,
+    "samples": 3,
+    "server_id": 8,
+    "test": "automatic_stats_16_viewers",
+    "type": "check",
+    "variant": "manta",
+    "viewer": 6
+  },
+  {
+    "first_uptime": 960407,
+    "game": "bedrock",
+    "last_stats": {
+      "memory_bytes": 270286848,
+      "memory_limit_bytes": 617398272,
+      "cpu_absolute": 3.255,
+      "network": {
+        "rx_bytes": 63833,
+        "tx_bytes": 31303
+      },
+      "uptime": 962425
+    },
+    "last_uptime": 962425,
+    "pass": true,
+    "samples": 3,
+    "server_id": 8,
+    "test": "automatic_stats_16_viewers",
+    "type": "check",
+    "variant": "manta",
+    "viewer": 2
+  },
+  {
+    "first_uptime": 960407,
+    "game": "bedrock",
+    "last_stats": {
+      "memory_bytes": 270286848,
+      "memory_limit_bytes": 617398272,
+      "cpu_absolute": 3.255,
+      "network": {
+        "rx_bytes": 63833,
+        "tx_bytes": 31303
+      },
+      "uptime": 962425
+    },
+    "last_uptime": 962425,
+    "pass": true,
+    "samples": 3,
+    "server_id": 8,
+    "test": "automatic_stats_16_viewers",
+    "type": "check",
+    "variant": "manta",
+    "viewer": 3
+  },
+  {
+    "first_uptime": 960407,
+    "game": "bedrock",
+    "last_stats": {
+      "memory_bytes": 270286848,
+      "memory_limit_bytes": 617398272,
+      "cpu_absolute": 3.255,
+      "network": {
+        "rx_bytes": 63833,
+        "tx_bytes": 31303
+      },
+      "uptime": 962425
+    },
+    "last_uptime": 962425,
+    "pass": true,
+    "samples": 3,
+    "server_id": 8,
+    "test": "automatic_stats_16_viewers",
+    "type": "check",
+    "variant": "manta",
+    "viewer": 0
+  },
+  {
+    "first_uptime": 960407,
+    "game": "bedrock",
+    "last_stats": {
+      "memory_bytes": 270286848,
+      "memory_limit_bytes": 617398272,
+      "cpu_absolute": 3.255,
+      "network": {
+        "rx_bytes": 63833,
+        "tx_bytes": 31303
+      },
+      "uptime": 962425
+    },
+    "last_uptime": 962425,
+    "pass": true,
+    "samples": 3,
+    "server_id": 8,
+    "test": "automatic_stats_16_viewers",
+    "type": "check",
+    "variant": "manta",
+    "viewer": 5
+  },
+  {
+    "first_uptime": 960407,
+    "game": "bedrock",
+    "last_stats": {
+      "memory_bytes": 270286848,
+      "memory_limit_bytes": 617398272,
+      "cpu_absolute": 3.255,
+      "network": {
+        "rx_bytes": 63833,
+        "tx_bytes": 31303
+      },
+      "uptime": 962425
+    },
+    "last_uptime": 962425,
+    "pass": true,
+    "samples": 3,
+    "server_id": 8,
+    "test": "automatic_stats_16_viewers",
+    "type": "check",
+    "variant": "manta",
+    "viewer": 13
+  },
+  {
+    "first_uptime": 960407,
+    "game": "bedrock",
+    "last_stats": {
+      "memory_bytes": 270286848,
+      "memory_limit_bytes": 617398272,
+      "cpu_absolute": 3.255,
+      "network": {
+        "rx_bytes": 63833,
+        "tx_bytes": 31303
+      },
+      "uptime": 962425
+    },
+    "last_uptime": 962425,
+    "pass": true,
+    "samples": 3,
+    "server_id": 8,
+    "test": "automatic_stats_16_viewers",
+    "type": "check",
+    "variant": "manta",
+    "viewer": 1
+  },
+  {
+    "first_uptime": 960407,
+    "game": "bedrock",
+    "last_stats": {
+      "memory_bytes": 270286848,
+      "memory_limit_bytes": 617398272,
+      "cpu_absolute": 3.255,
+      "network": {
+        "rx_bytes": 63833,
+        "tx_bytes": 31303
+      },
+      "uptime": 962425
+    },
+    "last_uptime": 962425,
+    "pass": true,
+    "samples": 3,
+    "server_id": 8,
+    "test": "automatic_stats_16_viewers",
+    "type": "check",
+    "variant": "manta",
+    "viewer": 9
+  },
+  {
+    "first_uptime": 960407,
+    "game": "bedrock",
+    "last_stats": {
+      "memory_bytes": 270286848,
+      "memory_limit_bytes": 617398272,
+      "cpu_absolute": 3.255,
+      "network": {
+        "rx_bytes": 63833,
+        "tx_bytes": 31303
+      },
+      "uptime": 962425
+    },
+    "last_uptime": 962425,
+    "pass": true,
+    "samples": 3,
+    "server_id": 8,
+    "test": "automatic_stats_16_viewers",
+    "type": "check",
+    "variant": "manta",
+    "viewer": 12
+  },
+  {
+    "first_uptime": 960407,
+    "game": "bedrock",
+    "last_stats": {
+      "memory_bytes": 270286848,
+      "memory_limit_bytes": 617398272,
+      "cpu_absolute": 3.255,
+      "network": {
+        "rx_bytes": 63833,
+        "tx_bytes": 31303
+      },
+      "uptime": 962425
+    },
+    "last_uptime": 962425,
+    "pass": true,
+    "samples": 3,
+    "server_id": 8,
+    "test": "automatic_stats_16_viewers",
+    "type": "check",
+    "variant": "manta",
+    "viewer": 4
+  },
+  {
+    "first_uptime": 960407,
+    "game": "bedrock",
+    "last_stats": {
+      "memory_bytes": 270286848,
+      "memory_limit_bytes": 617398272,
+      "cpu_absolute": 3.255,
+      "network": {
+        "rx_bytes": 63833,
+        "tx_bytes": 31303
+      },
+      "uptime": 962425
+    },
+    "last_uptime": 962425,
+    "pass": true,
+    "samples": 3,
+    "server_id": 8,
+    "test": "automatic_stats_16_viewers",
+    "type": "check",
+    "variant": "manta",
+    "viewer": 11
+  },
+  {
+    "first_uptime": 960407,
+    "game": "bedrock",
+    "last_stats": {
+      "memory_bytes": 270286848,
+      "memory_limit_bytes": 617398272,
+      "cpu_absolute": 3.255,
+      "network": {
+        "rx_bytes": 63833,
+        "tx_bytes": 31303
+      },
+      "uptime": 962425
+    },
+    "last_uptime": 962425,
+    "pass": true,
+    "samples": 3,
+    "server_id": 8,
+    "test": "automatic_stats_16_viewers",
+    "type": "check",
+    "variant": "manta",
+    "viewer": 7
+  },
+  {
+    "first_uptime": 960407,
+    "game": "bedrock",
+    "last_stats": {
+      "memory_bytes": 270286848,
+      "memory_limit_bytes": 617398272,
+      "cpu_absolute": 3.255,
+      "network": {
+        "rx_bytes": 63833,
+        "tx_bytes": 31303
+      },
+      "uptime": 962425
+    },
+    "last_uptime": 962425,
+    "pass": true,
+    "samples": 3,
+    "server_id": 8,
+    "test": "automatic_stats_16_viewers",
+    "type": "check",
+    "variant": "manta",
+    "viewer": 14
+  },
+  {
+    "first_uptime": 960407,
+    "game": "bedrock",
+    "last_stats": {
+      "memory_bytes": 270286848,
+      "memory_limit_bytes": 617398272,
+      "cpu_absolute": 3.255,
+      "network": {
+        "rx_bytes": 63833,
+        "tx_bytes": 31303
+      },
+      "uptime": 962425
+    },
+    "last_uptime": 962425,
+    "pass": true,
+    "samples": 3,
+    "server_id": 8,
+    "test": "automatic_stats_16_viewers",
+    "type": "check",
+    "variant": "manta",
+    "viewer": 10
+  },
+  {
+    "first_uptime": 960407,
+    "game": "bedrock",
+    "last_stats": {
+      "memory_bytes": 270286848,
+      "memory_limit_bytes": 617398272,
+      "cpu_absolute": 3.255,
+      "network": {
+        "rx_bytes": 63833,
+        "tx_bytes": 31303
+      },
+      "uptime": 962425
+    },
+    "last_uptime": 962425,
+    "pass": true,
+    "samples": 3,
+    "server_id": 8,
+    "test": "automatic_stats_16_viewers",
+    "type": "check",
+    "variant": "manta",
+    "viewer": 8
+  },
+  {
+    "first_uptime": 961349,
+    "game": "paper",
+    "last_stats": {
+      "memory_bytes": 795910144,
+      "memory_limit_bytes": 1852203008,
+      "cpu_absolute": 1.628,
+      "network": {
+        "rx_bytes": 167762,
+        "tx_bytes": 53460
+      },
+      "uptime": 963418
+    },
+    "last_uptime": 963418,
+    "pass": true,
+    "samples": 3,
+    "server_id": 9,
+    "test": "automatic_stats_16_viewers",
+    "type": "check",
+    "variant": "wings",
+    "viewer": 9
+  },
+  {
+    "first_uptime": 961349,
+    "game": "paper",
+    "last_stats": {
+      "memory_bytes": 795910144,
+      "memory_limit_bytes": 1852203008,
+      "cpu_absolute": 1.628,
+      "network": {
+        "rx_bytes": 167762,
+        "tx_bytes": 53460
+      },
+      "uptime": 963418
+    },
+    "last_uptime": 963418,
+    "pass": true,
+    "samples": 3,
+    "server_id": 9,
+    "test": "automatic_stats_16_viewers",
+    "type": "check",
+    "variant": "wings",
+    "viewer": 7
+  },
+  {
+    "first_uptime": 961349,
+    "game": "paper",
+    "last_stats": {
+      "memory_bytes": 795910144,
+      "memory_limit_bytes": 1852203008,
+      "cpu_absolute": 1.628,
+      "network": {
+        "rx_bytes": 167762,
+        "tx_bytes": 53460
+      },
+      "uptime": 963418
+    },
+    "last_uptime": 963418,
+    "pass": true,
+    "samples": 3,
+    "server_id": 9,
+    "test": "automatic_stats_16_viewers",
+    "type": "check",
+    "variant": "wings",
+    "viewer": 15
+  },
+  {
+    "first_uptime": 961349,
+    "game": "paper",
+    "last_stats": {
+      "memory_bytes": 795910144,
+      "memory_limit_bytes": 1852203008,
+      "cpu_absolute": 1.628,
+      "network": {
+        "rx_bytes": 167762,
+        "tx_bytes": 53460
+      },
+      "uptime": 963418
+    },
+    "last_uptime": 963418,
+    "pass": true,
+    "samples": 3,
+    "server_id": 9,
+    "test": "automatic_stats_16_viewers",
+    "type": "check",
+    "variant": "wings",
+    "viewer": 11
+  },
+  {
+    "first_uptime": 961349,
+    "game": "paper",
+    "last_stats": {
+      "memory_bytes": 795910144,
+      "memory_limit_bytes": 1852203008,
+      "cpu_absolute": 1.628,
+      "network": {
+        "rx_bytes": 167762,
+        "tx_bytes": 53460
+      },
+      "uptime": 963418
+    },
+    "last_uptime": 963418,
+    "pass": true,
+    "samples": 3,
+    "server_id": 9,
+    "test": "automatic_stats_16_viewers",
+    "type": "check",
+    "variant": "wings",
+    "viewer": 5
+  },
+  {
+    "first_uptime": 961349,
+    "game": "paper",
+    "last_stats": {
+      "memory_bytes": 795910144,
+      "memory_limit_bytes": 1852203008,
+      "cpu_absolute": 1.628,
+      "network": {
+        "rx_bytes": 167762,
+        "tx_bytes": 53460
+      },
+      "uptime": 963418
+    },
+    "last_uptime": 963418,
+    "pass": true,
+    "samples": 3,
+    "server_id": 9,
+    "test": "automatic_stats_16_viewers",
+    "type": "check",
+    "variant": "wings",
+    "viewer": 8
+  },
+  {
+    "first_uptime": 961349,
+    "game": "paper",
+    "last_stats": {
+      "memory_bytes": 795910144,
+      "memory_limit_bytes": 1852203008,
+      "cpu_absolute": 1.628,
+      "network": {
+        "rx_bytes": 167762,
+        "tx_bytes": 53460
+      },
+      "uptime": 963418
+    },
+    "last_uptime": 963418,
+    "pass": true,
+    "samples": 3,
+    "server_id": 9,
+    "test": "automatic_stats_16_viewers",
+    "type": "check",
+    "variant": "wings",
+    "viewer": 12
+  },
+  {
+    "first_uptime": 961349,
+    "game": "paper",
+    "last_stats": {
+      "memory_bytes": 795910144,
+      "memory_limit_bytes": 1852203008,
+      "cpu_absolute": 1.628,
+      "network": {
+        "rx_bytes": 167762,
+        "tx_bytes": 53460
+      },
+      "uptime": 963418
+    },
+    "last_uptime": 963418,
+    "pass": true,
+    "samples": 3,
+    "server_id": 9,
+    "test": "automatic_stats_16_viewers",
+    "type": "check",
+    "variant": "wings",
+    "viewer": 1
+  },
+  {
+    "first_uptime": 961349,
+    "game": "paper",
+    "last_stats": {
+      "memory_bytes": 795910144,
+      "memory_limit_bytes": 1852203008,
+      "cpu_absolute": 1.628,
+      "network": {
+        "rx_bytes": 167762,
+        "tx_bytes": 53460
+      },
+      "uptime": 963418
+    },
+    "last_uptime": 963418,
+    "pass": true,
+    "samples": 3,
+    "server_id": 9,
+    "test": "automatic_stats_16_viewers",
+    "type": "check",
+    "variant": "wings",
+    "viewer": 4
+  },
+  {
+    "first_uptime": 961349,
+    "game": "paper",
+    "last_stats": {
+      "memory_bytes": 795910144,
+      "memory_limit_bytes": 1852203008,
+      "cpu_absolute": 1.628,
+      "network": {
+        "rx_bytes": 167762,
+        "tx_bytes": 53460
+      },
+      "uptime": 963418
+    },
+    "last_uptime": 963418,
+    "pass": true,
+    "samples": 3,
+    "server_id": 9,
+    "test": "automatic_stats_16_viewers",
+    "type": "check",
+    "variant": "wings",
+    "viewer": 14
+  },
+  {
+    "first_uptime": 961349,
+    "game": "paper",
+    "last_stats": {
+      "memory_bytes": 795910144,
+      "memory_limit_bytes": 1852203008,
+      "cpu_absolute": 1.628,
+      "network": {
+        "rx_bytes": 167762,
+        "tx_bytes": 53460
+      },
+      "uptime": 963418
+    },
+    "last_uptime": 963418,
+    "pass": true,
+    "samples": 3,
+    "server_id": 9,
+    "test": "automatic_stats_16_viewers",
+    "type": "check",
+    "variant": "wings",
+    "viewer": 3
+  },
+  {
+    "first_uptime": 961349,
+    "game": "paper",
+    "last_stats": {
+      "memory_bytes": 795910144,
+      "memory_limit_bytes": 1852203008,
+      "cpu_absolute": 1.628,
+      "network": {
+        "rx_bytes": 167762,
+        "tx_bytes": 53460
+      },
+      "uptime": 963418
+    },
+    "last_uptime": 963418,
+    "pass": true,
+    "samples": 3,
+    "server_id": 9,
+    "test": "automatic_stats_16_viewers",
+    "type": "check",
+    "variant": "wings",
+    "viewer": 10
+  },
+  {
+    "first_uptime": 961349,
+    "game": "paper",
+    "last_stats": {
+      "memory_bytes": 795910144,
+      "memory_limit_bytes": 1852203008,
+      "cpu_absolute": 1.628,
+      "network": {
+        "rx_bytes": 167762,
+        "tx_bytes": 53460
+      },
+      "uptime": 963418
+    },
+    "last_uptime": 963418,
+    "pass": true,
+    "samples": 3,
+    "server_id": 9,
+    "test": "automatic_stats_16_viewers",
+    "type": "check",
+    "variant": "wings",
+    "viewer": 13
+  },
+  {
+    "first_uptime": 961349,
+    "game": "paper",
+    "last_stats": {
+      "memory_bytes": 795910144,
+      "memory_limit_bytes": 1852203008,
+      "cpu_absolute": 1.628,
+      "network": {
+        "rx_bytes": 167762,
+        "tx_bytes": 53460
+      },
+      "uptime": 963418
+    },
+    "last_uptime": 963418,
+    "pass": true,
+    "samples": 3,
+    "server_id": 9,
+    "test": "automatic_stats_16_viewers",
+    "type": "check",
+    "variant": "wings",
+    "viewer": 6
+  },
+  {
+    "first_uptime": 961349,
+    "game": "paper",
+    "last_stats": {
+      "memory_bytes": 795910144,
+      "memory_limit_bytes": 1852203008,
+      "cpu_absolute": 1.628,
+      "network": {
+        "rx_bytes": 167762,
+        "tx_bytes": 53460
+      },
+      "uptime": 963418
+    },
+    "last_uptime": 963418,
+    "pass": true,
+    "samples": 3,
+    "server_id": 9,
+    "test": "automatic_stats_16_viewers",
+    "type": "check",
+    "variant": "wings",
+    "viewer": 2
+  },
+  {
+    "first_uptime": 961349,
+    "game": "paper",
+    "last_stats": {
+      "memory_bytes": 795910144,
+      "memory_limit_bytes": 1852203008,
+      "cpu_absolute": 1.628,
+      "network": {
+        "rx_bytes": 167762,
+        "tx_bytes": 53460
+      },
+      "uptime": 963418
+    },
+    "last_uptime": 963418,
+    "pass": true,
+    "samples": 3,
+    "server_id": 9,
+    "test": "automatic_stats_16_viewers",
+    "type": "check",
+    "variant": "wings",
+    "viewer": 0
+  },
+  {
+    "first_uptime": 953279,
+    "game": "bedrock",
+    "last_stats": {
+      "memory_bytes": 270098432,
+      "memory_limit_bytes": 617398272,
+      "cpu_absolute": 2.531,
+      "network": {
+        "rx_bytes": 73564,
+        "tx_bytes": 32281
+      },
+      "uptime": 955294
+    },
+    "last_uptime": 955294,
+    "pass": true,
+    "samples": 3,
+    "server_id": 10,
+    "test": "automatic_stats_16_viewers",
+    "type": "check",
+    "variant": "wings",
+    "viewer": 15
+  },
+  {
+    "first_uptime": 953279,
+    "game": "bedrock",
+    "last_stats": {
+      "memory_bytes": 270098432,
+      "memory_limit_bytes": 617398272,
+      "cpu_absolute": 2.531,
+      "network": {
+        "rx_bytes": 73564,
+        "tx_bytes": 32281
+      },
+      "uptime": 955294
+    },
+    "last_uptime": 955294,
+    "pass": true,
+    "samples": 3,
+    "server_id": 10,
+    "test": "automatic_stats_16_viewers",
+    "type": "check",
+    "variant": "wings",
+    "viewer": 2
+  },
+  {
+    "first_uptime": 953279,
+    "game": "bedrock",
+    "last_stats": {
+      "memory_bytes": 270098432,
+      "memory_limit_bytes": 617398272,
+      "cpu_absolute": 2.531,
+      "network": {
+        "rx_bytes": 73564,
+        "tx_bytes": 32281
+      },
+      "uptime": 955294
+    },
+    "last_uptime": 955294,
+    "pass": true,
+    "samples": 3,
+    "server_id": 10,
+    "test": "automatic_stats_16_viewers",
+    "type": "check",
+    "variant": "wings",
+    "viewer": 4
+  },
+  {
+    "first_uptime": 953279,
+    "game": "bedrock",
+    "last_stats": {
+      "memory_bytes": 270098432,
+      "memory_limit_bytes": 617398272,
+      "cpu_absolute": 2.531,
+      "network": {
+        "rx_bytes": 73564,
+        "tx_bytes": 32281
+      },
+      "uptime": 955294
+    },
+    "last_uptime": 955294,
+    "pass": true,
+    "samples": 3,
+    "server_id": 10,
+    "test": "automatic_stats_16_viewers",
+    "type": "check",
+    "variant": "wings",
+    "viewer": 7
+  },
+  {
+    "first_uptime": 953279,
+    "game": "bedrock",
+    "last_stats": {
+      "memory_bytes": 270098432,
+      "memory_limit_bytes": 617398272,
+      "cpu_absolute": 2.531,
+      "network": {
+        "rx_bytes": 73564,
+        "tx_bytes": 32281
+      },
+      "uptime": 955294
+    },
+    "last_uptime": 955294,
+    "pass": true,
+    "samples": 3,
+    "server_id": 10,
+    "test": "automatic_stats_16_viewers",
+    "type": "check",
+    "variant": "wings",
+    "viewer": 8
+  },
+  {
+    "first_uptime": 953279,
+    "game": "bedrock",
+    "last_stats": {
+      "memory_bytes": 270098432,
+      "memory_limit_bytes": 617398272,
+      "cpu_absolute": 2.531,
+      "network": {
+        "rx_bytes": 73564,
+        "tx_bytes": 32281
+      },
+      "uptime": 955294
+    },
+    "last_uptime": 955294,
+    "pass": true,
+    "samples": 3,
+    "server_id": 10,
+    "test": "automatic_stats_16_viewers",
+    "type": "check",
+    "variant": "wings",
+    "viewer": 12
+  },
+  {
+    "first_uptime": 953279,
+    "game": "bedrock",
+    "last_stats": {
+      "memory_bytes": 270098432,
+      "memory_limit_bytes": 617398272,
+      "cpu_absolute": 2.531,
+      "network": {
+        "rx_bytes": 73564,
+        "tx_bytes": 32281
+      },
+      "uptime": 955294
+    },
+    "last_uptime": 955294,
+    "pass": true,
+    "samples": 3,
+    "server_id": 10,
+    "test": "automatic_stats_16_viewers",
+    "type": "check",
+    "variant": "wings",
+    "viewer": 1
+  },
+  {
+    "first_uptime": 953279,
+    "game": "bedrock",
+    "last_stats": {
+      "memory_bytes": 270098432,
+      "memory_limit_bytes": 617398272,
+      "cpu_absolute": 2.531,
+      "network": {
+        "rx_bytes": 73564,
+        "tx_bytes": 32281
+      },
+      "uptime": 955294
+    },
+    "last_uptime": 955294,
+    "pass": true,
+    "samples": 3,
+    "server_id": 10,
+    "test": "automatic_stats_16_viewers",
+    "type": "check",
+    "variant": "wings",
+    "viewer": 6
+  },
+  {
+    "first_uptime": 953279,
+    "game": "bedrock",
+    "last_stats": {
+      "memory_bytes": 270098432,
+      "memory_limit_bytes": 617398272,
+      "cpu_absolute": 2.531,
+      "network": {
+        "rx_bytes": 73564,
+        "tx_bytes": 32281
+      },
+      "uptime": 955294
+    },
+    "last_uptime": 955294,
+    "pass": true,
+    "samples": 3,
+    "server_id": 10,
+    "test": "automatic_stats_16_viewers",
+    "type": "check",
+    "variant": "wings",
+    "viewer": 13
+  },
+  {
+    "first_uptime": 953279,
+    "game": "bedrock",
+    "last_stats": {
+      "memory_bytes": 270098432,
+      "memory_limit_bytes": 617398272,
+      "cpu_absolute": 2.531,
+      "network": {
+        "rx_bytes": 73564,
+        "tx_bytes": 32281
+      },
+      "uptime": 955294
+    },
+    "last_uptime": 955294,
+    "pass": true,
+    "samples": 3,
+    "server_id": 10,
+    "test": "automatic_stats_16_viewers",
+    "type": "check",
+    "variant": "wings",
+    "viewer": 11
+  },
+  {
+    "first_uptime": 953279,
+    "game": "bedrock",
+    "last_stats": {
+      "memory_bytes": 270098432,
+      "memory_limit_bytes": 617398272,
+      "cpu_absolute": 2.531,
+      "network": {
+        "rx_bytes": 73564,
+        "tx_bytes": 32281
+      },
+      "uptime": 955294
+    },
+    "last_uptime": 955294,
+    "pass": true,
+    "samples": 3,
+    "server_id": 10,
+    "test": "automatic_stats_16_viewers",
+    "type": "check",
+    "variant": "wings",
+    "viewer": 9
+  },
+  {
+    "first_uptime": 953279,
+    "game": "bedrock",
+    "last_stats": {
+      "memory_bytes": 270098432,
+      "memory_limit_bytes": 617398272,
+      "cpu_absolute": 2.531,
+      "network": {
+        "rx_bytes": 73564,
+        "tx_bytes": 32281
+      },
+      "uptime": 955294
+    },
+    "last_uptime": 955294,
+    "pass": true,
+    "samples": 3,
+    "server_id": 10,
+    "test": "automatic_stats_16_viewers",
+    "type": "check",
+    "variant": "wings",
+    "viewer": 0
+  },
+  {
+    "first_uptime": 953279,
+    "game": "bedrock",
+    "last_stats": {
+      "memory_bytes": 270098432,
+      "memory_limit_bytes": 617398272,
+      "cpu_absolute": 2.531,
+      "network": {
+        "rx_bytes": 73564,
+        "tx_bytes": 32281
+      },
+      "uptime": 955294
+    },
+    "last_uptime": 955294,
+    "pass": true,
+    "samples": 3,
+    "server_id": 10,
+    "test": "automatic_stats_16_viewers",
+    "type": "check",
+    "variant": "wings",
+    "viewer": 10
+  },
+  {
+    "first_uptime": 953279,
+    "game": "bedrock",
+    "last_stats": {
+      "memory_bytes": 270098432,
+      "memory_limit_bytes": 617398272,
+      "cpu_absolute": 2.531,
+      "network": {
+        "rx_bytes": 73564,
+        "tx_bytes": 32281
+      },
+      "uptime": 955294
+    },
+    "last_uptime": 955294,
+    "pass": true,
+    "samples": 3,
+    "server_id": 10,
+    "test": "automatic_stats_16_viewers",
+    "type": "check",
+    "variant": "wings",
+    "viewer": 14
+  },
+  {
+    "first_uptime": 953279,
+    "game": "bedrock",
+    "last_stats": {
+      "memory_bytes": 270098432,
+      "memory_limit_bytes": 617398272,
+      "cpu_absolute": 2.531,
+      "network": {
+        "rx_bytes": 73564,
+        "tx_bytes": 32281
+      },
+      "uptime": 955294
+    },
+    "last_uptime": 955294,
+    "pass": true,
+    "samples": 3,
+    "server_id": 10,
+    "test": "automatic_stats_16_viewers",
+    "type": "check",
+    "variant": "wings",
+    "viewer": 5
+  },
+  {
+    "first_uptime": 953279,
+    "game": "bedrock",
+    "last_stats": {
+      "memory_bytes": 270098432,
+      "memory_limit_bytes": 617398272,
+      "cpu_absolute": 2.531,
+      "network": {
+        "rx_bytes": 73564,
+        "tx_bytes": 32281
+      },
+      "uptime": 955294
+    },
+    "last_uptime": 955294,
+    "pass": true,
+    "samples": 3,
+    "server_id": 10,
+    "test": "automatic_stats_16_viewers",
+    "type": "check",
+    "variant": "wings",
+    "viewer": 3
+  }
+]

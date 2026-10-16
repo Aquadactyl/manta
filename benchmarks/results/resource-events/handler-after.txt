@@ -1,0 +1,26 @@
+goos: linux
+goarch: amd64
+pkg: github.com/pterodactyl/wings/server
+cpu: Intel(R) Core(TM) i7-14700KF
+BenchmarkEnvironmentResourceHandling/observers_0-4         	  235700	      2558 ns/op	     800 B/op	      16 allocs/op
+BenchmarkEnvironmentResourceHandling/observers_0-4         	  245919	      2629 ns/op	     800 B/op	      16 allocs/op
+BenchmarkEnvironmentResourceHandling/observers_0-4         	  209372	      2662 ns/op	     800 B/op	      16 allocs/op
+BenchmarkEnvironmentResourceHandling/observers_0-4         	  205774	      2753 ns/op	     800 B/op	      16 allocs/op
+BenchmarkEnvironmentResourceHandling/observers_0-4         	  225156	      2601 ns/op	     800 B/op	      16 allocs/op
+BenchmarkEnvironmentResourceHandling/observers_1-4         	  163454	      3572 ns/op	    1169 B/op	      21 allocs/op
+BenchmarkEnvironmentResourceHandling/observers_1-4         	  172275	      3715 ns/op	    1168 B/op	      21 allocs/op
+BenchmarkEnvironmentResourceHandling/observers_1-4         	  171382	      3577 ns/op	    1168 B/op	      21 allocs/op
+BenchmarkEnvironmentResourceHandling/observers_1-4         	  162446	      3626 ns/op	    1169 B/op	      21 allocs/op
+BenchmarkEnvironmentResourceHandling/observers_1-4         	  166191	      3623 ns/op	    1168 B/op	      21 allocs/op
+BenchmarkEnvironmentResourceHandling/observers_16-4        	  149523	      4183 ns/op	    1168 B/op	      21 allocs/op
+BenchmarkEnvironmentResourceHandling/observers_16-4        	  151615	      4262 ns/op	    1168 B/op	      21 allocs/op
+BenchmarkEnvironmentResourceHandling/observers_16-4        	  144433	      4105 ns/op	    1168 B/op	      21 allocs/op
+BenchmarkEnvironmentResourceHandling/observers_16-4        	  134751	      4490 ns/op	    1168 B/op	      21 allocs/op
+BenchmarkEnvironmentResourceHandling/observers_16-4        	  151688	      4102 ns/op	    1168 B/op	      21 allocs/op
+BenchmarkEnvironmentStateHandling-4                        	 1000000	       577.0 ns/op	     296 B/op	       7 allocs/op
+BenchmarkEnvironmentStateHandling-4                        	 1000000	       580.4 ns/op	     296 B/op	       7 allocs/op
+BenchmarkEnvironmentStateHandling-4                        	  953728	       574.7 ns/op	     296 B/op	       7 allocs/op
+BenchmarkEnvironmentStateHandling-4                        	 1000000	       582.5 ns/op	     296 B/op	       7 allocs/op
+BenchmarkEnvironmentStateHandling-4                        	  961623	       589.4 ns/op	     296 B/op	       7 allocs/op
+PASS
+ok  	github.com/pterodactyl/wings/server	11.998s

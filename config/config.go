@@ -549,6 +549,14 @@ func Get() *Configuration {
 	return &c
 }
 
+// GetToken reads the current resolved credentials without copying the entire
+// configuration on every authenticated request. It observes token rotation.
+func GetToken() Token {
+	mu.RLock()
+	defer mu.RUnlock()
+	return _config.Token
+}
+
 // Update performs an in-situ update of the global configuration object using
 // a thread-safe mutex lock. This is the correct way to make modifications to
 // the global configuration.

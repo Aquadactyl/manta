@@ -2,13 +2,11 @@ package websocket
 
 import (
 	"context"
-	"encoding/json"
 	"sync"
 	"time"
 
 	"emperror.dev/errors"
 
-	"github.com/pterodactyl/wings/events"
 	"github.com/pterodactyl/wings/system"
 
 	"github.com/pterodactyl/wings/server"
@@ -112,28 +110,13 @@ func (h *Handler) listenForServerEvents(ctx context.Context) error {
 			}
 			onError(server.InstallOutputEvent, sendErr)
 		case b := <-eventChan:
-			var e events.Event
-			if err := events.DecodeTo(b, &e); err != nil {
+			message, decodeErr := decodeEventMessage(b)
+			if decodeErr != nil {
 				continue
 			}
-			var sendErr error
-			message := Message{Event: Event(e.Topic)}
-			if str, ok := e.Data.(string); ok {
-				message.Args = []string{str}
-			} else if b, ok := e.Data.([]byte); ok {
-				message.Args = []string{string(b)}
-			} else {
-				b, sendErr = json.Marshal(e.Data)
-				if sendErr == nil {
-					message.Args = []string{string(b)}
-				}
-			}
-
+			sendErr := h.SendJson(message)
 			if sendErr == nil {
-				sendErr = h.SendJson(message)
-				if sendErr == nil {
-					continue
-				}
+				continue
 			}
 			onError(string(message.Event), sendErr)
 		}

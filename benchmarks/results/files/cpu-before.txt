@@ -1,0 +1,29 @@
+File: filesystem.test
+Build ID: 583971af683ca66ee8fa77a0f2f26608d638f2c2
+Type: cpu
+Time: 2026-10-15 16:06:10 UTC
+Duration: 3.63s, Total samples = 4.31s (118.70%)
+Showing nodes accounting for 3.03s, 70.30% of 4.31s total
+Dropped 213 nodes (cum <= 0.02s)
+Showing top 20 nodes out of 165
+      flat  flat%   sum%        cum   cum%
+     1.66s 38.52% 38.52%      1.66s 38.52%  internal/runtime/syscall/linux.Syscall6
+     0.27s  6.26% 44.78%      0.39s  9.05%  encoding/json.appendCompact
+     0.18s  4.18% 48.96%      0.77s 17.87%  github.com/gabriel-vasile/mimetype.(*MIME).match
+     0.13s  3.02% 51.97%      0.13s  3.02%  runtime.futex
+     0.12s  2.78% 54.76%      0.12s  2.78%  memeqbody
+     0.10s  2.32% 57.08%      0.12s  2.78%  github.com/gabriel-vasile/mimetype/internal/magic.Text
+     0.09s  2.09% 59.16%      0.09s  2.09%  internal/poll.(*fdMutex).rwlock
+     0.07s  1.62% 60.79%      0.07s  1.62%  runtime.memclrNoHeapPointers
+     0.05s  1.16% 61.95%      0.05s  1.16%  encoding/json.stateInString
+     0.05s  1.16% 63.11%      2.93s 67.98%  github.com/pterodactyl/wings/server/filesystem.(*Filesystem).ListDirectory.func1
+     0.04s  0.93% 64.04%      0.06s  1.39%  runtime.tryDeferToSpanScan
+     0.03s   0.7% 64.73%      0.06s  1.39%  bytes.IndexAny
+     0.03s   0.7% 65.43%      0.06s  1.39%  encoding/json.appendString[go.shape.string]
+     0.03s   0.7% 66.13%      0.05s  1.16%  encoding/json.stateEndValue
+     0.03s   0.7% 66.82%      0.03s   0.7%  indexbytebody
+     0.03s   0.7% 67.52%      0.03s   0.7%  runtime.(*unwinder).resolveInternal
+     0.03s   0.7% 68.21%      0.03s   0.7%  runtime.exitsyscall
+     0.03s   0.7% 68.91%      0.06s  1.39%  runtime.lock2
+     0.03s   0.7% 69.61%      0.03s   0.7%  runtime.memequal
+     0.03s   0.7% 70.30%      0.03s   0.7%  runtime.tgkill

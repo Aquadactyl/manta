@@ -3,7 +3,6 @@ package router
 import (
 	"crypto/tls"
 	"net/http"
-	"regexp"
 	"time"
 
 	"emperror.dev/errors"
@@ -14,9 +13,8 @@ import (
 	"github.com/pterodactyl/wings/remote"
 	"github.com/pterodactyl/wings/router/middleware"
 	wserver "github.com/pterodactyl/wings/server"
+	"github.com/pterodactyl/wings/system"
 )
-
-var tokenRegex = regexp.MustCompile(`([?|&]token=)([^&]+)($|&)`)
 
 // Timeouts for the HTTP server.
 var (
@@ -72,16 +70,25 @@ func Configure(m *wserver.Manager, client remote.Client) *gin.Engine {
 	// lifecycle and quickly seeing what was called leading to the logs. However, it isn't feasible to mix
 	// this output in production and still get meaningful logs from it since they'll likely just be a huge
 	// spamfest.
-	router.Use(gin.LoggerWithFormatter(func(params gin.LogFormatterParams) string {
+	accessLogger := gin.LoggerWithFormatter(func(params gin.LogFormatterParams) string {
 		log.WithFields(log.Fields{
 			"client_ip":  params.ClientIP,
 			"status":     params.StatusCode,
 			"latency":    params.Latency,
 			"request_id": params.Keys["request_id"],
-		}).Debugf("%s %s", params.Method, tokenRegex.ReplaceAllString(params.Path, "$1***$3"))
+		}).Debugf("%s %s", params.Method, system.LogURL(params.Path))
 
 		return ""
-	}))
+	})
+	router.Use(func(c *gin.Context) {
+		// Avoid timing, IP parsing, URL parsing, and log-field allocation when
+		// debug output is disabled. Custom log implementations keep the full path.
+		if logger, ok := log.Log.(*log.Logger); ok && logger.Level > log.DebugLevel {
+			c.Next()
+			return
+		}
+		accessLogger(c)
+	})
 
 	// These routes use signed URLs to validate access to the resource being requested.
 	router.GET("/download/backup", getDownloadBackup)
@@ -100,7 +107,7 @@ func Configure(m *wserver.Manager, client remote.Client) *gin.Engine {
 
 	// All the routes beyond this mount will use an authorization middleware
 	// and will not be accessible without the correct Authorization header provided.
-	protected := router.Use(middleware.RequireAuthorization())
+	protected := router.Group("", middleware.RequireAuthorization())
 	protected.POST("/api/update", postUpdateConfiguration)
 	protected.GET("/api/system", getSystemInformation)
 	protected.GET("/api/servers", getAllServers)
@@ -110,8 +117,7 @@ func Configure(m *wserver.Manager, client remote.Client) *gin.Engine {
 
 	// These are server specific routes, and require that the request be authorized, and
 	// that the server exist on the Daemon.
-	server := router.Group("/api/servers/:server")
-	server.Use(middleware.RequireAuthorization(), middleware.ServerExists())
+	server := protected.Group("/api/servers/:server", middleware.ServerExists())
 	{
 		server.GET("", getServer)
 		server.DELETE("", deleteServer)

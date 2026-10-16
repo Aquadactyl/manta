@@ -559,7 +559,7 @@ func (fs *Filesystem) ListDirectory(p string) ([]Stat, error) {
 			if err != nil {
 				return Stat{}, err
 			}
-			m, err = mimetype.DetectReader(f)
+			m, err = detectFileMIME(f)
 			if err != nil {
 				log.Error(err.Error())
 			}
@@ -576,28 +576,15 @@ func (fs *Filesystem) ListDirectory(p string) ([]Stat, error) {
 		return nil, err
 	}
 
-	// Sort entries alphabetically.
-	slices.SortStableFunc(out, func(a, b Stat) int {
-		switch {
-		case a.Name() == b.Name():
-			return 0
-		case a.Name() > b.Name():
-			return 1
-		default:
-			return -1
-		}
-	})
-
-	// Sort folders before other file types.
-	slices.SortStableFunc(out, func(a, b Stat) int {
-		switch {
-		case a.IsDir() && b.IsDir():
-			return 0
-		case a.IsDir():
-			return -1
-		default:
+	// Put folders first and sort each group alphabetically in one pass.
+	slices.SortFunc(out, func(a, b Stat) int {
+		if a.IsDir() != b.IsDir() {
+			if a.IsDir() {
+				return -1
+			}
 			return 1
 		}
+		return strings.Compare(a.Name(), b.Name())
 	})
 
 	return out, nil

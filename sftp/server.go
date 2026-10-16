@@ -31,7 +31,7 @@ import (
 // Usernames all follow the same format, so don't even bother hitting the API if the username is not
 // at least in the expected format. This is very basic protection against random bots finding the SFTP
 // server and sending a flood of usernames.
-var validUsernameRegexp = regexp.MustCompile(`^(?i)(.+)\.([a-z0-9]{8})$`)
+var validUsernameRegexp = regexp.MustCompile(`^(?i)(.+)\.([a-z0-9]{8}|[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}|serv_[a-z2-7]{26})$`)
 
 // connectionLimits are the limits applied to connections.
 type connectionLimits struct {

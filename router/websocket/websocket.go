@@ -68,7 +68,9 @@ func IsJwtError(err error) bool {
 		errors.Is(err, ErrJwtNoConnectPerm) ||
 		errors.Is(err, ErrJwtUuidMismatch) ||
 		errors.Is(err, ErrJwtOnDenylist) ||
-		errors.Is(err, jwt.ErrExpValidation)
+		errors.Is(err, jwt.ErrExpValidation) ||
+		errors.Is(err, jwt.ErrNbfValidation) ||
+		errors.Is(err, jwt.ErrIatValidation)
 }
 
 // NewTokenPayload parses a JWT into a websocket token payload.

@@ -1,0 +1,7 @@
+services:
+  manta:
+    cpus: 2
+    mem_limit: 1g
+    memswap_limit: 1g
+    environment:
+      GOMAXPROCS: "2"

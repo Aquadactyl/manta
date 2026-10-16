@@ -1,0 +1,36 @@
+goos: linux
+goarch: amd64
+pkg: github.com/pterodactyl/wings/server
+cpu: Intel(R) Core(TM) i7-14700KF
+BenchmarkManagerLookup/1/missing=false-4         	44311032	        13.97 ns/op	       0 B/op	       0 allocs/op
+BenchmarkManagerLookup/1/missing=false-4         	35582319	        15.29 ns/op	       0 B/op	       0 allocs/op
+BenchmarkManagerLookup/1/missing=false-4         	45969820	        14.43 ns/op	       0 B/op	       0 allocs/op
+BenchmarkManagerLookup/1/missing=false-4         	44035879	        13.77 ns/op	       0 B/op	       0 allocs/op
+BenchmarkManagerLookup/1/missing=false-4         	42930614	        14.07 ns/op	       0 B/op	       0 allocs/op
+BenchmarkManagerLookup/1/missing=true-4          	39621114	        14.95 ns/op	       0 B/op	       0 allocs/op
+BenchmarkManagerLookup/1/missing=true-4          	44286852	        14.12 ns/op	       0 B/op	       0 allocs/op
+BenchmarkManagerLookup/1/missing=true-4          	44337613	        13.72 ns/op	       0 B/op	       0 allocs/op
+BenchmarkManagerLookup/1/missing=true-4          	43235068	        13.76 ns/op	       0 B/op	       0 allocs/op
+BenchmarkManagerLookup/1/missing=true-4          	42759652	        14.08 ns/op	       0 B/op	       0 allocs/op
+BenchmarkManagerLookup/100/missing=false-4       	43188571	        13.62 ns/op	       0 B/op	       0 allocs/op
+BenchmarkManagerLookup/100/missing=false-4       	43881387	        14.05 ns/op	       0 B/op	       0 allocs/op
+BenchmarkManagerLookup/100/missing=false-4       	42530719	        13.87 ns/op	       0 B/op	       0 allocs/op
+BenchmarkManagerLookup/100/missing=false-4       	42550321	        14.06 ns/op	       0 B/op	       0 allocs/op
+BenchmarkManagerLookup/100/missing=false-4       	43445272	        13.97 ns/op	       0 B/op	       0 allocs/op
+BenchmarkManagerLookup/100/missing=true-4        	41003281	        13.13 ns/op	       0 B/op	       0 allocs/op
+BenchmarkManagerLookup/100/missing=true-4        	44388002	        13.20 ns/op	       0 B/op	       0 allocs/op
+BenchmarkManagerLookup/100/missing=true-4        	44735606	        13.04 ns/op	       0 B/op	       0 allocs/op
+BenchmarkManagerLookup/100/missing=true-4        	43431543	        14.65 ns/op	       0 B/op	       0 allocs/op
+BenchmarkManagerLookup/100/missing=true-4        	41422826	        13.24 ns/op	       0 B/op	       0 allocs/op
+BenchmarkManagerLookup/1000/missing=false-4      	44402655	        13.72 ns/op	       0 B/op	       0 allocs/op
+BenchmarkManagerLookup/1000/missing=false-4      	44373505	        13.86 ns/op	       0 B/op	       0 allocs/op
+BenchmarkManagerLookup/1000/missing=false-4      	44185578	        13.86 ns/op	       0 B/op	       0 allocs/op
+BenchmarkManagerLookup/1000/missing=false-4      	36304938	        13.92 ns/op	       0 B/op	       0 allocs/op
+BenchmarkManagerLookup/1000/missing=false-4      	43563670	        13.69 ns/op	       0 B/op	       0 allocs/op
+BenchmarkManagerLookup/1000/missing=true-4       	44244644	        13.16 ns/op	       0 B/op	       0 allocs/op
+BenchmarkManagerLookup/1000/missing=true-4       	46957905	        13.01 ns/op	       0 B/op	       0 allocs/op
+BenchmarkManagerLookup/1000/missing=true-4       	47549587	        13.04 ns/op	       0 B/op	       0 allocs/op
+BenchmarkManagerLookup/1000/missing=true-4       	46268520	        13.05 ns/op	       0 B/op	       0 allocs/op
+BenchmarkManagerLookup/1000/missing=true-4       	46370323	        13.19 ns/op	       0 B/op	       0 allocs/op
+PASS
+ok  	github.com/pterodactyl/wings/server	17.993s

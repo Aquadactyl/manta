@@ -32,13 +32,23 @@ func getTokenStore() *TokenStore {
 
 // Checks if a token is valid or not.
 func (t *TokenStore) IsValidToken(token string) bool {
+	return t.IsValidUntil(token, time.Now().Add(time.Hour))
+}
+
+// IsValidUntil consumes a token once and retains it until its signed expiry.
+// A fixed cache lifetime would allow a longer-lived token to be replayed.
+func (t *TokenStore) IsValidUntil(token string, expiresAt time.Time) bool {
 	t.Lock()
 	defer t.Unlock()
+	ttl := time.Until(expiresAt)
+	if token == "" || ttl <= 0 {
+		return false
+	}
 
 	_, exists := t.cache.Get(token)
 
 	if !exists {
-		t.cache.Set(token, "", time.Minute*60)
+		t.cache.Set(token, "", ttl)
 	}
 
 	return !exists

@@ -61,7 +61,7 @@ func postCreateServer(c *gin.Context) {
 	manager := middleware.ExtractManager(c)
 
 	details := installer.ServerDetails{}
-	if err := c.BindJSON(&details); err != nil {
+	if err := middleware.BindJSON(c, &details); err != nil {
 		return
 	}
 
@@ -144,7 +144,7 @@ func postUpdateConfiguration(c *gin.Context) {
 
 	// Values missing from the request keep their current value.
 	update := cfg.PanelConfiguration()
-	if err := c.BindJSON(&update); err != nil {
+	if err := middleware.BindJSON(c, &update); err != nil {
 		return
 	}
 
@@ -195,7 +195,7 @@ func postDeauthorizeUser(c *gin.Context) {
 		Servers []string `json:"servers"`
 	}
 
-	if err := c.BindJSON(&data); err != nil {
+	if err := middleware.BindJSON(c, &data); err != nil {
 		return
 	}
 

@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"sync"
 	"time"
 
@@ -25,6 +26,9 @@ type Manager struct {
 	mu      sync.RWMutex
 	client  remote.Client
 	servers []*Server
+	// UUIDs are immutable after initialization. Keep ordered iteration in
+	// servers, and index point lookups under the same lock.
+	byUUID map[string]*Server
 }
 
 // NewManager returns a new server manager instance. This will boot up all the
@@ -73,22 +77,45 @@ func (m *Manager) Keys() []string {
 // is passed through.
 func (m *Manager) Put(s []*Server) {
 	m.mu.Lock()
-	m.servers = s
+	m.servers = slices.Clone(s)
+	m.reindexLocked()
 	m.mu.Unlock()
 }
 
-// All returns all the items in the collection.
+// All returns a snapshot of the collection. Callers cannot mutate its backing
+// slice and desynchronize the UUID index.
 func (m *Manager) All() []*Server {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	return m.servers
+	return slices.Clone(m.servers)
 }
 
 // Add adds an item to the collection store.
 func (m *Manager) Add(s *Server) {
 	m.mu.Lock()
-	m.servers = append(m.servers, s)
+	m.addLocked(s.ID(), s)
 	m.mu.Unlock()
+}
+
+func (m *Manager) addLocked(id string, s *Server) {
+	if m.byUUID == nil {
+		m.byUUID = make(map[string]*Server)
+	}
+	// Preserve the first-match behavior if Add/Put contain duplicate UUIDs.
+	if _, exists := m.byUUID[id]; !exists {
+		m.byUUID[id] = s
+	}
+	m.servers = append(m.servers, s)
+}
+
+func (m *Manager) reindexLocked() {
+	m.byUUID = make(map[string]*Server, len(m.servers))
+	for _, s := range m.servers {
+		id := s.ID()
+		if _, exists := m.byUUID[id]; !exists {
+			m.byUUID[id] = s
+		}
+	}
 }
 
 // AddIfMissing adds an item to the collection store unless a server with the
@@ -96,22 +123,21 @@ func (m *Manager) Add(s *Server) {
 func (m *Manager) AddIfMissing(s *Server) bool {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	for _, v := range m.servers {
-		if v.ID() == s.ID() {
-			return false
-		}
+	id := s.ID()
+	if _, exists := m.byUUID[id]; exists {
+		return false
 	}
-	m.servers = append(m.servers, s)
+	m.addLocked(id, s)
 	return true
 }
 
 // Get returns a single server instance and a boolean value indicating if it was
 // found in the global collection or not.
 func (m *Manager) Get(uuid string) (*Server, bool) {
-	match := m.Find(func(server *Server) bool {
-		return server.ID() == uuid
-	})
-	return match, match != nil
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	s, ok := m.byUUID[uuid]
+	return s, ok
 }
 
 // Filter returns only those items matching the filter criteria.
@@ -151,6 +177,7 @@ func (m *Manager) Remove(filter func(match *Server) bool) {
 		}
 	}
 	m.servers = r
+	m.reindexLocked()
 }
 
 // PersistStates writes the current environment states to the disk for each

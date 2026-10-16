@@ -1,6 +1,8 @@
 package server
 
 import (
+	"bytes"
+	"encoding/json"
 	"regexp"
 	"strconv"
 	"sync"
@@ -85,48 +87,7 @@ func (s *Server) StartEventListeners() {
 		for {
 			select {
 			case v := <-c:
-				go func(v []byte, limit *diskSpaceLimiter) {
-					var e events.Event
-					if err := events.DecodeTo(v, &e); err != nil {
-						return
-					}
-					switch e.Topic {
-					case environment.ResourceEvent:
-						{
-							var stats struct {
-								Topic string
-								Data  environment.Stats
-							}
-							if err := events.DecodeTo(v, &stats); err != nil {
-								s.Log().WithField("error", err).Warn("failed to decode server resource event")
-								return
-							}
-							s.resources.UpdateStats(stats.Data)
-							// If there is no disk space available at this point, trigger the server
-							// disk limiter logic which will start to stop the running instance.
-							if !s.Filesystem().HasSpaceAvailable(true) {
-								limit.Trigger()
-							}
-							s.Events().Publish(StatsEvent, s.Proc())
-						}
-					case environment.StateChangeEvent:
-						{
-							// Reset the throttler when the process is started.
-							if e.Data == environment.ProcessStartingState {
-								limit.Reset()
-								s.Throttler().Reset()
-							}
-							s.OnStateChange()
-						}
-					case environment.DockerImagePullStatus:
-						s.Events().Publish(InstallOutputEvent, e.Data)
-					case environment.DockerImagePullStarted:
-						s.PublishConsoleOutputFromDaemon("Pulling Docker container image, this could take a few minutes to complete...")
-					case environment.DockerImagePullCompleted:
-						s.PublishConsoleOutputFromDaemon("Finished pulling Docker container image")
-					default:
-					}
-				}(v, limit)
+				go s.handleEnvironmentEvent(v, limit)
 			case <-s.Context().Done():
 				return
 			}
@@ -134,12 +95,65 @@ func (s *Server) StartEventListeners() {
 	}()
 }
 
+func (s *Server) handleEnvironmentEvent(v []byte, limit *diskSpaceLimiter) {
+	// Inspect the envelope without allocating a generic map/float tree for
+	// resource counters that will immediately be decoded into Stats anyway.
+	var e struct {
+		Topic string
+		Data  json.RawMessage
+	}
+	if err := events.DecodeTo(v, &e); err != nil {
+		return
+	}
+	switch e.Topic {
+	case environment.ResourceEvent:
+		var stats environment.Stats
+		// Missing/null data previously decoded to zero-valued Stats.
+		if len(e.Data) > 0 {
+			if err := events.DecodeTo(e.Data, &stats); err != nil {
+				s.Log().WithField("error", err).Warn("failed to decode server resource event")
+				return
+			}
+		}
+		s.resources.UpdateStats(stats)
+		// Enforce disk limits independently of connected console viewers.
+		if !s.Filesystem().HasSpaceAvailable(true) {
+			limit.Trigger()
+		}
+		bus := s.Events()
+		if bus.HasListeners() {
+			bus.Publish(StatsEvent, s.Proc())
+		}
+	case environment.StateChangeEvent:
+		starting := bytes.Equal(e.Data, []byte(`"starting"`))
+		// Normal state strings need no second decode. Keep JSON's escape
+		// handling for equivalent strings such as "\u0073tarting".
+		if !starting && bytes.IndexByte(e.Data, '\\') >= 0 {
+			var state string
+			starting = json.Unmarshal(e.Data, &state) == nil && state == environment.ProcessStartingState
+		}
+		if starting {
+			limit.Reset()
+			s.Throttler().Reset()
+		}
+		s.OnStateChange()
+	case environment.DockerImagePullStatus:
+		s.Events().Publish(InstallOutputEvent, e.Data)
+	case environment.DockerImagePullStarted:
+		s.PublishConsoleOutputFromDaemon("Pulling Docker container image, this could take a few minutes to complete...")
+	case environment.DockerImagePullCompleted:
+		s.PublishConsoleOutputFromDaemon("Finished pulling Docker container image")
+	}
+}
+
 var stripAnsiRegex = regexp.MustCompile("[\u001B\u009B][[\\]()#;?]*(?:(?:(?:[a-zA-Z\\d]*(?:;[a-zA-Z\\d]*)*)?\u0007)|(?:(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-PRZcf-ntqry=><~]))")
 
 // Custom listener for console output events that will check if the given line
 // of output matches one that should mark the server as started or not.
 func (s *Server) onConsoleOutput(data []byte) {
-	if s.Environment.State() != environment.ProcessStartingState && !s.IsRunning() {
+	// Startup markers are the only console content inspected here. Once running,
+	// avoid copying each line or waiting for process-configuration locks.
+	if s.Environment.State() != environment.ProcessStartingState {
 		return
 	}
 

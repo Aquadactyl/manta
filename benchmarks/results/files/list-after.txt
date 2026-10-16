@@ -1,0 +1,26 @@
+goos: linux
+goarch: amd64
+pkg: github.com/pterodactyl/wings/server/filesystem
+cpu: Intel(R) Core(TM) i7-14700KF
+BenchmarkDirectoryListing/entries_10/read-4    	    9805	     60352 ns/op	   11981 B/op	     115 allocs/op
+BenchmarkDirectoryListing/entries_10/read-4    	   10000	     60655 ns/op	   11981 B/op	     115 allocs/op
+BenchmarkDirectoryListing/entries_10/read-4    	   10000	     60326 ns/op	   11978 B/op	     115 allocs/op
+BenchmarkDirectoryListing/entries_10/read-4    	   10000	     61608 ns/op	   11981 B/op	     115 allocs/op
+BenchmarkDirectoryListing/entries_10/read-4    	    9081	     60908 ns/op	   11978 B/op	     115 allocs/op
+BenchmarkDirectoryListing/entries_10/read_and_json-4         	    8199	     76769 ns/op	   18354 B/op	     177 allocs/op
+BenchmarkDirectoryListing/entries_10/read_and_json-4         	    7687	     80656 ns/op	   18358 B/op	     177 allocs/op
+BenchmarkDirectoryListing/entries_10/read_and_json-4         	    7725	     76609 ns/op	   18355 B/op	     177 allocs/op
+BenchmarkDirectoryListing/entries_10/read_and_json-4         	    7816	     76165 ns/op	   18359 B/op	     177 allocs/op
+BenchmarkDirectoryListing/entries_10/read_and_json-4         	    8125	     76561 ns/op	   18352 B/op	     177 allocs/op
+BenchmarkDirectoryListing/entries_1000/read-4                	      75	   7480850 ns/op	  721616 B/op	   10022 allocs/op
+BenchmarkDirectoryListing/entries_1000/read-4                	      80	   7300321 ns/op	  721418 B/op	   10022 allocs/op
+BenchmarkDirectoryListing/entries_1000/read-4                	      76	   7165432 ns/op	  721711 B/op	   10022 allocs/op
+BenchmarkDirectoryListing/entries_1000/read-4                	      69	   7556527 ns/op	  721372 B/op	   10022 allocs/op
+BenchmarkDirectoryListing/entries_1000/read-4                	      86	   7295264 ns/op	  721417 B/op	   10022 allocs/op
+BenchmarkDirectoryListing/entries_1000/read_and_json-4       	      58	   8778671 ns/op	 1535023 B/op	   16036 allocs/op
+BenchmarkDirectoryListing/entries_1000/read_and_json-4       	      58	   8682358 ns/op	 1561811 B/op	   16037 allocs/op
+BenchmarkDirectoryListing/entries_1000/read_and_json-4       	      63	   8665235 ns/op	 1511360 B/op	   16035 allocs/op
+BenchmarkDirectoryListing/entries_1000/read_and_json-4       	      64	   9190141 ns/op	 1533062 B/op	   16036 allocs/op
+BenchmarkDirectoryListing/entries_1000/read_and_json-4       	      66	   9519663 ns/op	 1567858 B/op	   16038 allocs/op
+PASS
+ok  	github.com/pterodactyl/wings/server/filesystem	11.714s

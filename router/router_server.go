@@ -58,7 +58,7 @@ func postServerPower(c *gin.Context) {
 		WaitSeconds int                `json:"wait_seconds"`
 	}
 
-	if err := c.BindJSON(&data); err != nil {
+	if err := middleware.BindJSON(c, &data); err != nil {
 		return
 	}
 
@@ -122,7 +122,7 @@ func postServerCommands(c *gin.Context) {
 		Commands []string `json:"commands"`
 	}
 	// BindJSON sends 400 if the request fails, all we need to do is return
-	if err := c.BindJSON(&data); err != nil {
+	if err := middleware.BindJSON(c, &data); err != nil {
 		return
 	}
 
@@ -253,7 +253,7 @@ func postServerDenyWSTokens(c *gin.Context) {
 		JTIs []string `json:"jtis"`
 	}
 
-	if err := c.BindJSON(&data); err != nil {
+	if err := middleware.BindJSON(c, &data); err != nil {
 		return
 	}
 

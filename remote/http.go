@@ -59,6 +59,23 @@ func New(base string, opts ...ClientOption) Client {
 	for _, opt := range opts {
 		opt(&c)
 	}
+	// Keep caller-provided transports and timeouts, but never forward node
+	// credentials or SFTP request bodies to another origin via a redirect.
+	httpClient := *c.httpClient
+	checkRedirect := httpClient.CheckRedirect
+	httpClient.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+		if len(via) > 0 && (req.URL.Scheme != via[0].URL.Scheme || !strings.EqualFold(req.URL.Host, via[0].URL.Host)) {
+			return http.ErrUseLastResponse
+		}
+		if checkRedirect != nil {
+			return checkRedirect(req, via)
+		}
+		if len(via) >= 10 {
+			return errors.New("remote: stopped after 10 redirects")
+		}
+		return nil
+	}
+	c.httpClient = &httpClient
 	return &c
 }
 
@@ -154,16 +171,13 @@ func (c *client) requestOnce(ctx context.Context, method, path string, body io.R
 func (c *client) request(ctx context.Context, method, path string, body *bytes.Buffer, opts ...func(r *http.Request)) (*Response, error) {
 	var res *Response
 	err := backoff.Retry(func() error {
-		var b bytes.Buffer
+		var b io.Reader
 		if body != nil {
-			// We have to create a copy of the body, otherwise attempting this request again will
-			// send no data if there was initially a body since the "requestOnce" method will read
-			// the whole buffer, thus leaving it empty at the end.
-			if _, err := b.Write(body.Bytes()); err != nil {
-				return backoff.Permanent(errors.Wrap(err, "http: failed to copy body buffer"))
-			}
+			// Each attempt needs its own cursor, but can share the immutable
+			// bytes rather than allocating another copy of the entire body.
+			b = bytes.NewReader(body.Bytes())
 		}
-		r, err := c.requestOnce(ctx, method, path, &b, opts...)
+		r, err := c.requestOnce(ctx, method, path, b, opts...)
 		if err != nil {
 			if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 				return backoff.Permanent(err)
@@ -174,10 +188,9 @@ func (c *client) request(ctx context.Context, method, path string, body *bytes.B
 		if r.HasError() {
 			// Close the request body after returning the error to free up resources.
 			defer r.Body.Close()
-			// Don't keep attempting to access this endpoint if the response is a 4XX
-			// level error which indicates a client mistake. Only retry when the error
-			// is due to a server issue (5XX error).
-			if r.StatusCode >= 400 && r.StatusCode < 500 {
+			// Only retry server failures (5XX). Redirects refused by the
+			// security policy and client errors will not improve with retries.
+			if r.StatusCode < 500 {
 				return backoff.Permanent(r.Error())
 			}
 			return r.Error()
@@ -233,6 +246,12 @@ type Response struct {
 	*http.Response
 }
 
+// MaxResponseSize bounds decompressed Panel API responses, including chunked
+// bodies. File downloads and backup streams use separate clients.
+const MaxResponseSize int64 = 16 << 20
+
+var ErrResponseTooLarge = errors.Sentinel("remote: Panel API response exceeds the 16 MiB limit")
+
 // HasError determines if the API call encountered an error. If no request has
 // been made the response will be false. This function will evaluate to true if
 // the response code is anything 300 or higher.
@@ -245,17 +264,28 @@ func (r *Response) HasError() bool {
 }
 
 // Reads the body from the response and returns it, then replaces it on the response
-// so that it can be read again later. This does not close the response body, so any
-// functions calling this should be sure to manually defer a Body.Close() call.
+// so that it can be read again later. The original body is always closed, and
+// truncated or oversized responses are rejected rather than partially decoded.
 func (r *Response) Read() ([]byte, error) {
-	var b []byte
 	if r.Response == nil {
 		return nil, errors.New("remote: attempting to read missing response")
 	}
-	if r.Response.Body != nil {
-		b, _ = io.ReadAll(r.Response.Body)
+	if r.Body == nil {
+		return nil, nil
 	}
-	r.Response.Body = io.NopCloser(bytes.NewBuffer(b))
+	body := r.Body
+	defer body.Close()
+	if r.ContentLength > MaxResponseSize {
+		return nil, ErrResponseTooLarge
+	}
+	b, err := io.ReadAll(io.LimitReader(body, MaxResponseSize+1))
+	if err != nil {
+		return nil, errors.Wrap(err, "remote: could not read response")
+	}
+	if int64(len(b)) > MaxResponseSize {
+		return nil, ErrResponseTooLarge
+	}
+	r.Body = io.NopCloser(bytes.NewReader(b))
 	return b, nil
 }
 
@@ -319,7 +349,7 @@ func debugLogRequest(req *http.Request) {
 
 	log.WithFields(log.Fields{
 		"method":   req.Method,
-		"endpoint": req.URL.String(),
+		"endpoint": system.LogURL(req.URL.String()),
 		"headers":  headers,
 	}).Debug("making request to external HTTP endpoint")
 }

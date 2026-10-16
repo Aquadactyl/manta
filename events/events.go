@@ -64,7 +64,7 @@ func MustDecode(data []byte) (e Event) {
 
 // DecodeTo decodes a byte slice of event data into the given interface.
 func DecodeTo(data []byte, v interface{}) error {
-	if err := json.Unmarshal(data, &v); err != nil {
+	if err := json.Unmarshal(data, v); err != nil {
 		return errors.Wrap(err, "events: failed to decode byte slice")
 	}
 	return nil

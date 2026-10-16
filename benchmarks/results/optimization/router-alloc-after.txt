@@ -1,0 +1,57 @@
+File: router.test
+Build ID: d82382bb8e24a1ce76e2000b6a31280b1cb246b2
+Type: alloc_space
+Time: 2026-10-15 07:43:46 UTC
+Showing nodes accounting for 5624.61MB, 99.36% of 5660.83MB total
+Dropped 75 nodes (cum <= 28.30MB)
+      flat  flat%   sum%        cum   cum%
+  915.11MB 16.17% 16.17%   915.11MB 16.17%  bytes.growSlice
+  880.58MB 15.56% 31.72%   910.08MB 16.08%  encoding/json.Marshal
+  857.71MB 15.15% 46.87%  1177.24MB 20.80%  github.com/apex/log.(*Entry).WithField (partial-inline)
+  645.67MB 11.41% 58.28%   645.67MB 11.41%  net/http.Header.Clone (inline)
+  555.24MB  9.81% 68.09%  3034.10MB 53.60%  github.com/pterodactyl/wings/router.getServer
+  552.65MB  9.76% 77.85%   552.65MB  9.76%  net/textproto.MIMEHeader.Set (inline)
+  422.11MB  7.46% 85.31%   422.11MB  7.46%  github.com/gin-gonic/gin.(*Context).Set
+  319.53MB  5.64% 90.95%   319.53MB  5.64%  github.com/apex/log.(*Entry).WithFields
+  199.51MB  3.52% 94.48%   199.51MB  3.52%  net/http/httptest.NewRecorder (inline)
+     136MB  2.40% 96.88%      137MB  2.42%  fmt.errorf
+   54.50MB  0.96% 97.84%    54.50MB  0.96%  github.com/google/uuid.UUID.String
+   33.50MB  0.59% 98.43%  5452.10MB 96.31%  github.com/pterodactyl/wings/router.Configure.AttachRequestID.func3
+   21.50MB  0.38% 98.81%    42.50MB  0.75%  github.com/pterodactyl/wings/system.(*AtomicString).MarshalJSON
+      21MB  0.37% 99.18%  3637.21MB 64.25%  github.com/pterodactyl/wings/router.Configure.ServerExists.func10
+      10MB  0.18% 99.36%  2478.86MB 43.79%  github.com/gin-gonic/gin.(*Context).JSON (inline)
+         0     0% 99.36%   913.11MB 16.13%  bytes.(*Buffer).Write
+         0     0% 99.36%   915.11MB 16.17%  bytes.(*Buffer).grow
+         0     0% 99.36%       46MB  0.81%  encoding/json.(*encodeState).marshal
+         0     0% 99.36%       46MB  0.81%  encoding/json.(*encodeState).reflectValue
+         0     0% 99.36%       44MB  0.78%  encoding/json.marshalerEncoder
+         0     0% 99.36%       46MB  0.81%  encoding/json.structEncoder.encode
+         0     0% 99.36%      137MB  2.42%  fmt.Errorf (inline)
+         0     0% 99.36%   595.12MB 10.51%  github.com/apex/log.(*Logger).WithField
+         0     0% 99.36%   595.12MB 10.51%  github.com/apex/log.WithField
+         0     0% 99.36%   552.65MB  9.76%  github.com/gin-gonic/gin.(*Context).Header
+         0     0% 99.36%  5452.10MB 96.31%  github.com/gin-gonic/gin.(*Context).Next (partial-inline)
+         0     0% 99.36%  2468.86MB 43.61%  github.com/gin-gonic/gin.(*Context).Render
+         0     0% 99.36%  5452.60MB 96.32%  github.com/gin-gonic/gin.(*Engine).ServeHTTP
+         0     0% 99.36%  5452.10MB 96.31%  github.com/gin-gonic/gin.(*Engine).handleHTTPRequest
+         0     0% 99.36%  1558.78MB 27.54%  github.com/gin-gonic/gin.(*responseWriter).Write
+         0     0% 99.36%   645.67MB 11.41%  github.com/gin-gonic/gin.(*responseWriter).WriteHeaderNow (inline)
+         0     0% 99.36%  5452.10MB 96.31%  github.com/gin-gonic/gin.CustomRecoveryWithWriter.func1
+         0     0% 99.36%  2468.86MB 43.61%  github.com/gin-gonic/gin/render.JSON.Render
+         0     0% 99.36%  2468.86MB 43.61%  github.com/gin-gonic/gin/render.WriteJSON
+         0     0% 99.36%  5652.61MB 99.85%  github.com/pterodactyl/wings/router.BenchmarkServerStatus
+         0     0% 99.36%  3774.22MB 66.67%  github.com/pterodactyl/wings/router.Configure.AttachApiClient.func6
+         0     0% 99.36%  3774.22MB 66.67%  github.com/pterodactyl/wings/router.Configure.AttachServerManager.func5
+         0     0% 99.36%  3858.72MB 68.17%  github.com/pterodactyl/wings/router.Configure.CaptureErrors.func4
+         0     0% 99.36%  3774.22MB 66.67%  github.com/pterodactyl/wings/router.Configure.RequireAuthorization.func9
+         0     0% 99.36%  3774.22MB 66.67%  github.com/pterodactyl/wings/router.Configure.func2
+         0     0% 99.36%      137MB  2.42%  github.com/pterodactyl/wings/router/middleware.ClearDeadlines
+         0     0% 99.36%  3858.72MB 68.17%  github.com/pterodactyl/wings/router/middleware.SetAccessControlHeaders.func1
+         0     0% 99.36%       74MB  1.31%  net/http.(*ResponseController).SetReadDeadline
+         0     0% 99.36%       63MB  1.11%  net/http.(*ResponseController).SetWriteDeadline
+         0     0% 99.36%   552.65MB  9.76%  net/http.Header.Set (inline)
+         0     0% 99.36%      137MB  2.42%  net/http.errNotSupported
+         0     0% 99.36%   913.11MB 16.13%  net/http/httptest.(*ResponseRecorder).Write
+         0     0% 99.36%   645.67MB 11.41%  net/http/httptest.(*ResponseRecorder).WriteHeader
+         0     0% 99.36%  5652.61MB 99.85%  testing.(*B).run1.func1
+         0     0% 99.36%  5652.61MB 99.85%  testing.(*B).runN

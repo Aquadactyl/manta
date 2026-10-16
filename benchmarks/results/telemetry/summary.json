@@ -1,0 +1,35 @@
+[
+  {
+    "benchmark": "BenchmarkDockerStatsStream",
+    "before_ns": 17926.0,
+    "after_ns": 11255.0,
+    "before_bytes": 6472.0,
+    "after_bytes": 660.0,
+    "before_allocs": 84.0,
+    "after_allocs": 6.0,
+    "time_change_percent": -37.214102421064375,
+    "bytes_change_percent": -89.80222496909765
+  },
+  {
+    "benchmark": "BenchmarkConsoleInspection/running",
+    "before_ns": 73.6,
+    "after_ns": 10.11,
+    "before_bytes": 160.0,
+    "after_bytes": 0.0,
+    "before_allocs": 1.0,
+    "after_allocs": 0.0,
+    "time_change_percent": -86.26358695652175,
+    "bytes_change_percent": -100.0
+  },
+  {
+    "benchmark": "BenchmarkConsoleInspection/starting",
+    "before_ns": 62.39,
+    "after_ns": 62.86,
+    "before_bytes": 160.0,
+    "after_bytes": 160.0,
+    "before_allocs": 1.0,
+    "after_allocs": 1.0,
+    "time_change_percent": 0.7533258535021625,
+    "bytes_change_percent": 0.0
+  }
+]

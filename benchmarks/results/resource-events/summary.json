@@ -1,0 +1,46 @@
+[
+  {
+    "benchmark": "BenchmarkEnvironmentResourceHandling/observers_0",
+    "before_ns": 4863.0,
+    "after_ns": 2629.0,
+    "time_change_percent": -45.938720954143534,
+    "before_bytes": 2025.0,
+    "after_bytes": 800.0,
+    "bytes_change_percent": -60.49382716049383,
+    "before_allocs": 48.0,
+    "after_allocs": 16.0
+  },
+  {
+    "benchmark": "BenchmarkEnvironmentResourceHandling/observers_1",
+    "before_ns": 4865.0,
+    "after_ns": 3623.0,
+    "time_change_percent": -25.52929085303186,
+    "before_bytes": 2025.0,
+    "after_bytes": 1168.0,
+    "bytes_change_percent": -42.32098765432099,
+    "before_allocs": 48.0,
+    "after_allocs": 21.0
+  },
+  {
+    "benchmark": "BenchmarkEnvironmentResourceHandling/observers_16",
+    "before_ns": 5390.0,
+    "after_ns": 4183.0,
+    "time_change_percent": -22.39332096474954,
+    "before_bytes": 2025.0,
+    "after_bytes": 1168.0,
+    "bytes_change_percent": -42.32098765432099,
+    "before_allocs": 48.0,
+    "after_allocs": 21.0
+  },
+  {
+    "benchmark": "BenchmarkEnvironmentStateHandling",
+    "before_ns": 634.5,
+    "after_ns": 580.4,
+    "time_change_percent": -8.526398739164698,
+    "before_bytes": 304.0,
+    "after_bytes": 296.0,
+    "bytes_change_percent": -2.631578947368418,
+    "before_allocs": 9.0,
+    "after_allocs": 7.0
+  }
+]

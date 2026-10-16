@@ -1,0 +1,320 @@
+[
+  {
+    "cpu_limit": 2,
+    "go_version": "go1.27.2",
+    "gomaxprocs": "2",
+    "image_id": "sha256:ec82bc587a01876a1454d393884ee0e1122659595e797d3bc39d6d3c1f881c74",
+    "memory_limit": 1073741824,
+    "servers": [
+      {
+        "id": 7,
+        "uuid": "fe109884-f53a-45de-9c33-e17677b52fd4",
+        "name": "Benchmark Manta Paper",
+        "kind": "paper",
+        "identifier": "serv_7yijrbhvhjc55hbt4f3hpnjp2q",
+        "port": 27015
+      },
+      {
+        "id": 8,
+        "uuid": "ea47b10b-e5d1-480f-86f1-79a410cae5b2",
+        "name": "Benchmark Manta Bedrock",
+        "kind": "bedrock",
+        "identifier": "serv_5jd3cc7f2fea7bxrpgsbbsxfwi",
+        "port": 27016
+      }
+    ],
+    "system": {
+      "architecture": "amd64",
+      "cpu_count": 28,
+      "kernel_version": "6.18.54.1-microsoft-standard-WSL2",
+      "os": "linux",
+      "version": "1.13.3-manta-local-20261015-telemetry"
+    },
+    "type": "metadata",
+    "variant": "manta"
+  },
+  {
+    "cpu_limit": 2,
+    "go_version": "go1.24.11",
+    "gomaxprocs": "2",
+    "image_id": "sha256:27827aeeebf6836e4bd61072ad256bba2a904bba799faf99166049a249ad4b5c",
+    "memory_limit": 1073741824,
+    "servers": [
+      {
+        "id": 9,
+        "uuid": "924cba47-6fd7-4739-b397-f912a262b8f5",
+        "name": "Benchmark Wings Paper",
+        "kind": "paper",
+        "identifier": "serv_sjglur3p25dttm4x7ejkeyvy6u",
+        "port": 27115
+      },
+      {
+        "id": 10,
+        "uuid": "551f5acf-7955-4ac5-9190-af251a9cf991",
+        "name": "Benchmark Wings Bedrock",
+        "kind": "bedrock",
+        "identifier": "serv_kupvvt3zkvfmlemqv4srvhhzse",
+        "port": 27116
+      }
+    ],
+    "system": {
+      "architecture": "amd64",
+      "cpu_count": 28,
+      "kernel_version": "6.18.54.1-microsoft-standard-WSL2",
+      "os": "linux",
+      "version": "1.13.3"
+    },
+    "type": "metadata",
+    "variant": "wings"
+  },
+  {
+    "pass": true,
+    "status": 401,
+    "test": "unauthenticated_api",
+    "type": "check",
+    "variant": "manta"
+  },
+  {
+    "pass": true,
+    "status": 413,
+    "test": "oversized_json_known",
+    "type": "check",
+    "variant": "manta"
+  },
+  {
+    "pass": true,
+    "status": 413,
+    "test": "oversized_json_chunked",
+    "type": "check",
+    "variant": "manta"
+  },
+  {
+    "pass": true,
+    "status": 400,
+    "test": "multiple_json_documents",
+    "type": "check",
+    "variant": "manta"
+  },
+  {
+    "accepted": true,
+    "event": "auth success",
+    "pass": true,
+    "test": "valid_websocket_token",
+    "type": "check",
+    "variant": "manta"
+  },
+  {
+    "accepted": false,
+    "event": "jwt error",
+    "pass": true,
+    "test": "future_issued_token",
+    "type": "check",
+    "variant": "manta"
+  },
+  {
+    "accepted": false,
+    "event": "jwt error",
+    "pass": true,
+    "test": "future_not_before_token",
+    "type": "check",
+    "variant": "manta"
+  },
+  {
+    "accepted": false,
+    "event": "jwt error",
+    "pass": true,
+    "test": "expired_token",
+    "type": "check",
+    "variant": "manta"
+  },
+  {
+    "accepted": false,
+    "event": "jwt error",
+    "pass": true,
+    "test": "missing_expiry_token",
+    "type": "check",
+    "variant": "manta"
+  },
+  {
+    "bytes": 9437184,
+    "pass": true,
+    "read_status": 200,
+    "test": "raw_stream_above_json_limit",
+    "type": "check",
+    "variant": "manta",
+    "write_status": 204
+  },
+  {
+    "first_status": 200,
+    "pass": true,
+    "replay_status": 404,
+    "test": "one_time_file_token",
+    "type": "check",
+    "variant": "manta"
+  },
+  {
+    "pass": true,
+    "status": 500,
+    "synthetic_marker_leaked": false,
+    "test": "invalid_upload_token_log_redaction",
+    "type": "check",
+    "variant": "manta"
+  },
+  {
+    "file_status": 500,
+    "loopback_content_retrieved": false,
+    "pass": true,
+    "response": "{\"identifier\":\"b6f19c6e-9ef5-4831-b5d2-c5bb7c6430bc\",\"message\":\"The URL or IP address provided could not be resolved to a valid destination.\"}",
+    "status": 400,
+    "test": "ssrf_loopback_blocked",
+    "type": "check",
+    "variant": "manta"
+  },
+  {
+    "creation_rejected": false,
+    "outside_file_opened": false,
+    "pass": true,
+    "test": "sftp_symlink_containment",
+    "type": "check",
+    "variant": "manta"
+  },
+  {
+    "accepted": true,
+    "pass": true,
+    "test": "full_uuid_sftp",
+    "type": "check",
+    "variant": "manta"
+  },
+  {
+    "accepted": true,
+    "pass": true,
+    "test": "modern_identifier_sftp",
+    "type": "check",
+    "variant": "manta"
+  },
+  {
+    "pass": true,
+    "status": 401,
+    "test": "unauthenticated_api",
+    "type": "check",
+    "variant": "wings"
+  },
+  {
+    "pass": false,
+    "status": 204,
+    "test": "oversized_json_known",
+    "type": "check",
+    "variant": "wings"
+  },
+  {
+    "pass": false,
+    "status": 204,
+    "test": "oversized_json_chunked",
+    "type": "check",
+    "variant": "wings"
+  },
+  {
+    "pass": false,
+    "status": 204,
+    "test": "multiple_json_documents",
+    "type": "check",
+    "variant": "wings"
+  },
+  {
+    "accepted": true,
+    "event": "auth success",
+    "pass": true,
+    "test": "valid_websocket_token",
+    "type": "check",
+    "variant": "wings"
+  },
+  {
+    "accepted": true,
+    "event": "auth success",
+    "pass": false,
+    "test": "future_issued_token",
+    "type": "check",
+    "variant": "wings"
+  },
+  {
+    "accepted": true,
+    "event": "auth success",
+    "pass": false,
+    "test": "future_not_before_token",
+    "type": "check",
+    "variant": "wings"
+  },
+  {
+    "accepted": false,
+    "event": "jwt error",
+    "pass": true,
+    "test": "expired_token",
+    "type": "check",
+    "variant": "wings"
+  },
+  {
+    "accepted": false,
+    "event": "jwt error",
+    "pass": true,
+    "test": "missing_expiry_token",
+    "type": "check",
+    "variant": "wings"
+  },
+  {
+    "bytes": 9437184,
+    "pass": true,
+    "read_status": 200,
+    "test": "raw_stream_above_json_limit",
+    "type": "check",
+    "variant": "wings",
+    "write_status": 204
+  },
+  {
+    "first_status": 200,
+    "pass": true,
+    "replay_status": 404,
+    "test": "one_time_file_token",
+    "type": "check",
+    "variant": "wings"
+  },
+  {
+    "pass": false,
+    "status": 500,
+    "synthetic_marker_leaked": true,
+    "test": "invalid_upload_token_log_redaction",
+    "type": "check",
+    "variant": "wings"
+  },
+  {
+    "file_status": 500,
+    "loopback_content_retrieved": false,
+    "pass": true,
+    "response": "{\"identifier\":\"57bf061a-ab77-489d-9c95-6eef9f4f5992\",\"message\":\"The URL or IP address provided could not be resolved to a valid destination.\"}",
+    "status": 400,
+    "test": "ssrf_loopback_blocked",
+    "type": "check",
+    "variant": "wings"
+  },
+  {
+    "creation_rejected": false,
+    "outside_file_opened": false,
+    "pass": true,
+    "test": "sftp_symlink_containment",
+    "type": "check",
+    "variant": "wings"
+  },
+  {
+    "accepted": false,
+    "pass": false,
+    "test": "full_uuid_sftp",
+    "type": "check",
+    "variant": "wings"
+  },
+  {
+    "accepted": false,
+    "pass": false,
+    "test": "modern_identifier_sftp",
+    "type": "check",
+    "variant": "wings"
+  }
+]

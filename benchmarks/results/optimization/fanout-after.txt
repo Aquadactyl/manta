@@ -1,0 +1,26 @@
+goos: linux
+goarch: amd64
+pkg: github.com/pterodactyl/wings/system
+cpu: Intel(R) Core(TM) i7-14700KF
+BenchmarkSinkPoolReady/0-4 	62726277	         9.844 ns/op	       0 B/op	       0 allocs/op
+BenchmarkSinkPoolReady/0-4 	62372448	         9.820 ns/op	       0 B/op	       0 allocs/op
+BenchmarkSinkPoolReady/0-4 	62393346	         9.883 ns/op	       0 B/op	       0 allocs/op
+BenchmarkSinkPoolReady/0-4 	52927377	        10.04 ns/op	       0 B/op	       0 allocs/op
+BenchmarkSinkPoolReady/0-4 	61523342	         9.799 ns/op	       0 B/op	       0 allocs/op
+BenchmarkSinkPoolReady/1-4 	17520753	        34.93 ns/op	       0 B/op	       0 allocs/op
+BenchmarkSinkPoolReady/1-4 	17170081	        34.21 ns/op	       0 B/op	       0 allocs/op
+BenchmarkSinkPoolReady/1-4 	17833610	        33.88 ns/op	       0 B/op	       0 allocs/op
+BenchmarkSinkPoolReady/1-4 	16931680	        34.79 ns/op	       0 B/op	       0 allocs/op
+BenchmarkSinkPoolReady/1-4 	17789577	        33.80 ns/op	       0 B/op	       0 allocs/op
+BenchmarkSinkPoolReady/16-4         	 1512228	       396.0 ns/op	       0 B/op	       0 allocs/op
+BenchmarkSinkPoolReady/16-4         	 1500920	       399.2 ns/op	       0 B/op	       0 allocs/op
+BenchmarkSinkPoolReady/16-4         	 1514300	       396.8 ns/op	       0 B/op	       0 allocs/op
+BenchmarkSinkPoolReady/16-4         	 1514064	       395.8 ns/op	       0 B/op	       0 allocs/op
+BenchmarkSinkPoolReady/16-4         	 1513678	       394.4 ns/op	       0 B/op	       0 allocs/op
+BenchmarkSinkPoolReady/64-4         	  386379	      1603 ns/op	       0 B/op	       0 allocs/op
+BenchmarkSinkPoolReady/64-4         	  386821	      1544 ns/op	       0 B/op	       0 allocs/op
+BenchmarkSinkPoolReady/64-4         	  382753	      1544 ns/op	       0 B/op	       0 allocs/op
+BenchmarkSinkPoolReady/64-4         	  366286	      1564 ns/op	       0 B/op	       0 allocs/op
+BenchmarkSinkPoolReady/64-4         	  388852	      1548 ns/op	       0 B/op	       0 allocs/op
+PASS
+ok  	github.com/pterodactyl/wings/system	11.996s

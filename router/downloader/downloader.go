@@ -149,7 +149,9 @@ type Download struct {
 	req        DownloadRequest
 	server     *server.Server
 	progress   float64
-	cancelFunc *context.CancelFunc
+	cancelFunc context.CancelFunc
+	cancelled  bool
+	started    bool
 }
 
 // New starts a new tracked download which allows for cancellation later on by calling
@@ -166,8 +168,8 @@ func New(s *server.Server, r DownloadRequest) *Download {
 
 // ByServer returns all the tracked downloads for a given server instance.
 func ByServer(sid string) []*Download {
-	instance.mu.Lock()
-	defer instance.mu.Unlock()
+	instance.mu.RLock()
+	defer instance.mu.RUnlock()
 	var downloads []*Download
 	if v, ok := instance.serverCache[sid]; ok {
 		for _, id := range v {
@@ -199,7 +201,15 @@ func (dl *Download) MarshalJSON() ([]byte, error) {
 // completed the download will be removed from the cache.
 func (dl *Download) Execute() error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Hour*12)
-	dl.cancelFunc = &cancel
+	dl.mu.Lock()
+	if dl.cancelled || dl.started {
+		dl.mu.Unlock()
+		cancel()
+		return context.Canceled
+	}
+	dl.started = true
+	dl.cancelFunc = cancel
+	dl.mu.Unlock()
 	defer dl.Cancel()
 
 	// At this point we have verified the destination is not within the local network, so we can
@@ -227,6 +237,7 @@ func (dl *Download) Execute() error {
 		return errors.New("downloader: request is missing ContentLength")
 	}
 
+	var filename string
 	if dl.req.UseHeader {
 		if contentDisposition := res.Header.Get("Content-Disposition"); contentDisposition != "" {
 			_, params, err := mime.ParseMediaType(contentDisposition)
@@ -238,19 +249,22 @@ func (dl *Download) Execute() error {
 			// directory that was asked for.
 			if v, ok := params["filename"]; ok {
 				if name := filepath.Base(filepath.Clean("/" + v)); name != "/" && name != "." {
-					dl.path = name
+					filename = name
 				}
 			}
 		}
 	}
-	if dl.path == "" {
+	if filename == "" {
 		if dl.req.FileName != "" {
-			dl.path = dl.req.FileName
+			filename = dl.req.FileName
 		} else {
 			parts := strings.Split(dl.req.URL.Path, "/")
-			dl.path = parts[len(parts)-1]
+			filename = parts[len(parts)-1]
 		}
 	}
+	dl.mu.Lock()
+	dl.path = filename
+	dl.mu.Unlock()
 
 	p := dl.Path()
 	if err := dl.server.Filesystem().IsIgnored(p); err != nil {
@@ -270,8 +284,12 @@ func (dl *Download) Execute() error {
 // Cancel cancels a running download and frees up the associated resources. If a file is being
 // written a partial file will remain present on the disk.
 func (dl *Download) Cancel() {
-	if dl.cancelFunc != nil {
-		(*dl.cancelFunc)()
+	dl.mu.Lock()
+	dl.cancelled = true
+	cancel := dl.cancelFunc
+	dl.mu.Unlock()
+	if cancel != nil {
+		cancel()
 	}
 	instance.remove(dl.Identifier)
 }
@@ -290,6 +308,8 @@ func (dl *Download) Progress() float64 {
 }
 
 func (dl *Download) Path() string {
+	dl.mu.RLock()
+	defer dl.mu.RUnlock()
 	return filepath.Join(dl.req.Directory, dl.path)
 }
 
@@ -355,7 +375,11 @@ func (d *Downloader) remove(dlID string) {
 				out = append(out, k)
 			}
 		}
-		d.serverCache[sID] = out
+		if len(out) == 0 {
+			delete(d.serverCache, sID)
+		} else {
+			d.serverCache[sID] = out
+		}
 	}
 }
 

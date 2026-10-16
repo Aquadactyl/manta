@@ -29,7 +29,6 @@ func AttachRequestID() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id := uuid.New().String()
 		c.Set("request_id", id)
-		c.Set("logger", log.WithField("request_id", id))
 		c.Header("X-Request-Id", id)
 		c.Next()
 	}
@@ -139,23 +138,25 @@ func SetAccessControlHeaders() gin.HandlerFunc {
 
 // ServerExists will ensure that the requested server exists in this setup.
 // Returns a 404 if we cannot locate it. If the server is found it is set into
-// the request context, and the logger for the context is also updated to include
-// the server ID in the fields list.
+// the request context. Its logger includes the server ID when first needed;
+// an existing context logger is updated immediately.
 func ServerExists() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var s *server.Server
 		if c.Param("server") != "" {
 			manager := ExtractManager(c)
-			s = manager.Find(func(s *server.Server) bool {
-				return c.Param("server") == s.ID()
-			})
+			s, _ = manager.Get(c.Param("server"))
 		}
 		if s == nil {
 			c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "The requested resource does not exist on this instance."})
 			return
 		}
-		c.Set("logger", ExtractLogger(c).WithField("server_id", s.ID()))
 		c.Set("server", s)
+		// Most successful requests never log. Preserve a logger supplied by
+		// earlier middleware; otherwise ExtractLogger attaches fields lazily.
+		if _, ok := c.Get("logger"); ok {
+			c.Set("logger", ExtractLogger(c).WithField("server_id", s.ID()))
+		}
 		c.Next()
 	}
 }
@@ -166,11 +167,9 @@ func ServerExists() gin.HandlerFunc {
 // request is using a properly signed global token.
 func RequireAuthorization() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// We don't put this value outside this function since the node's authentication
-		// token can be changed on the fly and the config.Get() call returns a copy, so
-		// if it is rotated this value will never properly get updated.
-		auth := strings.SplitN(c.GetHeader("Authorization"), " ", 2)
-		if len(auth) != 2 || auth[0] != "Bearer" {
+		// Read credentials for each request so token rotation takes effect immediately.
+		scheme, token, ok := strings.Cut(c.GetHeader("Authorization"), " ")
+		if !ok || scheme != "Bearer" {
 			c.Header("WWW-Authenticate", "Bearer")
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "The required authorization heads were not present in the request."})
 			return
@@ -179,7 +178,7 @@ func RequireAuthorization() gin.HandlerFunc {
 		// All requests to Wings must be authorized with the authentication token present in
 		// the Wings configuration file. Remeber, all requests to Wings come from the Panel
 		// backend, or using a signed JWT for temporary authentication.
-		if subtle.ConstantTimeCompare([]byte(auth[1]), []byte(config.Get().Token.Token)) != 1 {
+		if subtle.ConstantTimeCompare([]byte(token), []byte(config.GetToken().Token)) != 1 {
 			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "You are not authorized to access this endpoint."})
 			return
 		}
@@ -213,12 +212,23 @@ func RemoteDownloadEnabled() gin.HandlerFunc {
 // ExtractLogger pulls the logger out of the request context and returns it. By
 // default this will include the request ID, but may also include the server ID
 // if that middleware has been used in the chain by the time it is called.
+// It is constructed only on first use, then cached for the request. Callers
+// passing it to background tasks retain an independent log entry, not a context.
 func ExtractLogger(c *gin.Context) *log.Entry {
-	v, ok := c.Get("logger")
+	if v, ok := c.Get("logger"); ok {
+		return v.(*log.Entry)
+	}
+	id, ok := c.Get("request_id")
 	if !ok {
 		panic("middleware/middleware: cannot extract logger: not present in request context")
 	}
-	return v.(*log.Entry)
+	fields := log.Fields{"request_id": id}
+	if v, ok := c.Get("server"); ok {
+		fields["server_id"] = v.(*server.Server).ID()
+	}
+	entry := log.WithFields(fields)
+	c.Set("logger", entry)
+	return entry
 }
 
 // ExtractServer will return the server from the gin.Context or panic if it is

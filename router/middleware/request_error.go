@@ -13,6 +13,7 @@ import (
 	"github.com/pterodactyl/wings/internal/ufs"
 	"github.com/pterodactyl/wings/server"
 	"github.com/pterodactyl/wings/server/filesystem"
+	"github.com/pterodactyl/wings/system"
 )
 
 // RequestError is a custom error type returned when something goes wrong with
@@ -53,7 +54,7 @@ func (re *RequestError) Abort(c *gin.Context, status int) {
 
 	// Generate the base logger instance, attaching the unique request ID and
 	// the URL that was requested.
-	event := log.WithField("request_id", reqId).WithField("url", c.Request.URL.String())
+	event := log.WithField("request_id", reqId).WithField("url", system.LogURL(c.Request.URL.String()))
 	// If there is a server present in the gin.Context stack go ahead and pull it
 	// and attach that server UUID to the logs as well so that we can see what specific
 	// server triggered this error.

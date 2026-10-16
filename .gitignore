@@ -20,6 +20,9 @@
 # ignore logfiles (/* so the .gitkeep override works)
 /logs/*
 
+# Local benchmark build and container logs
+/benchmarks/results/**/*.log
+
 # ignore configuration file
 /config.yml
 /config*.yml

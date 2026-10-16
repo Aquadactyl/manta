@@ -1,0 +1,232 @@
+{
+  "isolated": [
+    {
+      "benchmark": "BenchmarkServerStatus",
+      "label": "Status API (control)",
+      "before_ns": 4074.0,
+      "after_ns": 4029.0,
+      "time_change_percent": -1.1045655375552244,
+      "before_bytes": 3528.0,
+      "after_bytes": 3528.0,
+      "bytes_change_percent": 0.0,
+      "before_allocs": 27.0,
+      "after_allocs": 27.0,
+      "before_writes": 0,
+      "after_writes": 0
+    },
+    {
+      "benchmark": "BenchmarkDirectoryAPI/10",
+      "label": "Directory API, 10 files",
+      "before_ns": 110189.0,
+      "after_ns": 74558.0,
+      "time_change_percent": -32.3362586102061,
+      "before_bytes": 64540.0,
+      "after_bytes": 21184.0,
+      "bytes_change_percent": -67.17694453052371,
+      "before_allocs": 243.0,
+      "after_allocs": 214.0,
+      "before_writes": 0,
+      "after_writes": 0
+    },
+    {
+      "benchmark": "BenchmarkDirectoryAPI/1000",
+      "label": "Directory API, 1,000 files",
+      "before_ns": 10868692.0,
+      "after_ns": 8328376.0,
+      "time_change_percent": -23.372784876045806,
+      "before_bytes": 6238715.0,
+      "after_bytes": 1654508.0,
+      "bytes_change_percent": -73.47998746536747,
+      "before_allocs": 20096.0,
+      "after_allocs": 17070.0,
+      "before_writes": 0,
+      "after_writes": 0
+    },
+    {
+      "benchmark": "BenchmarkFileReadAPI/1MiB",
+      "label": "File read API, 1 MiB",
+      "before_ns": 115000.0,
+      "after_ns": 42165.0,
+      "time_change_percent": -63.33478260869565,
+      "before_bytes": 10712.0,
+      "after_bytes": 2564.0,
+      "bytes_change_percent": -76.06422703510081,
+      "before_allocs": 39.0,
+      "after_allocs": 37.0,
+      "before_writes": 256.0,
+      "after_writes": 16.0
+    },
+    {
+      "benchmark": "BenchmarkFileReadAPI/16MiB",
+      "label": "File read API, 16 MiB",
+      "before_ns": 2718436.0,
+      "after_ns": 1138365.0,
+      "time_change_percent": -58.12426704178433,
+      "before_bytes": 10726.0,
+      "after_bytes": 2920.0,
+      "bytes_change_percent": -72.77643110199516,
+      "before_allocs": 39.0,
+      "after_allocs": 37.0,
+      "before_writes": 4096.0,
+      "after_writes": 256.0
+    },
+    {
+      "benchmark": "BenchmarkDirectoryListing/entries_10/read",
+      "label": "List only, 10 files",
+      "before_ns": 70817.0,
+      "after_ns": 60655.0,
+      "time_change_percent": -14.349661804369006,
+      "before_bytes": 52937.0,
+      "after_bytes": 11981.0,
+      "bytes_change_percent": -77.36743676445586,
+      "before_allocs": 125.0,
+      "after_allocs": 115.0,
+      "before_writes": 0,
+      "after_writes": 0
+    },
+    {
+      "benchmark": "BenchmarkDirectoryListing/entries_10/read_and_json",
+      "label": "List + legacy Stat JSON, 10 files",
+      "before_ns": 88410.0,
+      "after_ns": 76609.0,
+      "time_change_percent": -13.348037552313086,
+      "before_bytes": 59374.0,
+      "after_bytes": 18355.0,
+      "bytes_change_percent": -69.08579512918112,
+      "before_allocs": 187.0,
+      "after_allocs": 177.0,
+      "before_writes": 0,
+      "after_writes": 0
+    },
+    {
+      "benchmark": "BenchmarkDirectoryListing/entries_1000/read",
+      "label": "List only, 1,000 files",
+      "before_ns": 8677460.0,
+      "after_ns": 7300321.0,
+      "time_change_percent": -15.870300756212075,
+      "before_bytes": 4817522.0,
+      "after_bytes": 721418.0,
+      "bytes_change_percent": -85.025122874374,
+      "before_allocs": 11025.0,
+      "after_allocs": 10022.0,
+      "before_writes": 0,
+      "after_writes": 0
+    },
+    {
+      "benchmark": "BenchmarkDirectoryListing/entries_1000/read_and_json",
+      "label": "List + legacy Stat JSON, 1,000 files",
+      "before_ns": 10981619.0,
+      "after_ns": 8778671.0,
+      "time_change_percent": -20.060320796050203,
+      "before_bytes": 5964642.0,
+      "after_bytes": 1535023.0,
+      "bytes_change_percent": -74.26462476708578,
+      "before_allocs": 17056.0,
+      "after_allocs": 16036.0,
+      "before_writes": 0,
+      "after_writes": 0
+    }
+  ],
+  "live": [
+    {
+      "test": "directory_1000",
+      "variant": "manta",
+      "concurrency": 1,
+      "before_p50_ms": 10.454,
+      "after_p50_ms": 7.362,
+      "p50_change_percent": -29.577195331930362,
+      "before_p95_ms": 12.907,
+      "after_p95_ms": 8.99
+    },
+    {
+      "test": "directory_1000",
+      "variant": "wings",
+      "concurrency": 1,
+      "before_p50_ms": 12.366,
+      "after_p50_ms": 11.746,
+      "p50_change_percent": -5.013747371825971,
+      "before_p95_ms": 15.221,
+      "after_p95_ms": 13.796
+    },
+    {
+      "test": "directory_1000",
+      "variant": "manta",
+      "concurrency": 16,
+      "before_p50_ms": 96.209,
+      "after_p50_ms": 54.069,
+      "p50_change_percent": -43.80047604693947,
+      "before_p95_ms": 221.559,
+      "after_p95_ms": 136.868
+    },
+    {
+      "test": "directory_1000",
+      "variant": "wings",
+      "concurrency": 16,
+      "before_p50_ms": 96.404,
+      "after_p50_ms": 89.944,
+      "p50_change_percent": -6.700966764864525,
+      "before_p95_ms": 249.644,
+      "after_p95_ms": 245.83
+    },
+    {
+      "test": "directory_1000",
+      "variant": "manta",
+      "concurrency": 32,
+      "before_p50_ms": 176.897,
+      "after_p50_ms": 108.946,
+      "p50_change_percent": -38.41274866165057,
+      "before_p95_ms": 453.271,
+      "after_p95_ms": 276.008
+    },
+    {
+      "test": "directory_1000",
+      "variant": "wings",
+      "concurrency": 32,
+      "before_p50_ms": 191.563,
+      "after_p50_ms": 186.062,
+      "p50_change_percent": -2.871640139275322,
+      "before_p95_ms": 530.656,
+      "after_p95_ms": 469.038
+    },
+    {
+      "test": "http_read_16m",
+      "variant": "manta",
+      "concurrency": null,
+      "before_p50_ms": 38.879,
+      "after_p50_ms": 13.27,
+      "p50_change_percent": -65.86846369505388,
+      "before_p95_ms": 40.595,
+      "after_p95_ms": 15.905
+    },
+    {
+      "test": "http_read_16m",
+      "variant": "wings",
+      "concurrency": null,
+      "before_p50_ms": 33.754,
+      "after_p50_ms": 33.362,
+      "p50_change_percent": -1.161343840729978,
+      "before_p95_ms": 34.353,
+      "after_p95_ms": 34.077
+    },
+    {
+      "test": "api_status",
+      "variant": "manta",
+      "concurrency": 1,
+      "before_p50_ms": 0.239,
+      "after_p50_ms": 0.185,
+      "p50_change_percent": -22.59414225941422,
+      "before_p95_ms": 0.364,
+      "after_p95_ms": 0.309
+    },
+    {
+      "test": "api_status",
+      "variant": "wings",
+      "concurrency": 1,
+      "before_p50_ms": 0.255,
+      "after_p50_ms": 0.185,
+      "p50_change_percent": -27.450980392156865,
+      "before_p95_ms": 0.367,
+      "after_p95_ms": 0.31
+    }
+  ]
+}

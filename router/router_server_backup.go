@@ -42,7 +42,7 @@ func postServerBackup(c *gin.Context) {
 		Uuid    string             `json:"uuid"`
 		Ignore  string             `json:"ignore"`
 	}
-	if err := c.BindJSON(&data); err != nil {
+	if err := middleware.BindJSON(c, &data); err != nil {
 		return
 	}
 	backupUuid, ok := parseBackupUuid(c, data.Uuid)
@@ -101,7 +101,7 @@ func postServerRestoreBackup(c *gin.Context) {
 		// is only present when the given adapter type is s3.
 		DownloadUrl string `json:"download_url"`
 	}
-	if err := c.BindJSON(&data); err != nil {
+	if err := middleware.BindJSON(c, &data); err != nil {
 		return
 	}
 	backupUuid, ok := parseBackupUuid(c, c.Param("backup"))

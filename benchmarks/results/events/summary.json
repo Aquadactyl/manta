@@ -1,0 +1,42 @@
+[
+  {
+    "benchmark": "BenchmarkEventMessage/stats/viewers_1",
+    "before_ns": 4453.0,
+    "after_ns": 1832.0,
+    "time_change_percent": -58.85919604760835,
+    "before_bytes": 2600.0,
+    "after_bytes": 816.0,
+    "before_allocs": 63.0,
+    "after_allocs": 13.0
+  },
+  {
+    "benchmark": "BenchmarkEventMessage/stats/viewers_16",
+    "before_ns": 71560.0,
+    "after_ns": 29612.0,
+    "time_change_percent": -58.619340413638895,
+    "before_bytes": 41616.0,
+    "after_bytes": 13063.0,
+    "before_allocs": 1008.0,
+    "after_allocs": 208.0
+  },
+  {
+    "benchmark": "BenchmarkEventMessage/stats/viewers_64",
+    "before_ns": 280421.0,
+    "after_ns": 118967.0,
+    "time_change_percent": -57.5755738692894,
+    "before_bytes": 166463.0,
+    "after_bytes": 52251.0,
+    "before_allocs": 4032.0,
+    "after_allocs": 832.0
+  },
+  {
+    "benchmark": "BenchmarkEventMessage/status",
+    "before_ns": 773.7,
+    "after_ns": 831.5,
+    "time_change_percent": 7.470595838180172,
+    "before_bytes": 408.0,
+    "after_bytes": 392.0,
+    "before_allocs": 12.0,
+    "after_allocs": 11.0
+  }
+]

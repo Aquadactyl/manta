@@ -1,0 +1,26 @@
+goos: linux
+goarch: amd64
+pkg: github.com/pterodactyl/wings/system
+cpu: Intel(R) Core(TM) i7-14700KF
+BenchmarkSinkPoolReady/0-4 	21455674	        26.00 ns/op	      16 B/op	       1 allocs/op
+BenchmarkSinkPoolReady/0-4 	22962332	        25.74 ns/op	      16 B/op	       1 allocs/op
+BenchmarkSinkPoolReady/0-4 	22310682	        26.25 ns/op	      16 B/op	       1 allocs/op
+BenchmarkSinkPoolReady/0-4 	22824624	        25.95 ns/op	      16 B/op	       1 allocs/op
+BenchmarkSinkPoolReady/0-4 	21871839	        25.97 ns/op	      16 B/op	       1 allocs/op
+BenchmarkSinkPoolReady/1-4 	  936368	       693.4 ns/op	     336 B/op	       6 allocs/op
+BenchmarkSinkPoolReady/1-4 	  815900	       689.2 ns/op	     336 B/op	       6 allocs/op
+BenchmarkSinkPoolReady/1-4 	  894807	       730.0 ns/op	     336 B/op	       6 allocs/op
+BenchmarkSinkPoolReady/1-4 	  840579	       715.5 ns/op	     336 B/op	       6 allocs/op
+BenchmarkSinkPoolReady/1-4 	  869076	       691.0 ns/op	     336 B/op	       6 allocs/op
+BenchmarkSinkPoolReady/16-4         	   42277	     13786 ns/op	    5137 B/op	      81 allocs/op
+BenchmarkSinkPoolReady/16-4         	   43576	     13148 ns/op	    5136 B/op	      81 allocs/op
+BenchmarkSinkPoolReady/16-4         	   46735	     12751 ns/op	    5136 B/op	      81 allocs/op
+BenchmarkSinkPoolReady/16-4         	   41796	     13177 ns/op	    5136 B/op	      81 allocs/op
+BenchmarkSinkPoolReady/16-4         	   48969	     12576 ns/op	    5136 B/op	      81 allocs/op
+BenchmarkSinkPoolReady/64-4         	   13204	     44796 ns/op	   20498 B/op	     321 allocs/op
+BenchmarkSinkPoolReady/64-4         	   16326	     36518 ns/op	   20496 B/op	     321 allocs/op
+BenchmarkSinkPoolReady/64-4         	   15228	     38580 ns/op	   20496 B/op	     321 allocs/op
+BenchmarkSinkPoolReady/64-4         	   14611	     41934 ns/op	   20496 B/op	     321 allocs/op
+BenchmarkSinkPoolReady/64-4         	   14452	     42163 ns/op	   20496 B/op	     321 allocs/op
+PASS
+ok  	github.com/pterodactyl/wings/system	11.924s

@@ -1,0 +1,263 @@
+File: router.test
+Build ID: d31da585343505c036e55c4a0366ede619050441
+Type: cpu
+Time: 2026-10-15 07:39:34 UTC
+Duration: 5.87s, Total samples = 8.52s (145.22%)
+Showing nodes accounting for 6.51s, 76.41% of 8.52s total
+Dropped 254 nodes (cum <= 0.04s)
+      flat  flat%   sum%        cum   cum%
+     0.67s  7.86%  7.86%      0.67s  7.86%  runtime.futex
+     0.38s  4.46% 12.32%      0.50s  5.87%  runtime.tryDeferToSpanScan
+     0.30s  3.52% 15.85%      1.13s 13.26%  encoding/json.structEncoder.encode
+     0.30s  3.52% 19.37%      0.79s  9.27%  runtime.scanObject
+     0.24s  2.82% 22.18%      0.24s  2.82%  runtime.nextFreeFast (inline)
+     0.22s  2.58% 24.77%      0.22s  2.58%  internal/runtime/syscall/linux.Syscall6
+     0.21s  2.46% 27.23%      0.21s  2.46%  sync/atomic.(*Int32).Add (inline)
+     0.19s  2.23% 29.46%      0.32s  3.76%  runtime.scanblock
+     0.17s  2.00% 31.46%      0.25s  2.93%  reflect.Value.Field
+     0.17s  2.00% 33.45%      0.17s  2.00%  runtime.memclrNoHeapPointers
+     0.14s  1.64% 35.09%      5.42s 63.62%  github.com/gin-gonic/gin.(*Context).Next (partial-inline)
+     0.14s  1.64% 36.74%      0.14s  1.64%  net/textproto.validHeaderFieldByte (inline)
+     0.13s  1.53% 38.26%      1.01s 11.85%  runtime.mallocgcSmallScanNoHeader
+     0.13s  1.53% 39.79%      0.18s  2.11%  runtime.typePointers.next
+     0.12s  1.41% 41.20%      0.38s  4.46%  runtime.scanObjectsSmall
+     0.11s  1.29% 42.49%      0.14s  1.64%  runtime.(*mspan).writeHeapBitsSmall
+     0.11s  1.29% 43.78%      0.11s  1.29%  runtime.memmove
+     0.09s  1.06% 44.84%      0.12s  1.41%  runtime.wbBufFlush1
+     0.08s  0.94% 45.77%      0.08s  0.94%  internal/abi.Name.IsExported (inline)
+     0.08s  0.94% 46.71%      0.08s  0.94%  runtime.spanClass.sizeclass (inline)
+     0.07s  0.82% 47.54%      0.07s  0.82%  aeshashbody
+     0.07s  0.82% 48.36%      0.12s  1.41%  bytes.(*Buffer).WriteString
+     0.07s  0.82% 49.18%      0.07s  0.82%  net/url.unescape
+     0.07s  0.82% 50.00%      0.12s  1.41%  runtime.gcmarknewobject
+     0.07s  0.82% 50.82%      1.71s 20.07%  runtime.mallocgc
+     0.07s  0.82% 51.64%      0.51s  5.99%  runtime.mapassign_faststr
+     0.07s  0.82% 52.46%      0.07s  0.82%  runtime.procyieldAsm
+     0.07s  0.82% 53.29%      0.07s  0.82%  runtime.tgkill
+     0.07s  0.82% 54.11%      0.07s  0.82%  runtime.typePointers.nextFast (inline)
+     0.06s   0.7% 54.81%      0.06s   0.7%  bytes.(*Buffer).tryGrowByReslice (inline)
+     0.06s   0.7% 55.52%      0.06s   0.7%  github.com/gin-gonic/gin.(*node).getValue
+     0.06s   0.7% 56.22%      0.06s   0.7%  internal/runtime/atomic.(*Uint32).CompareAndSwap (inline)
+     0.06s   0.7% 56.92%      0.06s   0.7%  runtime.bool2int (inline)
+     0.06s   0.7% 57.63%      0.06s   0.7%  time.runtimeNow
+     0.05s  0.59% 58.22%      0.05s  0.59%  runtime.extractHeapBitsSmall
+     0.05s  0.59% 58.80%      0.10s  1.17%  runtime.findObject
+     0.05s  0.59% 59.39%      0.35s  4.11%  runtime.growslice
+     0.05s  0.59% 59.98%      0.05s  0.59%  runtime.spanOf (inline)
+     0.04s  0.47% 60.45%      0.07s  0.82%  encoding/json.appendString[go.shape.string]
+     0.04s  0.47% 60.92%      0.19s  2.23%  fmt.(*pp).doPrintf
+     0.04s  0.47% 61.38%      0.11s  1.29%  fmt.(*pp).handleMethods
+     0.04s  0.47% 61.85%      5.53s 64.91%  github.com/gin-gonic/gin.(*Engine).handleHTTPRequest
+     0.04s  0.47% 62.32%      0.18s  2.11%  net/textproto.CanonicalMIMEHeaderKey
+     0.04s  0.47% 62.79%      0.09s  1.06%  runtime.(*mheap).initSpan
+     0.04s  0.47% 63.26%      0.09s  1.06%  runtime.(*spanSet).push
+     0.04s  0.47% 63.73%      0.12s  1.41%  sync.(*Pool).Get
+     0.04s  0.47% 64.20%      0.11s  1.29%  sync.(*Pool).pin
+     0.03s  0.35% 64.55%      0.18s  2.11%  bytes.(*Buffer).Write
+     0.03s  0.35% 64.91%      0.05s  0.59%  bytes.(*Buffer).WriteByte
+     0.03s  0.35% 65.26%      0.10s  1.17%  gcWriteBarrier
+     0.03s  0.35% 65.61%      0.38s  4.46%  github.com/pterodactyl/wings/config.Get
+     0.03s  0.35% 65.96%      4.47s 52.46%  github.com/pterodactyl/wings/router.Configure.AttachApiClient.func5
+     0.03s  0.35% 66.31%      0.09s  1.06%  internal/runtime/maps.(*Map).putSlotSmallFastStr
+     0.03s  0.35% 66.67%      0.18s  2.11%  runtime.(*sweepLocked).sweep
+     0.03s  0.35% 67.02%      1.70s 19.95%  runtime.gcDrain
+     0.02s  0.23% 67.25%      0.18s  2.11%  encoding/json.marshalerEncoder
+     0.02s  0.23% 67.49%      0.06s   0.7%  encoding/json.newEncodeState
+     0.02s  0.23% 67.72%      0.13s  1.53%  encoding/json.stringEncoder
+     0.02s  0.23% 67.96%      0.07s  0.82%  github.com/apex/log.(*Logger).WithFields
+     0.02s  0.23% 68.19%      1.85s 21.71%  github.com/gin-gonic/gin.(*Context).Render
+     0.02s  0.23% 68.43%      4.43s 52.00%  github.com/gin-gonic/gin.LoggerWithConfig.func1
+     0.02s  0.23% 68.66%      5.72s 67.14%  github.com/pterodactyl/wings/router.BenchmarkServerStatus
+     0.02s  0.23% 68.90%      5.35s 62.79%  github.com/pterodactyl/wings/router.Configure.AttachRequestID.func2
+     0.02s  0.23% 69.13%      2.08s 24.41%  github.com/pterodactyl/wings/router.getServer
+     0.02s  0.23% 69.37%      0.09s  1.06%  github.com/pterodactyl/wings/server.(*Server).ToAPIResponse
+     0.02s  0.23% 69.60%      0.05s  0.59%  runtime.(*gcControllerState).update
+     0.02s  0.23% 69.84%      0.40s  4.69%  runtime.(*mcache).nextFree
+     0.02s  0.23% 70.07%      0.15s  1.76%  runtime.(*mheap).allocSpan
+     0.02s  0.23% 70.31%      0.07s  0.82%  runtime.bulkBarrierPreWrite
+     0.02s  0.23% 70.54%      0.32s  3.76%  runtime.findRunnable
+     0.02s  0.23% 70.77%      0.29s  3.40%  runtime.mallocgcSmallNoscan
+     0.02s  0.23% 71.01%      0.27s  3.17%  runtime.sweepone
+     0.02s  0.23% 71.24%      0.08s  0.94%  strings.genSplit
+     0.01s  0.12% 71.36%      0.13s  1.53%  bytes.growSlice
+     0.01s  0.12% 71.48%      0.15s  1.76%  fmt.(*pp).printArg
+     0.01s  0.12% 71.60%      0.27s  3.17%  fmt.Fprint
+     0.01s  0.12% 71.71%      0.38s  4.46%  fmt.errorf
+     0.01s  0.12% 71.83%      0.27s  3.17%  github.com/apex/log.(*Entry).WithField (partial-inline)
+     0.01s  0.12% 71.95%      0.15s  1.76%  github.com/apex/log.(*Entry).WithFields
+     0.01s  0.12% 72.07%      0.24s  2.82%  github.com/gin-gonic/gin.(*Context).Set
+     0.01s  0.12% 72.18%      5.57s 65.38%  github.com/gin-gonic/gin.(*Engine).ServeHTTP
+     0.01s  0.12% 72.30%      0.51s  5.99%  github.com/gin-gonic/gin.(*responseWriter).Write
+     0.01s  0.12% 72.42%      0.36s  4.23%  github.com/gin-gonic/gin.(*responseWriter).WriteHeaderNow (inline)
+     0.01s  0.12% 72.54%      5.37s 63.03%  github.com/gin-gonic/gin.CustomRecoveryWithWriter.func1
+     0.01s  0.12% 72.65%      1.83s 21.48%  github.com/gin-gonic/gin/render.WriteJSON
+     0.01s  0.12% 72.77%      4.51s 52.93%  github.com/pterodactyl/wings/router.Configure.AttachServerManager.func4
+     0.01s  0.12% 72.89%      3.37s 39.55%  github.com/pterodactyl/wings/router.Configure.RequireAuthorization.func8
+     0.01s  0.12% 73.00%      2.80s 32.86%  github.com/pterodactyl/wings/router.Configure.RequireAuthorization.func9
+     0.01s  0.12% 73.12%      2.38s 27.93%  github.com/pterodactyl/wings/router.Configure.ServerExists.func10
+     0.01s  0.12% 73.24%      0.05s  0.59%  github.com/pterodactyl/wings/server.(*Server).Proc
+     0.01s  0.12% 73.36%      0.19s  2.23%  internal/runtime/maps.NewEmptyMap (inline)
+     0.01s  0.12% 73.47%      0.06s   0.7%  internal/stringslite.Index
+     0.01s  0.12% 73.59%      0.05s  0.59%  internal/stringslite.IndexByte (inline)
+     0.01s  0.12% 73.71%      0.26s  3.05%  net/http.(*ResponseController).SetReadDeadline
+     0.01s  0.12% 73.83%      0.34s  3.99%  net/http.Header.Clone (inline)
+     0.01s  0.12% 73.94%      0.39s  4.58%  net/http.errNotSupported
+     0.01s  0.12% 74.06%      0.35s  4.11%  net/http/httptest.(*ResponseRecorder).WriteHeader
+     0.01s  0.12% 74.18%      0.06s   0.7%  net/textproto.MIMEHeader.Del (inline)
+     0.01s  0.12% 74.30%      0.06s   0.7%  net/textproto.MIMEHeader.Get
+     0.01s  0.12% 74.41%      0.11s  1.29%  net/url.(*URL).setPath
+     0.01s  0.12% 74.53%      0.18s  2.11%  net/url.parse
+     0.01s  0.12% 74.65%      0.37s  4.34%  runtime.(*mcache).refill
+     0.01s  0.12% 74.77%      0.20s  2.35%  runtime.(*mcentral).grow
+     0.01s  0.12% 74.88%      0.05s  0.59%  runtime.(*sweepLocked).sweep.(*mheap).freeSpan.func2
+     0.01s  0.12% 75.00%      0.06s   0.7%  runtime.(*unwinder).next
+     0.01s  0.12% 75.12%      0.11s  1.29%  runtime.convT
+     0.01s  0.12% 75.23%      0.05s  0.59%  runtime.greyobject
+     0.01s  0.12% 75.35%      0.11s  1.29%  runtime.makeslice
+     0.01s  0.12% 75.47%      0.27s  3.17%  runtime.newarray
+     0.01s  0.12% 75.59%      0.74s  8.69%  runtime.newobject
+     0.01s  0.12% 75.70%      0.29s  3.40%  runtime.newstack
+     0.01s  0.12% 75.82%      0.57s  6.69%  runtime.notewakeup
+     0.01s  0.12% 75.94%      0.42s  4.93%  runtime.scanSpan
+     0.01s  0.12% 76.06%      0.45s  5.28%  runtime.schedule
+     0.01s  0.12% 76.17%      0.06s   0.7%  sync.(*Pool).Put
+     0.01s  0.12% 76.29%      0.07s  0.82%  sync.(*RWMutex).Lock
+     0.01s  0.12% 76.41%      0.06s   0.7%  sync.(*RWMutex).RUnlock (partial-inline)
+         0     0% 76.41%      0.13s  1.53%  bytes.(*Buffer).grow
+         0     0% 76.41%      0.05s  0.59%  crypto/internal/fips140/drbg.Read
+         0     0% 76.41%      0.05s  0.59%  crypto/internal/rand.reader.Read
+         0     0% 76.41%      0.05s  0.59%  crypto/internal/sysrand.Read
+         0     0% 76.41%      1.13s 13.26%  encoding/json.(*encodeState).marshal
+         0     0% 76.41%      1.13s 13.26%  encoding/json.(*encodeState).reflectValue
+         0     0% 76.41%      1.27s 14.91%  encoding/json.Marshal
+         0     0% 76.41%      0.38s  4.46%  fmt.Errorf (inline)
+         0     0% 76.41%      0.12s  1.41%  fmt.Sprintf
+         0     0% 76.41%      0.06s   0.7%  fmt.newPrinter
+         0     0% 76.41%      0.12s  1.41%  github.com/apex/log.(*Entry).Debugf
+         0     0% 76.41%      0.15s  1.76%  github.com/apex/log.(*Logger).WithField
+         0     0% 76.41%      0.15s  1.76%  github.com/apex/log.WithField
+         0     0% 76.41%      0.07s  0.82%  github.com/apex/log.WithFields (inline)
+         0     0% 76.41%      0.09s  1.06%  github.com/gin-gonic/gin.(*Context).ClientIP
+         0     0% 76.41%      0.06s   0.7%  github.com/gin-gonic/gin.(*Context).Get
+         0     0% 76.41%      0.06s   0.7%  github.com/gin-gonic/gin.(*Context).GetHeader (partial-inline)
+         0     0% 76.41%      0.35s  4.11%  github.com/gin-gonic/gin.(*Context).Header
+         0     0% 76.41%      1.86s 21.83%  github.com/gin-gonic/gin.(*Context).JSON (inline)
+         0     0% 76.41%      0.06s   0.7%  github.com/gin-gonic/gin.(*Context).requestHeader (inline)
+         0     0% 76.41%      1.83s 21.48%  github.com/gin-gonic/gin/render.JSON.Render
+         0     0% 76.41%      0.05s  0.59%  github.com/google/uuid.New
+         0     0% 76.41%      0.05s  0.59%  github.com/google/uuid.NewRandom
+         0     0% 76.41%      0.05s  0.59%  github.com/google/uuid.NewRandomFromReader
+         0     0% 76.41%      4.86s 57.04%  github.com/pterodactyl/wings/router.Configure.CaptureErrors.func3
+         0     0% 76.41%      0.60s  7.04%  github.com/pterodactyl/wings/router.Configure.func1
+         0     0% 76.41%      0.45s  5.28%  github.com/pterodactyl/wings/router/middleware.ClearDeadlines
+         0     0% 76.41%      4.86s 57.04%  github.com/pterodactyl/wings/router/middleware.SetAccessControlHeaders.func1
+         0     0% 76.41%      0.05s  0.59%  github.com/pterodactyl/wings/server.(*Server).ID
+         0     0% 76.41%      0.09s  1.06%  github.com/pterodactyl/wings/system.(*AtomicString).MarshalJSON
+         0     0% 76.41%      0.28s  3.29%  github.com/pterodactyl/wings/system.LogURL
+         0     0% 76.41%      0.26s  3.05%  internal/poll.(*FD).Write
+         0     0% 76.41%      0.23s  2.70%  internal/poll.ignoringEINTRIO (inline)
+         0     0% 76.41%      0.27s  3.17%  internal/runtime/maps.(*Map).growToSmall
+         0     0% 76.41%      0.27s  3.17%  internal/runtime/maps.newGroups (inline)
+         0     0% 76.41%      0.27s  3.17%  internal/runtime/maps.newarray
+         0     0% 76.41%      0.05s  0.59%  io.ReadAtLeast
+         0     0% 76.41%      0.05s  0.59%  io.ReadFull (inline)
+         0     0% 76.41%      0.18s  2.11%  net/http.(*ResponseController).SetWriteDeadline
+         0     0% 76.41%      0.06s   0.7%  net/http.Header.Del (inline)
+         0     0% 76.41%      0.06s   0.7%  net/http.Header.Get (inline)
+         0     0% 76.41%      0.29s  3.40%  net/http.Header.Set (inline)
+         0     0% 76.41%      0.14s  1.64%  net/http/httptest.(*ResponseRecorder).Write
+         0     0% 76.41%      0.11s  1.29%  net/http/httptest.NewRecorder (inline)
+         0     0% 76.41%      0.29s  3.40%  net/textproto.MIMEHeader.Set (inline)
+         0     0% 76.41%      0.07s  0.82%  net/url.(*URL).String
+         0     0% 76.41%      0.21s  2.46%  net/url.Parse
+         0     0% 76.41%      0.26s  3.05%  os.(*File).Write
+         0     0% 76.41%      0.26s  3.05%  os.(*File).write (inline)
+         0     0% 76.41%      0.05s  0.59%  runtime.(*activeSweep).begin (inline)
+         0     0% 76.41%      0.08s  0.94%  runtime.(*gcControllerState).enlistWorker
+         0     0% 76.41%      0.24s  2.82%  runtime.(*mcentral).cacheSpan
+         0     0% 76.41%      0.08s  0.94%  runtime.(*mcentral).uncacheSpan
+         0     0% 76.41%      0.15s  1.76%  runtime.(*mheap).alloc
+         0     0% 76.41%      0.15s  1.76%  runtime.(*mheap).alloc.func1
+         0     0% 76.41%      0.05s  0.59%  runtime.(*mheap).freeSpan (inline)
+         0     0% 76.41%      0.05s  0.59%  runtime.(*pageAlloc).scavenge
+         0     0% 76.41%      0.05s  0.59%  runtime.(*pageAlloc).scavenge.func1
+         0     0% 76.41%      0.05s  0.59%  runtime.(*pageAlloc).scavengeOne
+         0     0% 76.41%      0.05s  0.59%  runtime.(*scavengerState).init.func2
+         0     0% 76.41%      0.05s  0.59%  runtime.(*scavengerState).run
+         0     0% 76.41%      0.05s  0.59%  runtime.bgscavenge
+         0     0% 76.41%      0.28s  3.29%  runtime.bgsweep
+         0     0% 76.41%      0.06s   0.7%  runtime.callers
+         0     0% 76.41%      0.06s   0.7%  runtime.callers.func1
+         0     0% 76.41%      0.06s   0.7%  runtime.convTstring
+         0     0% 76.41%      0.06s   0.7%  runtime.deductAssistCredit
+         0     0% 76.41%      0.09s  1.06%  runtime.forEachP (inline)
+         0     0% 76.41%      0.09s  1.06%  runtime.forEachPInternal
+         0     0% 76.41%      0.06s   0.7%  runtime.futexsleep
+         0     0% 76.41%      0.61s  7.16%  runtime.futexwakeup
+         0     0% 76.41%      0.06s   0.7%  runtime.gcAssistAlloc
+         0     0% 76.41%      0.06s   0.7%  runtime.gcAssistAlloc.func2
+         0     0% 76.41%      0.06s   0.7%  runtime.gcAssistAlloc1
+         0     0% 76.41%      1.90s 22.30%  runtime.gcBgMarkWorker
+         0     0% 76.41%      1.70s 19.95%  runtime.gcBgMarkWorker.func2
+         0     0% 76.41%      0.64s  7.51%  runtime.gcDrainMarkWorkerDedicated (inline)
+         0     0% 76.41%      1.06s 12.44%  runtime.gcDrainMarkWorkerIdle (inline)
+         0     0% 76.41%      0.06s   0.7%  runtime.gcDrainN
+         0     0% 76.41%      0.20s  2.35%  runtime.gcMarkDone
+         0     0% 76.41%      0.07s  0.82%  runtime.gcMarkDone.forEachP.func5
+         0     0% 76.41%      0.10s  1.17%  runtime.gcMarkTermination
+         0     0% 76.41%      0.07s  0.82%  runtime.gcMarkTermination.func3
+         0     0% 76.41%      0.17s  2.00%  runtime.gcStart
+         0     0% 76.41%      0.12s  1.41%  runtime.gcStart.func4
+         0     0% 76.41%      0.28s  3.29%  runtime.gopreempt_m (inline)
+         0     0% 76.41%      0.29s  3.40%  runtime.goschedImpl
+         0     0% 76.41%      0.14s  1.64%  runtime.heapSetTypeNoHeader (inline)
+         0     0% 76.41%      0.07s  0.82%  runtime.lock (inline)
+         0     0% 76.41%      0.07s  0.82%  runtime.lock2
+         0     0% 76.41%      0.07s  0.82%  runtime.lockWithRank (inline)
+         0     0% 76.41%      0.07s  0.82%  runtime.mProf_Malloc
+         0     0% 76.41%      0.06s   0.7%  runtime.makeSpanClass (inline)
+         0     0% 76.41%      0.19s  2.23%  runtime.makemap_small
+         0     0% 76.41%      0.24s  2.82%  runtime.mallocgcSmallScanHeader
+         0     0% 76.41%      0.39s  4.58%  runtime.markroot
+         0     0% 76.41%      0.09s  1.06%  runtime.markroot.func1
+         0     0% 76.41%      0.29s  3.40%  runtime.markrootBlock
+         0     0% 76.41%      0.28s  3.29%  runtime.mcall
+         0     0% 76.41%      0.28s  3.29%  runtime.morestack
+         0     0% 76.41%      0.06s   0.7%  runtime.newMarkBits
+         0     0% 76.41%      0.25s  2.93%  runtime.park_m
+         0     0% 76.41%      0.07s  0.82%  runtime.preemptM (inline)
+         0     0% 76.41%      0.06s   0.7%  runtime.preemptall
+         0     0% 76.41%      0.07s  0.82%  runtime.preemptone
+         0     0% 76.41%      0.07s  0.82%  runtime.procyield (inline)
+         0     0% 76.41%      0.07s  0.82%  runtime.profilealloc
+         0     0% 76.41%      0.11s  1.29%  runtime.resetspinning
+         0     0% 76.41%      0.21s  2.46%  runtime.runSafePointFn
+         0     0% 76.41%      0.08s  0.94%  runtime.scanstack
+         0     0% 76.41%      0.05s  0.59%  runtime.semawakeup (inline)
+         0     0% 76.41%      0.07s  0.82%  runtime.signalM
+         0     0% 76.41%      0.19s  2.23%  runtime.slicebytetostring
+         0     0% 76.41%      0.19s  2.23%  runtime.startTheWorldWithSema
+         0     0% 76.41%      0.33s  3.87%  runtime.startm
+         0     0% 76.41%      0.05s  0.59%  runtime.stopm
+         0     0% 76.41%      2.52s 29.58%  runtime.systemstack
+         0     0% 76.41%      0.06s   0.7%  runtime.tracebackPCs
+         0     0% 76.41%      0.05s  0.59%  runtime.unlock (inline)
+         0     0% 76.41%      0.05s  0.59%  runtime.unlock2
+         0     0% 76.41%      0.05s  0.59%  runtime.unlock2Wake
+         0     0% 76.41%      0.05s  0.59%  runtime.unlockWithRank (inline)
+         0     0% 76.41%      0.35s  4.11%  runtime.wakep
+         0     0% 76.41%      0.11s  1.29%  runtime.wbBufFlush
+         0     0% 76.41%      0.11s  1.29%  runtime.wbBufFlush.func1
+         0     0% 76.41%      0.05s  0.59%  runtime.wbMove
+         0     0% 76.41%      0.05s  0.59%  strings.(*Builder).Grow
+         0     0% 76.41%      0.05s  0.59%  strings.(*Builder).grow
+         0     0% 76.41%      0.08s  0.94%  strings.SplitN
+         0     0% 76.41%      0.10s  1.17%  sync.(*RWMutex).RLock (inline)
+         0     0% 76.41%      0.06s   0.7%  sync.(*RWMutex).Unlock
+         0     0% 76.41%      0.22s  2.58%  syscall.RawSyscall6
+         0     0% 76.41%      0.24s  2.82%  syscall.Syscall
+         0     0% 76.41%      0.23s  2.70%  syscall.Write (inline)
+         0     0% 76.41%      0.23s  2.70%  syscall.write
+         0     0% 76.41%      5.72s 67.14%  testing.(*B).run1.func1
+         0     0% 76.41%      5.72s 67.14%  testing.(*B).runN
+         0     0% 76.41%      0.06s   0.7%  time.Now

@@ -16,19 +16,25 @@ type Stat struct {
 	Mimetype string
 }
 
-func (s *Stat) MarshalJSON() ([]byte, error) {
-	return json.Marshal(struct {
-		Name      string `json:"name"`
-		Created   string `json:"created"`
-		Modified  string `json:"modified"`
-		Mode      string `json:"mode"`
-		ModeBits  string `json:"mode_bits"`
-		Size      int64  `json:"size"`
-		Directory bool   `json:"directory"`
-		File      bool   `json:"file"`
-		Symlink   bool   `json:"symlink"`
-		Mime      string `json:"mime"`
-	}{
+// StatResponse is the existing Wings file-metadata wire format. A directory
+// response can encode a slice of these directly, without encoding and then
+// validating/compacting a separate JSON document for every entry.
+type StatResponse struct {
+	Name      string `json:"name"`
+	Created   string `json:"created"`
+	Modified  string `json:"modified"`
+	Mode      string `json:"mode"`
+	ModeBits  string `json:"mode_bits"`
+	Size      int64  `json:"size"`
+	Directory bool   `json:"directory"`
+	File      bool   `json:"file"`
+	Symlink   bool   `json:"symlink"`
+	Mime      string `json:"mime"`
+}
+
+// ToAPIResponse returns metadata without changing its filesystem representation.
+func (s *Stat) ToAPIResponse() StatResponse {
+	return StatResponse{
 		Name:     s.Name(),
 		Created:  s.CTime().Format(time.RFC3339),
 		Modified: s.ModTime().Format(time.RFC3339),
@@ -40,7 +46,11 @@ func (s *Stat) MarshalJSON() ([]byte, error) {
 		File:      !s.IsDir(),
 		Symlink:   s.Mode().Type()&ufs.ModeSymlink != 0,
 		Mime:      s.Mimetype,
-	})
+	}
+}
+
+func (s *Stat) MarshalJSON() ([]byte, error) {
+	return json.Marshal(s.ToAPIResponse())
 }
 
 func statFromFile(f ufs.File) (Stat, error) {
@@ -50,7 +60,7 @@ func statFromFile(f ufs.File) (Stat, error) {
 	}
 	var m *mimetype.MIME
 	if !s.IsDir() {
-		m, err = mimetype.DetectReader(f)
+		m, err = detectFileMIME(f)
 		if err != nil {
 			return Stat{}, err
 		}

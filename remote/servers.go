@@ -31,7 +31,12 @@ func (c *client) GetServers(ctx context.Context, limit int) ([]RawServerData, er
 	var mu sync.Mutex
 	if meta.LastPage > 1 {
 		g, ctx := errgroup.WithContext(ctx)
+		// Bound connections and goroutines when loading a large node.
+		g.SetLimit(4)
 		for page := meta.CurrentPage + 1; page <= meta.LastPage; page++ {
+			if ctx.Err() != nil {
+				break
+			}
 			page := page
 			g.Go(func() error {
 				ps, _, err := c.getServersPaged(ctx, int(page), limit)
@@ -47,6 +52,9 @@ func (c *client) GetServers(ctx context.Context, limit int) ([]RawServerData, er
 		if err := g.Wait(); err != nil {
 			return nil, err
 		}
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
 	}
 
 	return servers, nil

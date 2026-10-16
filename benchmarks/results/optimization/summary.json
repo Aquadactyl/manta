@@ -1,0 +1,224 @@
+{
+  "micro": [
+    {
+      "benchmark": "BenchmarkServerStatus",
+      "before_ns": 6628.0,
+      "after_ns": 4244.0,
+      "before_bytes": 7774.0,
+      "after_bytes": 4488.0,
+      "before_allocs": 58.0,
+      "after_allocs": 38.0,
+      "time_change_percent": -35.96861798430899
+    },
+    {
+      "benchmark": "BenchmarkSinkPoolReady/0",
+      "before_ns": 25.97,
+      "after_ns": 9.844,
+      "before_bytes": 16.0,
+      "after_bytes": 0.0,
+      "before_allocs": 1.0,
+      "after_allocs": 0.0,
+      "time_change_percent": -62.09472468232576
+    },
+    {
+      "benchmark": "BenchmarkSinkPoolReady/1",
+      "before_ns": 693.4,
+      "after_ns": 34.21,
+      "before_bytes": 336.0,
+      "after_bytes": 0.0,
+      "before_allocs": 6.0,
+      "after_allocs": 0.0,
+      "time_change_percent": -95.06633977502163
+    },
+    {
+      "benchmark": "BenchmarkSinkPoolReady/16",
+      "before_ns": 13148.0,
+      "after_ns": 396.0,
+      "before_bytes": 5136.0,
+      "after_bytes": 0.0,
+      "before_allocs": 81.0,
+      "after_allocs": 0.0,
+      "time_change_percent": -96.98813507757833
+    },
+    {
+      "benchmark": "BenchmarkSinkPoolReady/64",
+      "before_ns": 41934.0,
+      "after_ns": 1548.0,
+      "before_bytes": 20496.0,
+      "after_bytes": 0.0,
+      "before_allocs": 321.0,
+      "after_allocs": 0.0,
+      "time_change_percent": -96.3084847617685
+    }
+  ],
+  "live": [
+    {
+      "metric": "Status API, concurrency 1",
+      "manta_before_ms": 0.223,
+      "wings_before_ms": 0.19,
+      "manta_after_ms": 0.24,
+      "wings_after_ms": 0.259,
+      "manta_change_percent": 7.623318385650224
+    },
+    {
+      "metric": "Status API, concurrency 1, p95",
+      "manta_before_ms": 0.352,
+      "wings_before_ms": 0.319,
+      "manta_after_ms": 0.374,
+      "wings_after_ms": 0.39,
+      "manta_change_percent": 6.25
+    },
+    {
+      "metric": "Status API, concurrency 16",
+      "manta_before_ms": 0.302,
+      "wings_before_ms": 0.229,
+      "manta_after_ms": 0.209,
+      "wings_after_ms": 0.235,
+      "manta_change_percent": -30.79470198675497
+    },
+    {
+      "metric": "Status API, concurrency 16, p95",
+      "manta_before_ms": 1.606,
+      "wings_before_ms": 0.864,
+      "manta_after_ms": 1.262,
+      "wings_after_ms": 0.507,
+      "manta_change_percent": -21.41967621419677
+    },
+    {
+      "metric": "Status API, concurrency 32",
+      "manta_before_ms": 0.661,
+      "wings_before_ms": 0.432,
+      "manta_after_ms": 0.466,
+      "wings_after_ms": 0.598,
+      "manta_change_percent": -29.500756429652043
+    },
+    {
+      "metric": "Status API, concurrency 32, p95",
+      "manta_before_ms": 2.396,
+      "wings_before_ms": 1.423,
+      "manta_after_ms": 1.67,
+      "wings_after_ms": 1.954,
+      "manta_change_percent": -30.30050083472454
+    },
+    {
+      "metric": "List 1,000 files, concurrency 1",
+      "manta_before_ms": 10.281,
+      "wings_before_ms": 12.216,
+      "manta_after_ms": 10.595,
+      "wings_after_ms": 12.145,
+      "manta_change_percent": 3.054177609181985
+    },
+    {
+      "metric": "List 1,000 files, concurrency 1, p95",
+      "manta_before_ms": 13.421,
+      "wings_before_ms": 15.174,
+      "manta_after_ms": 13.219,
+      "wings_after_ms": 14.422,
+      "manta_change_percent": -1.505103941584085
+    },
+    {
+      "metric": "List 1,000 files, concurrency 16",
+      "manta_before_ms": 85.739,
+      "wings_before_ms": 102.86,
+      "manta_after_ms": 93.068,
+      "wings_after_ms": 104.46,
+      "manta_change_percent": 8.548035316483737
+    },
+    {
+      "metric": "List 1,000 files, concurrency 16, p95",
+      "manta_before_ms": 192.431,
+      "wings_before_ms": 265.704,
+      "manta_after_ms": 206.043,
+      "wings_after_ms": 260.724,
+      "manta_change_percent": 7.073704340776699
+    },
+    {
+      "metric": "List 1,000 files, concurrency 32",
+      "manta_before_ms": 162.789,
+      "wings_before_ms": 189.163,
+      "manta_after_ms": 175.553,
+      "wings_after_ms": 199.982,
+      "manta_change_percent": 7.840824625742537
+    },
+    {
+      "metric": "List 1,000 files, concurrency 32, p95",
+      "manta_before_ms": 436.095,
+      "wings_before_ms": 516.191,
+      "manta_after_ms": 434.761,
+      "wings_after_ms": 533.095,
+      "manta_change_percent": -0.30589665095908103
+    },
+    {
+      "metric": "HTTP write 16 MiB",
+      "manta_before_ms": 15.966,
+      "wings_before_ms": 42.552,
+      "manta_after_ms": 14.495,
+      "wings_after_ms": 15.134,
+      "manta_change_percent": -9.21332832268571
+    },
+    {
+      "metric": "HTTP read 16 MiB",
+      "manta_before_ms": 34.427,
+      "wings_before_ms": 28.985,
+      "manta_after_ms": 32.937,
+      "wings_after_ms": 33.316,
+      "manta_change_percent": -4.327998373369746
+    },
+    {
+      "metric": "SFTP write 16 MiB",
+      "manta_before_ms": 132.361,
+      "wings_before_ms": 124.228,
+      "manta_after_ms": 136.8,
+      "wings_after_ms": 138.686,
+      "manta_change_percent": 3.3537069076238657
+    },
+    {
+      "metric": "SFTP read 16 MiB",
+      "manta_before_ms": 64.534,
+      "wings_before_ms": 75.589,
+      "manta_after_ms": 69.132,
+      "wings_after_ms": 71.06,
+      "manta_change_percent": 7.1249263953884645
+    },
+    {
+      "metric": "Log delivery, 16 subscribers",
+      "manta_before_ms": 9.541,
+      "wings_before_ms": 10.479,
+      "manta_after_ms": 8.792,
+      "wings_after_ms": 11.005,
+      "manta_change_percent": -7.850330154071905
+    },
+    {
+      "metric": "Chmod 1,000 files",
+      "manta_before_ms": 4.801,
+      "wings_before_ms": 5.732,
+      "manta_after_ms": 5.047,
+      "wings_after_ms": 4.534,
+      "manta_change_percent": 5.123932514059559
+    },
+    {
+      "metric": "Rename 1,000 files",
+      "manta_before_ms": 16.249,
+      "wings_before_ms": 18.655,
+      "manta_after_ms": 18.408,
+      "wings_after_ms": 18.536,
+      "manta_change_percent": 13.28697150593885
+    },
+    {
+      "metric": "Compress 16 MiB + 1,000 files",
+      "manta_before_ms": 17.087,
+      "wings_before_ms": 20.125,
+      "manta_after_ms": 20.056,
+      "wings_after_ms": 23.218,
+      "manta_change_percent": 17.3757827588225
+    },
+    {
+      "metric": "Extract 16 MiB + 1,000 files",
+      "manta_before_ms": 60.746,
+      "wings_before_ms": 56.423,
+      "manta_after_ms": 64.675,
+      "wings_after_ms": 59.699,
+      "manta_change_percent": 6.467915582919037
+    }
+  ]
+}

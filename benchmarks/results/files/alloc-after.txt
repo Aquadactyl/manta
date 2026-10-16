@@ -1,0 +1,28 @@
+File: filesystem.test
+Build ID: 134572c1b8908b28c30f55421b2c5f6c77d5ad29
+Type: alloc_space
+Time: 2026-10-15 16:08:57 UTC
+Showing nodes accounting for 591.08MB, 98.28% of 601.42MB total
+Dropped 63 nodes (cum <= 3.01MB)
+Showing top 20 nodes out of 44
+      flat  flat%   sum%        cum   cum%
+  165.22MB 27.47% 27.47%   323.01MB 53.71%  encoding/json.Marshal
+   92.28MB 15.34% 42.82%    92.28MB 15.34%  bytes.growSlice
+   83.51MB 13.88% 56.70%    83.51MB 13.88%  github.com/gabriel-vasile/mimetype.(*MIME).clone (inline)
+   81.52MB 13.55% 70.25%    86.52MB 14.39%  github.com/pterodactyl/wings/internal/ufs.(*UnixFS)._fstatat
+   42.14MB  7.01% 77.26%    44.64MB  7.42%  github.com/pterodactyl/wings/internal/ufs.(*UnixFS).readDir
+      38MB  6.32% 83.58%       38MB  6.32%  os.newFile
+      37MB  6.15% 89.73%   159.02MB 26.44%  github.com/pterodactyl/wings/server/filesystem.(*Stat).MarshalJSON
+   22.50MB  3.74% 93.47%    22.50MB  3.74%  time.Time.Format
+   13.41MB  2.23% 95.70%   271.08MB 45.07%  github.com/pterodactyl/wings/internal/ufs.ReadDirMap[go.shape.struct { io/fs.FileInfo; Mimetype string }]
+    9.50MB  1.58% 97.28%     9.50MB  1.58%  golang.org/x/sys/unix.ByteSliceFromString
+       6MB     1% 98.28%        6MB     1%  io/fs.FileMode.String
+         0     0% 98.28%    92.28MB 15.34%  bytes.(*Buffer).Grow (inline)
+         0     0% 98.28%    92.28MB 15.34%  bytes.(*Buffer).grow
+         0     0% 98.28%   251.30MB 41.79%  encoding/json.(*encodeState).marshal
+         0     0% 98.28%   251.30MB 41.79%  encoding/json.(*encodeState).reflectValue
+         0     0% 98.28%   251.30MB 41.79%  encoding/json.addrMarshalerEncoder
+         0     0% 98.28%   251.30MB 41.79%  encoding/json.arrayEncoder.encode
+         0     0% 98.28%   251.30MB 41.79%  encoding/json.condAddrEncoder.encode
+         0     0% 98.28%   251.30MB 41.79%  encoding/json.sliceEncoder.encode
+         0     0% 98.28%    83.51MB 13.88%  github.com/gabriel-vasile/mimetype.(*MIME).cloneHierarchy

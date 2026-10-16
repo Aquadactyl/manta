@@ -26,7 +26,7 @@ type serverTransferRequest struct {
 // postServerTransfer handles the start of a transfer for a server.
 func postServerTransfer(c *gin.Context) {
 	var data serverTransferRequest
-	if err := c.BindJSON(&data); err != nil {
+	if err := middleware.BindJSON(c, &data); err != nil {
 		return
 	}
 

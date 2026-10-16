@@ -1,0 +1,16 @@
+goos: linux
+goarch: amd64
+pkg: github.com/pterodactyl/wings/router
+cpu: Intel(R) Core(TM) i7-14700KF
+BenchmarkFileReadAPI/1MiB-4         	    4365	    115502 ns/op	9078.40 MB/s	       256.0 writes/op	   10714 B/op	      39 allocs/op
+BenchmarkFileReadAPI/1MiB-4         	    6342	    115000 ns/op	9118.02 MB/s	       256.0 writes/op	   10713 B/op	      39 allocs/op
+BenchmarkFileReadAPI/1MiB-4         	    5706	    114066 ns/op	9192.74 MB/s	       256.0 writes/op	   10712 B/op	      39 allocs/op
+BenchmarkFileReadAPI/1MiB-4         	    5436	    116286 ns/op	9017.24 MB/s	       256.0 writes/op	   10712 B/op	      39 allocs/op
+BenchmarkFileReadAPI/1MiB-4         	    4910	    114092 ns/op	9190.64 MB/s	       256.0 writes/op	   10712 B/op	      39 allocs/op
+BenchmarkFileReadAPI/16MiB-4        	     218	   2718436 ns/op	6171.64 MB/s	      4096 writes/op	   10726 B/op	      39 allocs/op
+BenchmarkFileReadAPI/16MiB-4        	     222	   2692121 ns/op	6231.97 MB/s	      4096 writes/op	   10725 B/op	      39 allocs/op
+BenchmarkFileReadAPI/16MiB-4        	     210	   2829861 ns/op	5928.64 MB/s	      4096 writes/op	   10726 B/op	      39 allocs/op
+BenchmarkFileReadAPI/16MiB-4        	     216	   2714165 ns/op	6181.35 MB/s	      4096 writes/op	   10725 B/op	      39 allocs/op
+BenchmarkFileReadAPI/16MiB-4        	     219	   2727216 ns/op	6151.77 MB/s	      4096 writes/op	   10728 B/op	      39 allocs/op
+PASS
+ok  	github.com/pterodactyl/wings/router	6.191s

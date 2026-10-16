@@ -50,6 +50,19 @@ func (e *commandEnvironment) SendCommand(string) error {
 
 func setupHandler(t *testing.T) (*Handler, *commandEnvironment) {
 	t.Helper()
+	h, env, client := setupHandlerClient(t)
+	go func() {
+		for {
+			if _, _, err := client.ReadMessage(); err != nil {
+				return
+			}
+		}
+	}()
+	return h, env
+}
+
+func setupHandlerClient(t *testing.T) (*Handler, *commandEnvironment, *websocket.Conn) {
+	t.Helper()
 
 	cfg, err := config.NewAtPath(filepath.Join(t.TempDir(), "config.yml"))
 	if err != nil {
@@ -85,15 +98,9 @@ func setupHandler(t *testing.T) (*Handler, *commandEnvironment) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = client.Close() })
-	go func() {
-		for {
-			if _, _, err := client.ReadMessage(); err != nil {
-				return
-			}
-		}
-	}()
-
-	return &Handler{Connection: <-conns, server: s, limiter: NewLimiter()}, env
+	h := &Handler{Connection: <-conns, server: s, limiter: NewLimiter()}
+	t.Cleanup(func() { _ = h.Connection.Close() })
+	return h, env, client
 }
 
 func signToken(t *testing.T, forServer string, permissions ...string) (string, *tokens.WebsocketPayload) {

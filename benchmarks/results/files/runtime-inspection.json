@@ -1,0 +1,10 @@
+{
+    "image_id":  "sha256:c05d956c4bf5b8b0cbac8730893eb5986ae46a88010e9e17d061e7882788db46",
+    "binary_sha256":  "8f2516afd6a9d8f745587c2e2eb65b8d20f9b6c75bdf09fd0aeac9c8d73fcd29",
+    "helpers":  {
+                    "filesystem.detectFileMIME":  true,
+                    "filesystem.StatResponse":  true,
+                    "websocket.decodeEventMessage":  true,
+                    "*[65536]uint8":  true
+                }
+}

@@ -1,0 +1,29 @@
+File: filesystem.test
+Build ID: 134572c1b8908b28c30f55421b2c5f6c77d5ad29
+Type: cpu
+Time: 2026-10-15 16:08:53 UTC
+Duration: 3.58s, Total samples = 3.80s (106.15%)
+Showing nodes accounting for 2.81s, 73.95% of 3.80s total
+Dropped 137 nodes (cum <= 0.02s)
+Showing top 20 nodes out of 177
+      flat  flat%   sum%        cum   cum%
+     1.80s 47.37% 47.37%      1.80s 47.37%  internal/runtime/syscall/linux.Syscall6
+     0.22s  5.79% 53.16%      0.34s  8.95%  encoding/json.appendCompact
+     0.12s  3.16% 56.32%      0.58s 15.26%  github.com/gabriel-vasile/mimetype.(*MIME).match
+     0.10s  2.63% 58.95%      0.10s  2.63%  internal/runtime/atomic.(*Uint32).CompareAndSwap (inline)
+     0.07s  1.84% 60.79%      0.07s  1.84%  encoding/json.stateInString
+     0.06s  1.58% 62.37%      0.06s  1.58%  github.com/gabriel-vasile/mimetype/internal/magic.Text
+     0.06s  1.58% 63.95%      0.06s  1.58%  memeqbody
+     0.05s  1.32% 65.26%      0.05s  1.32%  runtime.memmove
+     0.04s  1.05% 66.32%      0.04s  1.05%  encoding/json.appendString[go.shape.string]
+     0.04s  1.05% 67.37%      0.04s  1.05%  indexbytebody
+     0.04s  1.05% 68.42%      0.10s  2.63%  runtime.reentersyscall
+     0.03s  0.79% 69.21%      0.03s  0.79%  github.com/gabriel-vasile/mimetype/internal/magic.markupCheck
+     0.03s  0.79% 70.00%      0.03s  0.79%  runtime.futex
+     0.03s  0.79% 70.79%      0.03s  0.79%  runtime.memclrNoHeapPointers
+     0.02s  0.53% 71.32%      0.67s 17.63%  encoding/json.Marshal
+     0.02s  0.53% 71.84%      0.03s  0.79%  encoding/json.stateBeginValue
+     0.02s  0.53% 72.37%      0.02s  0.53%  encoding/json.stateEndValue
+     0.02s  0.53% 72.89%      0.09s  2.37%  encoding/json.structEncoder.encode
+     0.02s  0.53% 73.42%      0.04s  1.05%  github.com/gabriel-vasile/mimetype/internal/magic.Shell
+     0.02s  0.53% 73.95%      0.02s  0.53%  github.com/gabriel-vasile/mimetype/internal/magic.ciPrefix (inline)

@@ -1,0 +1,222 @@
+{
+    "passed": true,
+    "servers_checked": 4,
+    "samples": [
+        {
+            "round": 0,
+            "server_id": 7,
+            "name": "Benchmark Manta Paper",
+            "node": "Local Manta",
+            "utilization": {
+                "memory_bytes": 835948544,
+                "memory_limit_bytes": 1852203008,
+                "cpu_absolute": 3.993,
+                "network": {
+                    "rx_bytes": 151018,
+                    "tx_bytes": 12361
+                },
+                "uptime": 137790,
+                "state": "running",
+                "disk_bytes": 278972791
+            }
+        },
+        {
+            "round": 0,
+            "server_id": 8,
+            "name": "Benchmark Manta Bedrock",
+            "node": "Local Manta",
+            "utilization": {
+                "memory_bytes": 200699904,
+                "memory_limit_bytes": 617398272,
+                "cpu_absolute": 1.857,
+                "network": {
+                    "rx_bytes": 58249,
+                    "tx_bytes": 12949
+                },
+                "uptime": 137693,
+                "state": "running",
+                "disk_bytes": 322217470
+            }
+        },
+        {
+            "round": 0,
+            "server_id": 9,
+            "name": "Benchmark Wings Paper",
+            "node": "Benchmark Wings",
+            "utilization": {
+                "memory_bytes": 894320640,
+                "memory_limit_bytes": 1852203008,
+                "cpu_absolute": 1.399,
+                "network": {
+                    "rx_bytes": 119127,
+                    "tx_bytes": 10681
+                },
+                "uptime": 139805,
+                "state": "running",
+                "disk_bytes": 278971259
+            }
+        },
+        {
+            "round": 0,
+            "server_id": 10,
+            "name": "Benchmark Wings Bedrock",
+            "node": "Benchmark Wings",
+            "utilization": {
+                "memory_bytes": 208130048,
+                "memory_limit_bytes": 617398272,
+                "cpu_absolute": 1.883,
+                "network": {
+                    "rx_bytes": 62625,
+                    "tx_bytes": 11347
+                },
+                "uptime": 139791,
+                "state": "running",
+                "disk_bytes": 322222255
+            }
+        },
+        {
+            "round": 1,
+            "server_id": 7,
+            "name": "Benchmark Manta Paper",
+            "node": "Local Manta",
+            "utilization": {
+                "memory_bytes": 835743744,
+                "memory_limit_bytes": 1852203008,
+                "cpu_absolute": 3.381,
+                "network": {
+                    "rx_bytes": 151018,
+                    "tx_bytes": 12361
+                },
+                "uptime": 139801,
+                "state": "running",
+                "disk_bytes": 278972791
+            }
+        },
+        {
+            "round": 1,
+            "server_id": 8,
+            "name": "Benchmark Manta Bedrock",
+            "node": "Local Manta",
+            "utilization": {
+                "memory_bytes": 200699904,
+                "memory_limit_bytes": 617398272,
+                "cpu_absolute": 1.565,
+                "network": {
+                    "rx_bytes": 58249,
+                    "tx_bytes": 12949
+                },
+                "uptime": 139704,
+                "state": "running",
+                "disk_bytes": 322217470
+            }
+        },
+        {
+            "round": 1,
+            "server_id": 9,
+            "name": "Benchmark Wings Paper",
+            "node": "Benchmark Wings",
+            "utilization": {
+                "memory_bytes": 894308352,
+                "memory_limit_bytes": 1852203008,
+                "cpu_absolute": 2.458,
+                "network": {
+                    "rx_bytes": 119127,
+                    "tx_bytes": 10681
+                },
+                "uptime": 141816,
+                "state": "running",
+                "disk_bytes": 278971259
+            }
+        },
+        {
+            "round": 1,
+            "server_id": 10,
+            "name": "Benchmark Wings Bedrock",
+            "node": "Benchmark Wings",
+            "utilization": {
+                "memory_bytes": 208130048,
+                "memory_limit_bytes": 617398272,
+                "cpu_absolute": 1.546,
+                "network": {
+                    "rx_bytes": 62625,
+                    "tx_bytes": 11347
+                },
+                "uptime": 141802,
+                "state": "running",
+                "disk_bytes": 322222255
+            }
+        },
+        {
+            "round": 2,
+            "server_id": 7,
+            "name": "Benchmark Manta Paper",
+            "node": "Local Manta",
+            "utilization": {
+                "memory_bytes": 835395584,
+                "memory_limit_bytes": 1852203008,
+                "cpu_absolute": 1.305,
+                "network": {
+                    "rx_bytes": 151018,
+                    "tx_bytes": 12361
+                },
+                "uptime": 141820,
+                "state": "running",
+                "disk_bytes": 278972791
+            }
+        },
+        {
+            "round": 2,
+            "server_id": 8,
+            "name": "Benchmark Manta Bedrock",
+            "node": "Local Manta",
+            "utilization": {
+                "memory_bytes": 200699904,
+                "memory_limit_bytes": 617398272,
+                "cpu_absolute": 1.662,
+                "network": {
+                    "rx_bytes": 58249,
+                    "tx_bytes": 12949
+                },
+                "uptime": 141718,
+                "state": "running",
+                "disk_bytes": 322217470
+            }
+        },
+        {
+            "round": 2,
+            "server_id": 9,
+            "name": "Benchmark Wings Paper",
+            "node": "Benchmark Wings",
+            "utilization": {
+                "memory_bytes": 895115264,
+                "memory_limit_bytes": 1852203008,
+                "cpu_absolute": 1.423,
+                "network": {
+                    "rx_bytes": 119127,
+                    "tx_bytes": 10681
+                },
+                "uptime": 143835,
+                "state": "running",
+                "disk_bytes": 278971259
+            }
+        },
+        {
+            "round": 2,
+            "server_id": 10,
+            "name": "Benchmark Wings Bedrock",
+            "node": "Benchmark Wings",
+            "utilization": {
+                "memory_bytes": 208130048,
+                "memory_limit_bytes": 617398272,
+                "cpu_absolute": 1.74,
+                "network": {
+                    "rx_bytes": 62625,
+                    "tx_bytes": 11347
+                },
+                "uptime": 143816,
+                "state": "running",
+                "disk_bytes": 322222255
+            }
+        }
+    ]
+}

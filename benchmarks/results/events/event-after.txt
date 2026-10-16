@@ -1,0 +1,26 @@
+goos: linux
+goarch: amd64
+pkg: github.com/pterodactyl/wings/router/websocket
+cpu: Intel(R) Core(TM) i7-14700KF
+BenchmarkEventMessage/stats/viewers_1-4         	  306164	      1843 ns/op	     816 B/op	      13 allocs/op
+BenchmarkEventMessage/stats/viewers_1-4         	  332925	      1804 ns/op	     816 B/op	      13 allocs/op
+BenchmarkEventMessage/stats/viewers_1-4         	  327589	      1876 ns/op	     816 B/op	      13 allocs/op
+BenchmarkEventMessage/stats/viewers_1-4         	  307608	      1784 ns/op	     816 B/op	      13 allocs/op
+BenchmarkEventMessage/stats/viewers_1-4         	  335503	      1832 ns/op	     816 B/op	      13 allocs/op
+BenchmarkEventMessage/stats/viewers_16-4        	   20852	     28418 ns/op	   13062 B/op	     208 allocs/op
+BenchmarkEventMessage/stats/viewers_16-4        	   20605	     29612 ns/op	   13063 B/op	     208 allocs/op
+BenchmarkEventMessage/stats/viewers_16-4        	   21210	     28770 ns/op	   13062 B/op	     208 allocs/op
+BenchmarkEventMessage/stats/viewers_16-4        	   20545	     29870 ns/op	   13063 B/op	     208 allocs/op
+BenchmarkEventMessage/stats/viewers_16-4        	   20455	     29662 ns/op	   13063 B/op	     208 allocs/op
+BenchmarkEventMessage/stats/viewers_64-4        	    4789	    125529 ns/op	   52251 B/op	     832 allocs/op
+BenchmarkEventMessage/stats/viewers_64-4        	    4400	    118607 ns/op	   52252 B/op	     832 allocs/op
+BenchmarkEventMessage/stats/viewers_64-4        	    5112	    118097 ns/op	   52252 B/op	     832 allocs/op
+BenchmarkEventMessage/stats/viewers_64-4        	    5062	    118967 ns/op	   52251 B/op	     832 allocs/op
+BenchmarkEventMessage/stats/viewers_64-4        	    4564	    120854 ns/op	   52251 B/op	     832 allocs/op
+BenchmarkEventMessage/status-4                  	  745856	       847.4 ns/op	     392 B/op	      11 allocs/op
+BenchmarkEventMessage/status-4                  	  667458	       824.7 ns/op	     392 B/op	      11 allocs/op
+BenchmarkEventMessage/status-4                  	  736674	       810.1 ns/op	     392 B/op	      11 allocs/op
+BenchmarkEventMessage/status-4                  	  620467	       884.2 ns/op	     392 B/op	      11 allocs/op
+BenchmarkEventMessage/status-4                  	  785828	       831.5 ns/op	     392 B/op	      11 allocs/op
+PASS
+ok  	github.com/pterodactyl/wings/router/websocket	11.888s

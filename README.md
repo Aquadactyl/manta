@@ -1,55 +1,62 @@
-<p align="center">
-  <a href="https://pterodactyl.io">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset=".github/assets/logo-dark.svg">
-      <img alt="Pterodactyl" src=".github/assets/logo-light.svg" height="72">
-    </picture>
-  </a>
-</p>
+# Manta
 
-![Discord](https://img.shields.io/discord/122900397965705216?label=Discord&logo=Discord&logoColor=white)
-![GitHub Releases](https://img.shields.io/github/downloads/pterodactyl/wings/latest/total)
-[![Go Report Card](https://goreportcard.com/badge/github.com/pterodactyl/wings)](https://goreportcard.com/report/github.com/pterodactyl/wings)
+Manta is a Linux server daemon for Aquadactyl Panel, based on Pterodactyl Wings. It manages Docker game servers, exposes the Wings HTTP and WebSocket APIs, provides SFTP access, and handles files, backups, installations, and transfers.
 
-# Pterodactyl Wings
+The existing Go module path, API routes, authentication format, and configuration paths are retained for compatibility. Aquadactyl integration should be verified against your Panel version before replacing a running daemon.
 
-Wings is Pterodactyl's server control plane, built for the rapidly changing gaming industry and designed to be
-highly performant and secure. Wings provides an HTTP API allowing you to interface directly with running server
-instances, fetch server logs, generate backups, and control all aspects of the server lifecycle.
+## Performance and security
 
-In addition, Wings ships with a built-in SFTP server allowing your system to remain free of Pterodactyl specific
-dependencies, and allowing users to authenticate with the same credentials they would normally use to access the Panel.
+Manta includes filesystem containment, container restrictions, bounded SFTP and WebSocket connections, and checks against internal network destinations for user-requested downloads. The latest hardening adds:
 
-## Pterodactyl v2 is coming soon
+- A 4 MiB limit for JSON control requests, including chunked bodies; file uploads, raw file writes, and transfers keep their existing streaming paths.
+- Up to eight concurrent operations per rename, delete, or chmod request, stopping further scheduling after errors or request cancellation.
+- Up to four concurrent Panel pagination requests during startup, stopping further scheduling after a failure.
+- A 16 MiB limit for Panel API response bodies, including decompressed and chunked responses; read failures are propagated and the original body is closed.
+- Request retries that reuse the serialized body without allocating another full copy.
+- A redirect policy that keeps Panel credentials and SFTP authentication bodies on the original origin.
+- Strict JWT expiry, issuance and not-before validation with 30 seconds of clock tolerance, and one-time token retention through the signed expiry.
+- Synchronized remote download cancellation, including cancellation before execution, and cleanup of empty tracking entries.
+- URL logs that omit credentials, query strings, and fragments, including upload/download tokens and signed URL parameters.
 
-Wings is stable and remains the daemon for Pterodactyl: the same Wings is used with the upcoming Panel v2.
+These bounds apply per request. They do not establish a global limit for simultaneous file operations or downloads. Local Paper/Bedrock benchmarks and Aquadactyl integration checks are linked below. Production workload testing is still needed to establish capacity and deployment suitability.
 
-[![Watch: Introducing Pterodactyl v2](.github/assets/v2-video.jpg)](https://www.youtube.com/watch?v=1ER4kv0jVEU)
+See the [hardening review](HARDENING.md) for benchmark results, regression coverage, and the remaining Docker dependency scan findings.
 
-## Sponsors
+## Build and verify
 
-I would like to extend my sincere thanks to the following sponsors for helping fund Pterodactyl's development.
-[Interested in becoming a sponsor?](https://github.com/sponsors/pterodactyl)
+Use Linux and the Go toolchain selected by `go.mod`:
 
-| Company                                                                           | About                                                                                                                                                                                                                                           |
-|-----------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| [**Buildurly**](https://buildurly.com/)                                           | Buildurly is a hardware procurement company. They deliver tailored, enterprise-grade hardware solutions designed around your unique needs. From sourcing to delivery, Buildurly's white-glove service ensures a seamless, worry-free, professional experience.                                                                                                                                          |
-| [**Hosturly**](https://hosturly.com/)                                             | Hosturly is an enterprise hosting provider. They provide cost-effective, high-performance, and reliable services, including VPS, Web, Dedicated, and Colocation.                                                                                |
-| [**indifferent broccoli**](https://indifferentbroccoli.com/)                      | indifferent broccoli is a game server hosting and rental company. With them, you get top-notch computer power for your gaming sessions. They destroy lag, latency, and complexity--letting you focus on the fun stuff.                         |
-| [**Infraly, LLC**](https://infraly.co/)                                           | Infraly is an infrastructure company powering the next generation of online services. Through their brands, Infraly delivers cutting-edge solutions across multiple markets. Their vertically integrated approach provides unmatched performance, scalability, and reliability, giving our customers full control.                                                                                     |
-| [**MineStrator**](https://minestrator.com/)                                       | MineStrator is a game server hosting provider. Looking for the most high-end French hosting company for your Minecraft server? More than 24,000 members on our Discord trust us. Give us a try!                                                |
-| [**Physgun**](https://physgun.com/)                                               | Physgun is a game server hosting provider. Most providers rent rack space and rebrand a panel. At Physgun, they engineer the performance, write the features, and staff the support. Physgun truly is game hosting perfected!                   |
-| [**WISP**](https://wisp.gg/)                                                      | WISP is an industry-leading SaaS platform for game server management, designed for hosting companies, gaming organizations, and enthusiasts. WISP combines modern, intuitive interfaces with powerful tools, making server deployment and administration seamless, scalable, and efficient.     
+```sh
+go build -trimpath -o build/manta .
+go test ./...
+go test -race ./...
+go vet ./...
+```
 
-## Documentation
+Run with the existing node configuration:
 
-* [Panel Documentation](https://docs.pterodactyl.io/v1/panel/getting-started)
-* [Wings Documentation](https://docs.pterodactyl.io/v1/wings/)
-* [Community Guides](https://docs.pterodactyl.io/v1/guides/panel-installation/debian)
-* Or, get additional help [via Discord](https://discord.gg/pterodactyl)
+```sh
+./build/manta --config /etc/pterodactyl/config.yml
+```
 
-## Reporting Issues
+The Dockerfile also builds the daemon. Existing deployment assets retain the `wings` executable name.
 
-Please use the [pterodactyl/panel](https://github.com/pterodactyl/panel) repository to report any issues or make
-feature requests for Wings. In addition, the [security policy](https://github.com/pterodactyl/panel/security/policy) listed
-within that repository also applies to Wings.
+To run Manta alongside your existing local Aquadactyl Panel, see the [local Docker setup](docker/README.md).
+
+Measured Paper/Bedrock results against stock Wings, live security checks, and reproduction instructions are in the [local benchmark report](benchmarks/REPORT.md).
+
+The [performance follow-up](benchmarks/OPTIMIZATION.md) records the subsequent authentication, access-log, and console/event optimizations against the previous Manta build.
+
+The [lookup and allocation comparison](benchmarks/SCALABILITY.md) measures UUID indexing and deferred request logging, including synthetic registration counts up to 1,000.
+
+The [stats and console comparison](benchmarks/TELEMETRY.md) records decoder and running-console changes, resource-value parity checks, and live validation.
+
+The [WebSocket event comparison](benchmarks/EVENTS.md) measures reduced per-viewer stats serialization and checks automatic stats delivery with 16 viewers on each benchmark game.
+
+The [file browsing and streaming comparison](benchmarks/FILES.md) measures pooled content probes, directory JSON encoding, and larger streaming reads against the preceding Manta build, with live Docker controls.
+
+The [resource-event comparison](benchmarks/RESOURCE_EVENTS.md) measures typed stats decoding and observer-aware periodic broadcasts, with disk-limit enforcement and API/console validation.
+
+## Upstream
+
+Manta derives from [Pterodactyl Wings](https://github.com/pterodactyl/wings), distributed under the [MIT license](LICENSE). The upstream [Wings documentation](https://docs.pterodactyl.io/v1/wings/) remains useful for the inherited configuration and API behavior.

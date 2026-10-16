@@ -13,6 +13,42 @@ import (
 	"github.com/pterodactyl/wings/environment"
 )
 
+// Decode only counters used by resource reporting. Docker's full response also
+// materializes large memory-counter maps and block-I/O arrays on every sample.
+type resourceStats struct {
+	Read        time.Time                           `json:"read"`
+	PreRead     time.Time                           `json:"preread"`
+	CPUStats    container.CPUStats                  `json:"cpu_stats"`
+	PreCPUStats container.CPUStats                  `json:"precpu_stats"`
+	MemoryStats resourceMemoryStats                 `json:"memory_stats"`
+	Networks    map[string]environment.NetworkStats `json:"networks"`
+}
+
+type resourceMemoryStats struct {
+	Usage uint64 `json:"usage"`
+	Limit uint64 `json:"limit"`
+	Stats struct {
+		TotalInactiveFile optionalResourceCounter `json:"total_inactive_file"`
+		InactiveFile      uint64                  `json:"inactive_file"`
+	} `json:"stats"`
+}
+
+// Presence matters: a v1 cache value of zero takes precedence over the v2
+// counter. Accept null as zero, matching the SDK's map[string]uint64 decoder.
+type optionalResourceCounter struct {
+	value   uint64
+	present bool
+}
+
+func (v *optionalResourceCounter) UnmarshalJSON(raw []byte) error {
+	var value uint64
+	if err := json.Unmarshal(raw, &value); err != nil {
+		return err
+	}
+	v.value, v.present = value, true
+	return nil
+}
+
 // Uptime returns the current uptime of the container in milliseconds. If the
 // container is not currently running this will return 0.
 func (e *Environment) Uptime(ctx context.Context) (int64, error) {
@@ -57,8 +93,8 @@ func (e *Environment) pollResources(ctx context.Context) error {
 		case <-ctx.Done():
 			return ctx.Err()
 		default:
-			var v container.StatsResponse
-			if err := dec.Decode(&v); err != nil {
+			st, err := decodeResourceStats(dec, uptime)
+			if err != nil {
 				if err != io.EOF && !errors.Is(err, context.Canceled) {
 					e.log().WithField("error", err).Warn("error while processing Docker stats output for container")
 				} else {
@@ -73,26 +109,30 @@ func (e *Environment) pollResources(ctx context.Context) error {
 				return nil
 			}
 
-			if !v.PreRead.IsZero() {
-				uptime = uptime + v.Read.Sub(v.PreRead).Milliseconds()
-			}
-
-			st := environment.Stats{
-				Uptime:      uptime,
-				Memory:      calculateDockerMemory(v.MemoryStats),
-				MemoryLimit: v.MemoryStats.Limit,
-				CpuAbsolute: calculateDockerAbsoluteCpu(v.PreCPUStats, v.CPUStats),
-				Network:     environment.NetworkStats{},
-			}
-
-			for _, nw := range v.Networks {
-				st.Network.RxBytes += nw.RxBytes
-				st.Network.TxBytes += nw.TxBytes
-			}
-
+			uptime = st.Uptime
 			e.Events().Publish(environment.ResourceEvent, st)
 		}
 	}
+}
+
+func decodeResourceStats(dec *json.Decoder, uptime int64) (environment.Stats, error) {
+	var v resourceStats
+	if err := dec.Decode(&v); err != nil {
+		return environment.Stats{}, err
+	}
+	if !v.PreRead.IsZero() {
+		uptime += v.Read.Sub(v.PreRead).Milliseconds()
+	}
+	st := environment.Stats{
+		Uptime: uptime, Memory: calculateDockerMemory(v.MemoryStats),
+		MemoryLimit: v.MemoryStats.Limit,
+		CpuAbsolute: calculateDockerAbsoluteCpu(v.PreCPUStats, v.CPUStats),
+	}
+	for _, nw := range v.Networks {
+		st.Network.RxBytes += nw.RxBytes
+		st.Network.TxBytes += nw.TxBytes
+	}
+	return st, nil
 }
 
 // The "docker stats" CLI call does not return the same value as the [container.MemoryStats].Usage
@@ -103,12 +143,12 @@ func (e *Environment) pollResources(ctx context.Context) error {
 // bothering me about it. It should also reflect a slightly more correct memory value anyways.
 //
 // @see https://github.com/docker/cli/blob/96e1d1d6/cli/command/container/stats_helpers.go#L227-L249
-func calculateDockerMemory(stats container.MemoryStats) uint64 {
-	if v, ok := stats.Stats["total_inactive_file"]; ok && v < stats.Usage {
-		return stats.Usage - v
+func calculateDockerMemory(stats resourceMemoryStats) uint64 {
+	if v := stats.Stats.TotalInactiveFile; v.present && v.value < stats.Usage {
+		return stats.Usage - v.value
 	}
 
-	if v := stats.Stats["inactive_file"]; v < stats.Usage {
+	if v := stats.Stats.InactiveFile; v < stats.Usage {
 		return stats.Usage - v
 	}
 

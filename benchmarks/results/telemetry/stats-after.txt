@@ -1,0 +1,11 @@
+goos: linux
+goarch: amd64
+pkg: github.com/pterodactyl/wings/environment/docker
+cpu: Intel(R) Core(TM) i7-14700KF
+BenchmarkDockerStatsStream-4   	   51489	     11622 ns/op	     660 B/op	       6 allocs/op
+BenchmarkDockerStatsStream-4   	   52885	     11262 ns/op	     660 B/op	       6 allocs/op
+BenchmarkDockerStatsStream-4   	   52456	     11255 ns/op	     660 B/op	       6 allocs/op
+BenchmarkDockerStatsStream-4   	   52981	     11232 ns/op	     660 B/op	       6 allocs/op
+BenchmarkDockerStatsStream-4   	   52305	     11195 ns/op	     660 B/op	       6 allocs/op
+PASS
+ok  	github.com/pterodactyl/wings/environment/docker	2.988s

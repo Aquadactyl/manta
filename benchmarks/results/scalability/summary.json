@@ -1,0 +1,122 @@
+[
+  {
+    "kind": "router",
+    "benchmark": "BenchmarkServerStatus",
+    "before_ns": 4832.0,
+    "after_ns": 4039.0,
+    "before_bytes": 4491.0,
+    "after_bytes": 3529.0,
+    "before_allocs": 38.0,
+    "after_allocs": 27.0,
+    "speedup": 1.196335726665016,
+    "time_change_percent": -16.4114238410596
+  },
+  {
+    "kind": "router",
+    "benchmark": "BenchmarkServerStatusScale/10",
+    "before_ns": 5156.0,
+    "after_ns": 4136.0,
+    "before_bytes": 4491.0,
+    "after_bytes": 3529.0,
+    "before_allocs": 38.0,
+    "after_allocs": 27.0,
+    "speedup": 1.246615087040619,
+    "time_change_percent": -19.782777346780446
+  },
+  {
+    "kind": "router",
+    "benchmark": "BenchmarkServerStatusScale/100",
+    "before_ns": 7990.0,
+    "after_ns": 4118.0,
+    "before_bytes": 4491.0,
+    "after_bytes": 3529.0,
+    "before_allocs": 38.0,
+    "after_allocs": 27.0,
+    "speedup": 1.9402622632345798,
+    "time_change_percent": -48.460575719649555
+  },
+  {
+    "kind": "router",
+    "benchmark": "BenchmarkServerStatusScale/1000",
+    "before_ns": 30882.0,
+    "after_ns": 3806.0,
+    "before_bytes": 4485.0,
+    "after_bytes": 3523.0,
+    "before_allocs": 38.0,
+    "after_allocs": 27.0,
+    "speedup": 8.114030478192328,
+    "time_change_percent": -87.67566867430865
+  },
+  {
+    "kind": "lookup",
+    "benchmark": "BenchmarkManagerLookup/1/missing=false",
+    "before_ns": 33.12,
+    "after_ns": 14.07,
+    "before_bytes": 0.0,
+    "after_bytes": 0.0,
+    "before_allocs": 0.0,
+    "after_allocs": 0.0,
+    "speedup": 2.3539445628997866,
+    "time_change_percent": -57.51811594202898
+  },
+  {
+    "kind": "lookup",
+    "benchmark": "BenchmarkManagerLookup/1/missing=true",
+    "before_ns": 34.6,
+    "after_ns": 14.08,
+    "before_bytes": 0.0,
+    "after_bytes": 0.0,
+    "before_allocs": 0.0,
+    "after_allocs": 0.0,
+    "speedup": 2.4573863636363638,
+    "time_change_percent": -59.30635838150289
+  },
+  {
+    "kind": "lookup",
+    "benchmark": "BenchmarkManagerLookup/100/missing=false",
+    "before_ns": 2204.0,
+    "after_ns": 13.97,
+    "before_bytes": 0.0,
+    "after_bytes": 0.0,
+    "before_allocs": 0.0,
+    "after_allocs": 0.0,
+    "speedup": 157.76664280601287,
+    "time_change_percent": -99.36615245009074
+  },
+  {
+    "kind": "lookup",
+    "benchmark": "BenchmarkManagerLookup/100/missing=true",
+    "before_ns": 2229.0,
+    "after_ns": 13.2,
+    "before_bytes": 0.0,
+    "after_bytes": 0.0,
+    "before_allocs": 0.0,
+    "after_allocs": 0.0,
+    "speedup": 168.86363636363637,
+    "time_change_percent": -99.40780619111709
+  },
+  {
+    "kind": "lookup",
+    "benchmark": "BenchmarkManagerLookup/1000/missing=false",
+    "before_ns": 21208.0,
+    "after_ns": 13.86,
+    "before_bytes": 0.0,
+    "after_bytes": 0.0,
+    "before_allocs": 0.0,
+    "after_allocs": 0.0,
+    "speedup": 1530.1587301587301,
+    "time_change_percent": -99.93464730290457
+  },
+  {
+    "kind": "lookup",
+    "benchmark": "BenchmarkManagerLookup/1000/missing=true",
+    "before_ns": 21384.0,
+    "after_ns": 13.05,
+    "before_bytes": 0.0,
+    "after_bytes": 0.0,
+    "before_allocs": 0.0,
+    "after_allocs": 0.0,
+    "speedup": 1638.6206896551723,
+    "time_change_percent": -99.93897306397307
+  }
+]

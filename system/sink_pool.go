@@ -28,6 +28,14 @@ func NewSinkPool() *SinkPool {
 	return &SinkPool{}
 }
 
+// HasListeners reports whether a sink is currently registered. This is a
+// snapshot: listeners added afterward receive subsequent publications.
+func (p *SinkPool) HasListeners() bool {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	return len(p.sinks) > 0
+}
+
 // On adds a channel to the sink pool instance.
 func (p *SinkPool) On(c chan []byte) {
 	p.mu.Lock()
@@ -90,21 +98,31 @@ func (p *SinkPool) Destroy() {
 // There is a potential for data to be lost when passing it through this
 // function, but only in instances where the channel buffer is full and the
 // channel is not drained fast enough, in which case dropping messages is most
-// likely the best option anyways. This uses waitgroups to allow every channel
-// to attempt its send concurrently thus making the total blocking time of this
-// function "O(1)" instead of "O(n)".
+// likely the best option anyways. Ready receivers are sent to directly without
+// allocations. Only blocked receivers need a goroutine and a timeout; those
+// waits run concurrently so a slow receiver does not delay ready receivers.
 func (p *SinkPool) Push(data []byte) {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 
-	var wg sync.WaitGroup
-	wg.Add(len(p.sinks))
+	var wg *sync.WaitGroup
 	for _, c := range p.sinks {
-		go func(c chan []byte) {
-			defer wg.Done()
+		select {
+		case c <- data:
+			continue
+		default:
+		}
+		if wg == nil {
+			wg = &sync.WaitGroup{}
+		}
+		wg.Add(1)
+		go func(c chan []byte, pending *sync.WaitGroup) {
+			defer pending.Done()
+			timer := time.NewTimer(10 * time.Millisecond)
+			defer timer.Stop()
 			select {
 			case c <- data:
-			case <-time.After(10 * time.Millisecond):
+			case <-timer.C:
 				// If we cannot send the message to the channel within 10ms,
 				// then try to drop the oldest message from the channel, then
 				// send our message.
@@ -121,7 +139,9 @@ func (p *SinkPool) Push(data []byte) {
 					// read from c.
 				}
 			}
-		}(c)
+		}(c, wg)
 	}
-	wg.Wait()
+	if wg != nil {
+		wg.Wait()
+	}
 }
