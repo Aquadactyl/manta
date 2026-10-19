@@ -22,6 +22,19 @@ These bounds apply per request. They do not establish a global limit for simulta
 
 See the [hardening review](HARDENING.md) for benchmark results, regression coverage, and the remaining Docker dependency scan findings.
 
+## Host resource metrics
+
+On Linux, authenticated `GET /api/system/usage` returns host CPU utilization, used
+and total RAM, and used and total space on the configured server-data filesystem.
+`GET /api/system?v=2` advertises this through `capabilities.system_usage`. Missing
+counters are `null`; idle usage remains zero. CPU uses a cancellable 200 ms sample,
+and RAM usage excludes memory reported as available by the kernel.
+
+These counters describe the Linux host and filesystem visible to Manta, including
+when it runs in Docker. They are distinct from game-container usage and assigned
+server limits. The endpoint uses the same node-token authentication as the other
+daemon APIs and does not return configuration, credentials or filesystem paths.
+
 ## Build and verify
 
 Use Linux and the Go toolchain selected by `go.mod`:

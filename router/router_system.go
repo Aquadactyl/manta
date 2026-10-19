@@ -44,6 +44,11 @@ func getSystemInformation(c *gin.Context) {
 	})
 }
 
+// Returns host usage without exposing filesystem paths or daemon configuration.
+func getSystemUsage(c *gin.Context) {
+	c.JSON(http.StatusOK, system.ReadResourceUsage(c.Request.Context(), config.Get().System.Data))
+}
+
 // Returns all the servers that are registered and configured correctly on
 // this wings instance.
 func getAllServers(c *gin.Context) {

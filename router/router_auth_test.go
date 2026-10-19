@@ -17,7 +17,7 @@ import (
 func TestProtectedRouteAuthenticationAndRotation(t *testing.T) {
 	h := newTransferHarness(t, &transferTestPanel{})
 	s := h.seedServer()
-	for _, path := range []string{"/api/servers", "/api/servers/" + s.ID()} {
+	for _, path := range []string{"/api/servers", "/api/servers/" + s.ID(), "/api/system/usage"} {
 		request := func(token string) int {
 			req := httptest.NewRequest(http.MethodGet, path, nil)
 			if token != "" {

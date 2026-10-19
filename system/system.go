@@ -12,9 +12,10 @@ import (
 )
 
 type Information struct {
-	Version string            `json:"version"`
-	Docker  DockerInformation `json:"docker"`
-	System  System            `json:"system"`
+	Version      string            `json:"version"`
+	Docker       DockerInformation `json:"docker"`
+	System       System            `json:"system"`
+	Capabilities map[string]bool   `json:"capabilities"`
 }
 
 type DockerInformation struct {
@@ -90,7 +91,8 @@ func GetSystemInformation() (*Information, error) {
 	}
 
 	return &Information{
-		Version: Version,
+		Capabilities: map[string]bool{"system_usage": HostUsageSupported},
+		Version:      Version,
 		Docker: DockerInformation{
 			Version: version.Version,
 			Cgroups: DockerCgroups{
