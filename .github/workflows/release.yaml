@@ -1,8 +1,21 @@
 name: Release
+
 on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release (e.g. v1.2.3 or 1.2.3)"
+        required: true
+        type: string
+      prerelease:
+        description: "Mark as prerelease"
+        required: false
+        type: boolean
+        default: false
+
 jobs:
   release:
     name: Release
@@ -11,61 +24,87 @@ jobs:
       contents: write
     steps:
       - name: Code checkout
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        uses: actions/checkout@v7
+
+      - name: Resolve release configuration
+        id: resolve-release
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+          INPUT_PRERELEASE: ${{ inputs.prerelease }}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            TAG="$(echo "$INPUT_VERSION" | xargs)"
+            if [[ "$TAG" != v* ]]; then
+              TAG="v$TAG"
+            fi
+            IS_PRERELEASE="$INPUT_PRERELEASE"
+          else
+            TAG="$GITHUB_REF_NAME"
+            if [[ "$TAG" =~ (rc|beta|alpha) ]]; then
+              IS_PRERELEASE="true"
+            else
+              IS_PRERELEASE="false"
+            fi
+          fi
+          echo "RELEASE_TAG=$TAG" >> "$GITHUB_ENV"
+          echo "IS_PRERELEASE=$IS_PRERELEASE" >> "$GITHUB_ENV"
+          echo "release_tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "is_prerelease=$IS_PRERELEASE" >> "$GITHUB_OUTPUT"
+
+      - name: Validate release tag
+        run: |
+          if [[ ! "$RELEASE_TAG" =~ ^v[0-9]+(\.[0-9]+)*(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "Release tags must use a v-prefixed version or versioned prerelease." >&2
+            exit 1
+          fi
 
       - name: Setup Go
-        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        uses: actions/setup-go@v7
         with:
-          go-version: 1.27.2
+          go-version: "1.27.2"
 
       - name: Build release binaries
         env:
           CGO_ENABLED: 0
         run: |
-          GOARCH=amd64 go build -o dist/wings_linux_amd64 -v -trimpath -ldflags="-s -w -X github.com/pterodactyl/wings/system.Version=${{ github.ref_name }}" github.com/pterodactyl/wings
+          mkdir -p dist
+          GOARCH=amd64 go build -o dist/wings_linux_amd64 -v -trimpath -ldflags="-s -w -X github.com/pterodactyl/wings/system.Version=${RELEASE_TAG}" github.com/pterodactyl/wings
           chmod 755 dist/wings_linux_amd64
-          GOARCH=arm64 go build -o dist/wings_linux_arm64 -v -trimpath -ldflags="-s -w -X github.com/pterodactyl/wings/system.Version=${{ github.ref_name }}" github.com/pterodactyl/wings
+          GOARCH=arm64 go build -o dist/wings_linux_arm64 -v -trimpath -ldflags="-s -w -X github.com/pterodactyl/wings/system.Version=${RELEASE_TAG}" github.com/pterodactyl/wings
           chmod 755 dist/wings_linux_arm64
+          cd dist && sha256sum wings_linux_* > checksums.txt && cd ..
 
-      - name: Create release branch
-        env:
-          VERSION: ${{ github.ref_name }}
+      - name: create release branch and bump version
         run: |
-          BRANCH=release/${{ env.VERSION }}
-          git config --local user.email "ci@pterodactyl.io"
-          git config --local user.name "Pterodactyl CI"
-          git checkout -b $BRANCH
-          git push -u origin $BRANCH
-          sed -i "s/var Version = \".*\"/var Version = \"${VERSION:1}\"/" system/const.go
+          VERSION="${RELEASE_TAG#v}"
+          BRANCH="release/$RELEASE_TAG"
+          git config --local user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git config --local user.name 'Manta CI'
+          git checkout -b "$BRANCH"
+          sed -i "s/var Version = \".*\"/var Version = \"$VERSION\"/" system/const.go
           git add system/const.go
-          git commit -m "ci(release): bump version"
-          git push
+          git commit -m 'ci(release): bump version'
+          git push -u origin "$BRANCH"
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            if [ -z "$(git ls-remote --tags origin "refs/tags/$RELEASE_TAG")" ]; then
+              git tag -a "$RELEASE_TAG" -m "Release $RELEASE_TAG"
+              git push origin "$RELEASE_TAG"
+            fi
+          fi
 
       - name: write changelog
         run: |
-          sed -n "/^## ${{ github.ref_name }}/,/^## /{/^## /b;p}" CHANGELOG.md > ./RELEASE_CHANGELOG
+          sed -n "/^## $RELEASE_TAG/,/^## /{/^## /b;p}" CHANGELOG.md > ./RELEASE_CHANGELOG
 
-      - uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b # v2.5.0
+      - uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          draft: true
-          prerelease: ${{ contains(github.ref_name, 'rc') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'alpha') }}
+          name: ${{ steps.resolve-release.outputs.release_tag }}
+          tag_name: ${{ steps.resolve-release.outputs.release_tag }}
+          target_commitish: release/${{ steps.resolve-release.outputs.release_tag }}
+          draft: false
+          prerelease: ${{ steps.resolve-release.outputs.is_prerelease == 'true' }}
           body_path: ./RELEASE_CHANGELOG
           files: |
             dist/*
-
-      # Hand the tagged version to pterodactyl/pterodactyl-cdn, which publishes
-      # https://cdn.pterodactyl.io/releases/latest.json. It can't read the
-      # version off the API itself, because the release above is still a draft.
-      # GITHUB_TOKEN deliberately cannot be used here: it has no access to
-      # another repository.
-      - name: Update CDN release manifest
-        if: ${{ !contains(github.ref_name, 'rc') && !contains(github.ref_name, 'beta') && !contains(github.ref_name, 'alpha') }}
-        env:
-          GH_TOKEN: ${{ secrets.CDN_DISPATCH_TOKEN }}
-          VERSION: ${{ github.ref_name }}
-        run: |
-          jq -n --arg version "$VERSION" \
-            '{event_type: "release-tagged", client_payload: {component: "wings", version: $version}}' \
-            | gh api repos/pterodactyl/pterodactyl-cdn/dispatches --input -

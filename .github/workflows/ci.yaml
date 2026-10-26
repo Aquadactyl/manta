@@ -1,36 +1,36 @@
-name: Push
+name: Tests
 
 on:
+  workflow_dispatch:
   push:
     branches:
-      - develop
+      - "main"
   pull_request:
     branches:
-      - develop
+      - "main"
 
 jobs:
-  build-and-test:
-    name: Build and Test
-    runs-on: ${{ matrix.os }}
+  tests:
+    name: Tests
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04]
         go: ["1.26.9", "1.27.2"]
         goos: [linux]
         goarch: [amd64, arm64]
-    permissions:
-      contents: read
     steps:
       - name: Code checkout
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        uses: actions/checkout@v7
 
       - name: Setup Go
-        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        uses: actions/setup-go@v7
         with:
           go-version: ${{ matrix.go }}
 
-      - name: go mod download
+      - name: Download dependencies
         env:
           CGO_ENABLED: 0
         run: |
@@ -43,34 +43,43 @@ jobs:
           CGO_ENABLED: 0
           SRC_PATH: github.com/pterodactyl/wings
         run: |
+          mkdir -p dist
           go build -v -trimpath -ldflags="-s -w -X ${SRC_PATH}/system.Version=dev-${GITHUB_SHA:0:7}" -o dist/wings ${SRC_PATH}
           go build -v -trimpath -ldflags="-X ${SRC_PATH}/system.Version=dev-${GITHUB_SHA:0:7}" -o dist/wings_debug ${SRC_PATH}
           chmod 755 dist/*
 
-      - name: go test
+      - name: Run tests
         if: ${{ matrix.goarch == 'amd64' }}
         env:
           CGO_ENABLED: 0
         run: |
           go test $(go list ./...)
 
-      - name: go test -race
+      - name: Run tests with race detector and coverage
         if: ${{ matrix.goarch == 'amd64' }}
         env:
           CGO_ENABLED: 1
         run: |
-          go test -race $(go list ./...)
+          go test -race -coverprofile=coverage.out -covermode=atomic ./...
+
+      - name: Upload coverage
+        if: always() && matrix.goarch == 'amd64' && matrix.go == '1.27.2'
+        uses: actions/upload-artifact@v7
+        with:
+          name: go-coverage
+          path: coverage.out
+          if-no-files-found: ignore
 
       - name: Upload Release Artifact
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        if: ${{ (github.ref == 'refs/heads/develop' || github.event_name == 'pull_request') && matrix.go == '1.27.2' }}
+        uses: actions/upload-artifact@v7
+        if: ${{ (github.ref == 'refs/heads/main' || github.event_name == 'pull_request') && matrix.go == '1.27.2' }}
         with:
           name: wings_linux_${{ matrix.goarch }}
           path: dist/wings
 
       - name: Upload Debug Artifact
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        if: ${{ (github.ref == 'refs/heads/develop' || github.event_name == 'pull_request') && matrix.go == '1.27.2' }}
+        uses: actions/upload-artifact@v7
+        if: ${{ (github.ref == 'refs/heads/main' || github.event_name == 'pull_request') && matrix.go == '1.27.2' }}
         with:
           name: wings_linux_${{ matrix.goarch }}_debug
           path: dist/wings_debug
