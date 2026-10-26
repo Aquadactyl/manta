@@ -116,6 +116,84 @@ func Test_Utils(t *testing.T) {
 			g.Assert(b).Equal([]byte(`{"value":true}`))
 		})
 	})
+
+	g.Describe("FirstNotEmpty", func() {
+		g.It("returns first non-empty string", func() {
+			g.Assert(FirstNotEmpty("", "first", "second")).Equal("first")
+			g.Assert(FirstNotEmpty("", "", "third")).Equal("third")
+			g.Assert(FirstNotEmpty("", "")).Equal("")
+		})
+	})
+
+	g.Describe("MustInt", func() {
+		g.It("parses valid integer", func() {
+			g.Assert(MustInt("123")).Equal(123)
+			g.Assert(MustInt("-45")).Equal(-45)
+		})
+
+		g.It("panics on invalid integer", func() {
+			defer func() {
+				r := recover()
+				g.Assert(r != nil).IsTrue()
+			}()
+			MustInt("invalid")
+		})
+	})
+
+	g.Describe("FormatBytes", func() {
+		g.It("formats byte sizes properly", func() {
+			g.Assert(FormatBytes(500)).Equal("500 B")
+			g.Assert(FormatBytes(1024)).Equal("1.0 KiB")
+			g.Assert(FormatBytes(1536)).Equal("1.5 KiB")
+			g.Assert(FormatBytes(1048576)).Equal("1.0 MiB")
+			g.Assert(FormatBytes(1073741824)).Equal("1.0 GiB")
+			g.Assert(FormatBytes(1099511627776)).Equal("1.0 TiB")
+		})
+	})
+
+	g.Describe("AtomicString", func() {
+		g.It("handles store, load and JSON serialization", func() {
+			s := NewAtomicString("initial")
+			g.Assert(s.Load()).Equal("initial")
+
+			s.Store("updated")
+			g.Assert(s.Load()).Equal("updated")
+
+			type testStruct struct {
+				Val *AtomicString `json:"val"`
+			}
+			data, err := json.Marshal(&testStruct{Val: s})
+			g.Assert(err).IsNil()
+			g.Assert(string(data)).Equal(`{"val":"updated"}`)
+
+			var unmarshaled testStruct
+			err = json.Unmarshal([]byte(`{"val":"from_json"}`), &unmarshaled)
+			g.Assert(err).IsNil()
+			g.Assert(unmarshaled.Val.Load()).Equal("from_json")
+		})
+	})
+
+	g.Describe("Atomic[T]", func() {
+		g.It("handles store, load and JSON serialization for generic types", func() {
+			a := NewAtomic(42)
+			g.Assert(a.Load()).Equal(42)
+
+			a.Store(100)
+			g.Assert(a.Load()).Equal(100)
+
+			type testStruct struct {
+				Val *Atomic[int] `json:"val"`
+			}
+			data, err := json.Marshal(&testStruct{Val: a})
+			g.Assert(err).IsNil()
+			g.Assert(string(data)).Equal(`{"val":100}`)
+
+			var unmarshaled testStruct
+			err = json.Unmarshal([]byte(`{"val":999}`), &unmarshaled)
+			g.Assert(err).IsNil()
+			g.Assert(unmarshaled.Val.Load()).Equal(999)
+		})
+	})
 }
 
 func Benchmark_ScanReader(b *testing.B) {

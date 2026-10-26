@@ -46,5 +46,24 @@ func TestProgress(t *testing.T) {
 			g.Assert(p.Written()).Equal(uint64(len(v)))
 			g.Assert(p.Progress(25)).Equal("[=========================] 1001 B / 1000 B")
 		})
+
+		g.It("updates total when SetTotal is called", func() {
+			p := progress.NewProgress(500)
+			g.Assert(p.Total()).Equal(uint64(500))
+			p.SetTotal(2000)
+			g.Assert(p.Total()).Equal(uint64(2000))
+		})
+
+		g.It("forwards writes to underlying writer if set", func() {
+			var buf bytes.Buffer
+			p := progress.NewProgress(100)
+			p.Writer = &buf
+
+			n, err := p.Write([]byte("foobar"))
+			g.Assert(err).IsNil()
+			g.Assert(n).Equal(6)
+			g.Assert(buf.String()).Equal("foobar")
+			g.Assert(p.Written()).Equal(uint64(6))
+		})
 	})
 }

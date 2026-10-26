@@ -93,6 +93,46 @@ func TestNewBus(t *testing.T) {
 				bus.Off(listener2)
 				bus.Off(listener3)
 			})
+
+			g.It("strips colon suffix from namespaced topic", func() {
+				bus := NewBus()
+				listener := make(chan []byte, 1)
+				bus.On(listener)
+
+				bus.Publish("backup completed:12345", "done")
+				v := <-listener
+				m := MustDecode(v)
+				g.Assert(m.Topic).Equal("backup completed")
+				g.Assert(m.Data).Equal("done")
+				bus.Off(listener)
+			})
+		})
+
+		g.Describe("Decode", func() {
+			g.It("decodes valid json into custom struct", func() {
+				type payload struct {
+					Name string `json:"name"`
+				}
+				data := []byte(`{"name":"test-name"}`)
+				var p payload
+				err := DecodeTo(data, &p)
+				g.Assert(err).IsNil()
+				g.Assert(p.Name).Equal("test-name")
+			})
+
+			g.It("returns error when DecodeTo encounters invalid json", func() {
+				var e Event
+				err := DecodeTo([]byte(`not-json`), &e)
+				g.Assert(err).IsNotNil()
+			})
+
+			g.It("panics when MustDecode encounters invalid json", func() {
+				defer func() {
+					r := recover()
+					g.Assert(r != nil).IsTrue()
+				}()
+				MustDecode([]byte(`invalid-json`))
+			})
 		})
 	})
 }

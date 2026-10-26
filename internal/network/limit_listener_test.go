@@ -74,4 +74,11 @@ func TestLimitListenerWarnsWhenTheLimitIsReached(t *testing.T) {
 	if len(handler.Entries) != 1 {
 		t.Fatalf("expected the warning to not be repeated within a minute, got %d entries", len(handler.Entries))
 	}
+
+	// Accept returns error when underlying listener is closed
+	_ = l.Close()
+	_, err = l.Accept()
+	if err == nil {
+		t.Fatal("expected error from Accept after listener is closed")
+	}
 }
