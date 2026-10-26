@@ -344,3 +344,64 @@ func TestDeleteTransferForUnknownServer(t *testing.T) {
 
 	assert.Equal(t, http.StatusConflict, w.Code)
 }
+
+func TestPostTransfersValidationBranches(t *testing.T) {
+	h := newTransferHarness(t, &transferTestPanel{})
+
+	// 1. Missing Authorization header -> 401
+	req := httptest.NewRequest(http.MethodPost, "/api/transfers", nil)
+	w := httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+
+	// 2. Authorization header without Bearer prefix -> 401
+	req = httptest.NewRequest(http.MethodPost, "/api/transfers", nil)
+	req.Header.Set("Authorization", "Basic 12345")
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+
+	// 3. Token with invalid scope -> 403
+	badScopeToken, _ := jwt.Sign(tokens.TransferPayload{
+		Payload: jwt.Payload{
+			Subject:        transferTestUUID,
+			ExpirationTime: jwt.NumericDate(time.Now().Add(15 * time.Minute)),
+		},
+		Scoped: tokens.Scoped{Scope: "bad-scope"},
+	}, config.GetJwtAlgorithm())
+	w = h.postTransfer(bytes.NewBuffer(nil), "multipart/form-data", string(badScopeToken))
+	assert.Equal(t, http.StatusForbidden, w.Code)
+
+	// 4. Token subject is not a UUID -> 400 or 500
+	badUUIDToken, _ := jwt.Sign(tokens.TransferPayload{
+		Payload: jwt.Payload{
+			Subject:        "not-a-valid-uuid",
+			ExpirationTime: jwt.NumericDate(time.Now().Add(15 * time.Minute)),
+		},
+		Scoped: tokens.Scoped{Scope: string(tokens.ServerTransfer)},
+	}, config.GetJwtAlgorithm())
+	w = h.postTransfer(bytes.NewBuffer(nil), "multipart/form-data", string(badUUIDToken))
+	assert.Contains(t, []int{http.StatusBadRequest, http.StatusInternalServerError}, w.Code)
+
+	// 5. Server already exists on manager -> 409
+	s := h.seedServer()
+	w = h.postTransfer(bytes.NewBuffer(nil), "multipart/form-data", signTransferTestToken(t, s.ID()))
+	assert.Equal(t, http.StatusConflict, w.Code)
+	assert.Contains(t, w.Body.String(), "already exists on this instance")
+
+	// 6. Non-multipart content type -> 500
+	newUUID := "00000000-1111-4000-8000-000000000099"
+	h.panel.config.Settings, _ = json.Marshal(map[string]string{"uuid": newUUID})
+	w = h.postTransfer(bytes.NewBufferString("hello"), "text/plain", signTransferTestToken(t, newUUID))
+	assert.Contains(t, []int{http.StatusBadRequest, http.StatusInternalServerError}, w.Code)
+
+	// 7. DELETE /api/transfers/:server when transferring -> 202
+	tr := h.startInFlightReceive(s)
+	req = httptest.NewRequest(http.MethodDelete, "/api/transfers/"+s.ID(), nil)
+	req.Header.Set("Authorization", "Bearer test-token")
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusAccepted, w.Code)
+	_ = tr
+}
+
