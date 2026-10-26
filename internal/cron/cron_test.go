@@ -49,4 +49,3 @@ func TestScheduler(t *testing.T) {
 	cfg.System.Timezone = origTz
 	config.Set(cfg)
 }
-

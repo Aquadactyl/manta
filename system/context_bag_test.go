@@ -50,4 +50,3 @@ func TestContextBag(t *testing.T) {
 	// Check items map reset
 	assert.Empty(t, cb.items)
 }
-

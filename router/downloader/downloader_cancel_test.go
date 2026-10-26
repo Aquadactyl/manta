@@ -84,3 +84,25 @@ func TestConcurrentDownloadCancellationStopsRequest(t *testing.T) {
 	instance.mu.RUnlock()
 	require.False(t, tracked)
 }
+
+func TestDownloadGettersAndJSON(t *testing.T) {
+	s := newPullTestServer(t)
+	u, err := url.Parse("https://example.com/file.bin")
+	require.NoError(t, err)
+
+	dl := New(s, DownloadRequest{Directory: "/", URL: u, FileName: "file.bin"})
+	defer dl.Cancel()
+
+	// BelongsTo
+	require.True(t, dl.BelongsTo(s))
+
+	// ByServer
+	dls := ByServer(s.ID())
+	require.Len(t, dls, 1)
+	require.Equal(t, dl.Identifier, dls[0].Identifier)
+
+	// MarshalJSON
+	data, err := dl.MarshalJSON()
+	require.NoError(t, err)
+	require.Contains(t, string(data), dl.Identifier)
+}

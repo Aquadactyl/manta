@@ -106,6 +106,15 @@ func TestNewBus(t *testing.T) {
 				g.Assert(m.Data).Equal("done")
 				bus.Off(listener)
 			})
+
+			g.It("panics when publishing unmarshalable data", func() {
+				bus := NewBus()
+				defer func() {
+					r := recover()
+					g.Assert(r != nil).IsTrue()
+				}()
+				bus.Publish("bad", make(chan int))
+			})
 		})
 
 		g.Describe("Decode", func() {

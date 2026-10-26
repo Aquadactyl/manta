@@ -132,3 +132,23 @@ func TestConfigurationFileKeepsReplacementsWithNumericMatch(t *testing.T) {
 		t.Fatalf("expected both replacements to survive decoding, got %d", len(f.Replace))
 	}
 }
+
+func TestSetValueAtPathArrays(t *testing.T) {
+	c := gabs.New()
+
+	// Setting servers[0].host when servers does not exist
+	if err := setValueAtPath(c, "servers[0].host", "127.0.0.1"); err != nil {
+		t.Fatalf("setValueAtPath servers[0].host: %v", err)
+	}
+	if got := c.Path("servers.0.host").Data(); got != "127.0.0.1" {
+		t.Fatalf("expected 127.0.0.1, got %v", got)
+	}
+
+	// Setting servers[0].port on existing element
+	if err := setValueAtPath(c, "servers[0].port", 25565); err != nil {
+		t.Fatalf("setValueAtPath servers[0].port: %v", err)
+	}
+	if got := c.Path("servers.0.port").Data(); got != 25565 {
+		t.Fatalf("expected 25565, got %v", got)
+	}
+}

@@ -24,4 +24,3 @@ func TestGetSystemInformation(t *testing.T) {
 	assert.NotEmpty(t, info.System.OS)
 	assert.NotEmpty(t, info.Docker.Version)
 }
-

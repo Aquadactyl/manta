@@ -45,4 +45,3 @@ func TestDirentAndStatMethods(t *testing.T) {
 	assert.False(t, info.ModTime().IsZero())
 	assert.NotNil(t, info.Sys())
 }
-

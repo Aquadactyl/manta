@@ -90,4 +90,3 @@ func TestWebsocketPermissionsAndDenyJTI(t *testing.T) {
 	}
 	assert.False(t, wp2.HasPermission("control.stop"))
 }
-
