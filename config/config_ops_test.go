@@ -1,6 +1,7 @@
 package config
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -159,4 +160,177 @@ func TestConfigureSystemDirectoriesAndTimezone(t *testing.T) {
 
 	require.NoError(t, EnableLogRotation())
 	require.NoError(t, ConfigureTimezone())
+
+	// ConfigurePasswd enabled
+	require.NoError(t, ConfigurePasswd())
+	assert.FileExists(t, filepath.Join(cfg.System.Passwd.Directory, "group"))
+	assert.FileExists(t, filepath.Join(cfg.System.Passwd.Directory, "passwd"))
+
+	// ConfigurePasswd disabled
+	cfg.System.Passwd.Enable = false
+	require.NoError(t, ConfigurePasswd())
+
+	// EnsurePterodactylUser in rootless mode
+	cfg.System.User.Rootless.Enabled = true
+	require.NoError(t, EnsurePterodactylUser())
+	assert.NotEmpty(t, cfg.System.Username)
+
+	// Expand
+	t.Setenv("TEST_VAR", "expanded_val")
+	expanded, err := Expand("value_${TEST_VAR}")
+	require.NoError(t, err)
+	assert.Equal(t, "value_expanded_val", expanded)
+
+	testFilePath := filepath.Join(tmp, "token.txt")
+	require.NoError(t, os.WriteFile(testFilePath, []byte("file_token_value\n"), 0644))
+	fileExpanded, err := Expand("file://" + testFilePath)
+	require.NoError(t, err)
+	assert.Equal(t, "file_token_value", fileExpanded)
+
+	_, err = Expand("file:///nonexistent/path/file.txt")
+	assert.Error(t, err)
+
+	// UseOpenat2
+	openat2Set.Store(false)
+	_ = UseOpenat2()
 }
+
+func TestConfigMoreOperations(t *testing.T) {
+	tmp := t.TempDir()
+	cfgPath := filepath.Join(tmp, "config.yml")
+
+	cfg, err := NewAtPath(cfgPath)
+	require.NoError(t, err)
+	cfg.AuthenticationToken = "token-12345"
+	cfg.System.RootDirectory = tmp
+	Set(cfg)
+
+	// 1. GetStatesPath
+	assert.Equal(t, filepath.Join(tmp, "states.json"), cfg.System.GetStatesPath())
+
+	// 2. Load and FromFile
+	require.NoError(t, WriteToDisk(cfg))
+	loaded, err := Load(cfgPath)
+	require.NoError(t, err)
+	assert.NotNil(t, loaded)
+
+	_, err = Load(filepath.Join(tmp, "missing.yml"))
+	assert.Error(t, err)
+
+	require.NoError(t, FromFile(cfgPath))
+	assert.Error(t, FromFile(filepath.Join(tmp, "missing.yml")))
+
+	// 3. ConfigureDirectories with symlinked data dir
+	realData := filepath.Join(tmp, "real_data")
+	require.NoError(t, os.MkdirAll(realData, 0700))
+	realData, err = filepath.EvalSymlinks(realData)
+	require.NoError(t, err)
+	symData := filepath.Join(tmp, "sym_data")
+	require.NoError(t, os.Symlink(realData, symData))
+
+	cfg.System.Data = symData
+	Set(cfg)
+	require.NoError(t, ConfigureDirectories())
+	assert.Equal(t, realData, Get().System.Data)
+
+	// 4. EnableLogRotation disabled
+	cfg.System.EnableLogRotate = false
+	Set(cfg)
+	assert.NoError(t, EnableLogRotation())
+
+	// 5. ConfigureTimezone with TZ env var
+	t.Setenv("TZ", "America/New_York")
+	cfg.System.Timezone = ""
+	Set(cfg)
+	require.NoError(t, ConfigureTimezone())
+	assert.Equal(t, "America/New_York", Get().System.Timezone)
+
+	// 6. RegistryCredentials
+	cfg.Docker.Registries = map[string]RegistryConfiguration{
+		"ghcr.io": {
+			Username: "user",
+			Password: "password",
+		},
+	}
+	reg, creds := cfg.Docker.RegistryCredentialsForImage("ghcr.io/pterodactyl/installers:alpine")
+	assert.NotEmpty(t, reg)
+	assert.NotNil(t, creds)
+	assert.Equal(t, "user", creds.Username)
+	b64, err := creds.Base64()
+	assert.NoError(t, err)
+	assert.NotEmpty(t, b64)
+
+	_, credsNil := cfg.Docker.RegistryCredentialsForImage("nginx:latest")
+	assert.Nil(t, credsNil)
+
+	// 7. EnsurePterodactylUser with rootless
+	cfg.System.User.Rootless.Enabled = true
+	Set(cfg)
+	assert.NoError(t, EnsurePterodactylUser())
+	assert.NotEmpty(t, Get().System.Username)
+
+	// 8. EnsurePterodactylUser with root user
+	cfg.System.User.Rootless.Enabled = false
+	cfg.System.Username = "root"
+	Set(cfg)
+	assert.NoError(t, EnsurePterodactylUser())
+	assert.Equal(t, 0, Get().System.User.Uid)
+
+	// 9. ConfigureTimezone invalid
+	cfg.System.Timezone = "Invalid/Zone/Nonexistent"
+	Set(cfg)
+	assert.Error(t, ConfigureTimezone())
+
+	// 10. getSystemName and UseOpenat2
+	name, _ := getSystemName()
+	assert.NotEmpty(t, name)
+	_ = UseOpenat2()
+
+	// 11. StatesPath and LogRotation
+	assert.Equal(t, filepath.Join(cfg.System.RootDirectory, "states.json"), cfg.System.GetStatesPath())
+	cfg.System.EnableLogRotate = true
+	Set(cfg)
+	assert.NoError(t, EnableLogRotation())
+
+	// 12. UseOpenat2 modes
+	openat2Set.Store(false)
+	cfg.System.OpenatMode = "openat2"
+	Set(cfg)
+	assert.True(t, UseOpenat2())
+
+	openat2Set.Store(false)
+	cfg.System.OpenatMode = "openat"
+	Set(cfg)
+	assert.False(t, UseOpenat2())
+
+	openat2Set.Store(false)
+	cfg.System.OpenatMode = ""
+	Set(cfg)
+	_ = UseOpenat2()
+
+	// 13. parseDockerRegistryReference edge cases
+	dom, _, ok := parseDockerRegistryReference("")
+	assert.False(t, ok)
+	assert.Empty(t, dom)
+
+	dom, pth, ok := parseDockerRegistryReference("https://index.docker.io/v1/")
+	assert.True(t, ok)
+	assert.Equal(t, "docker.io", dom)
+	assert.Empty(t, pth)
+
+	dom, pth, ok = parseDockerRegistryReference("https://myregistry.com/v2")
+	assert.True(t, ok)
+	assert.Equal(t, "myregistry.com", dom)
+	assert.Empty(t, pth)
+
+	dom, pth, ok = parseDockerRegistryReference("https://myregistry.com/custom/team")
+	assert.True(t, ok)
+	assert.Equal(t, "myregistry.com", dom)
+	assert.Equal(t, "custom/team", pth)
+
+	_, _, ok = parseDockerRegistryReference("///")
+	assert.False(t, ok)
+}
+
+
+

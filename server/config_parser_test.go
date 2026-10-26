@@ -72,3 +72,20 @@ func TestConfigurationFilesAreUpdated(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "motd=hi\nport=25565\n", string(b))
 }
+
+func TestConfigurationFilesMoreCases(t *testing.T) {
+	// 1. Text file that does not exist yet
+	rawTxt := `{"file":"does_not_exist.txt","parser":"file","replace":[]}`
+	s, root := newConfigParserServer(t, 0, rawTxt)
+	s.UpdateConfigurationFiles()
+	require.NoFileExists(t, filepath.Join(root, "does_not_exist.txt"))
+
+	// 2. Parse error (e.g. invalid json in file)
+	rawJson := `{"file":"broken.json","parser":"json","replace":[{"match":"port","value_data":"1234"}]}`
+	var cfJson parser.ConfigurationFile
+	require.NoError(t, json.Unmarshal([]byte(rawJson), &cfJson))
+	s.procConfig = &remote.ProcessConfiguration{ConfigurationFiles: []parser.ConfigurationFile{cfJson}}
+	require.NoError(t, os.WriteFile(filepath.Join(root, "broken.json"), []byte(`{invalid-json`), 0644))
+	s.UpdateConfigurationFiles()
+}
+

@@ -2,6 +2,7 @@ package parser
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -11,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/pterodactyl/wings/config"
+	"github.com/pterodactyl/wings/internal/ufs"
 )
 
 func TestReplaceValueTypes(t *testing.T) {
@@ -203,3 +205,165 @@ func TestParseFileTooLarge(t *testing.T) {
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "exceeds limit")
 }
+
+func TestParserUnmarshalAndWildcard(t *testing.T) {
+	// 1. Missing fields in ConfigurationFile.UnmarshalJSON
+	var cfBad ConfigurationFile
+	assert.Error(t, json.Unmarshal([]byte(`{"file":"a.txt"}`), &cfBad))
+	assert.Error(t, json.Unmarshal([]byte(`{"parser":"json"}`), &cfBad))
+	assert.Error(t, json.Unmarshal([]byte(`{"replace":[]}`), &cfBad))
+	assert.Error(t, json.Unmarshal([]byte(`"not-an-object"`), &cfBad))
+
+	// 2. Fallback to "value" in ConfigurationFileReplacement.UnmarshalJSON
+	var cfr ConfigurationFileReplacement
+	require.NoError(t, json.Unmarshal([]byte(`{"match":"port","value":25565}`), &cfr))
+	assert.Equal(t, "port", cfr.Match)
+	assert.Equal(t, "25565", cfr.ReplaceWith.String())
+
+	// 3. scalarString data types
+	strVal, err := scalarString([]byte(`{"num": 123}`), "num")
+	require.NoError(t, err)
+	assert.Equal(t, "123", strVal)
+
+	boolVal, err := scalarString([]byte(`{"bool": true}`), "bool")
+	require.NoError(t, err)
+	assert.Equal(t, "true", boolVal)
+
+	nullVal, err := scalarString([]byte(`{"null": null}`), "null")
+	require.NoError(t, err)
+	assert.Equal(t, "", nullVal)
+
+	_, err = scalarString([]byte(`{"arr": [1, 2]}`), "arr")
+	assert.Error(t, err)
+
+	// 4. Wildcard and array parsing in IterateOverJson
+	jsonData := []byte(`{
+		"items": [
+			{"name": "item1", "val": 10},
+			{"name": "item2", "val": 20}
+		],
+		"indexed": [
+			{"inner": "a"},
+			{"inner": "b"}
+		]
+	}`)
+
+	var cfWildcard ConfigurationFile
+	require.NoError(t, json.Unmarshal([]byte(`{
+		"file": "test.json",
+		"parser": "json",
+		"replace": [
+			{"match": "items.*.val", "replace_with": 99},
+			{"match": "indexed[1].inner", "replace_with": "updated_b"}
+		]
+	}`), &cfWildcard))
+
+	c, err := cfWildcard.IterateOverJson(jsonData)
+	require.NoError(t, err)
+	assert.NotNil(t, c)
+	assert.Contains(t, c.String(), "99")
+	assert.Contains(t, c.String(), "updated_b")
+}
+
+type mockSizeCheckerFile struct {
+	ufs.File
+	failCheck bool
+}
+
+func (m *mockSizeCheckerFile) CheckSize(size int64) error {
+	if m.failCheck {
+		return errors.New("disk space exceeded")
+	}
+	return nil
+}
+
+func TestParserMoreCases(t *testing.T) {
+	// 1. UnmarshalJSON errors for ConfigurationFile
+	var cf ConfigurationFile
+	assert.Error(t, json.Unmarshal([]byte(`{}`), &cf))
+	assert.Error(t, json.Unmarshal([]byte(`{"file":"a","parser":"json"}`), &cf))
+	assert.Error(t, json.Unmarshal([]byte(`{"file":123,"parser":"json","replace":[]}`), &cf))
+	assert.Error(t, json.Unmarshal([]byte(`{"file":"a","parser":123,"replace":[]}`), &cf))
+
+	// Invalid replace JSON gracefully sets empty replace slice
+	require.NoError(t, json.Unmarshal([]byte(`{"file":"a","parser":"json","replace":"not an array"}`), &cf))
+	assert.Empty(t, cf.Replace)
+
+	// 2. ConfigurationFileReplacement UnmarshalJSON types
+	var cfr ConfigurationFileReplacement
+	require.NoError(t, json.Unmarshal([]byte(`{"match": 25565, "if_value": true, "replace_with": "val"}`), &cfr))
+	assert.Equal(t, "25565", cfr.Match)
+	assert.Equal(t, "true", cfr.IfValue)
+
+	require.NoError(t, json.Unmarshal([]byte(`{"match": false, "if_value": null, "replace_with": "val"}`), &cfr))
+	assert.Equal(t, "false", cfr.Match)
+	assert.Equal(t, "", cfr.IfValue)
+
+	assert.Error(t, json.Unmarshal([]byte(`{"match": {"nested":"obj"}, "replace_with": "val"}`), &cfr))
+
+	// 3. Rewrite limits and sizeChecker
+	tmp := t.TempDir()
+	p := filepath.Join(tmp, "test.txt")
+	require.NoError(t, os.WriteFile(p, []byte("hello"), 0644))
+	f, err := os.OpenFile(p, os.O_RDWR, 0)
+	require.NoError(t, err)
+	defer f.Close()
+
+	// Exceed maxConfigFileSize
+	tooBig := make([]byte, maxConfigFileSize+1)
+	assert.Error(t, rewrite(f, tooBig))
+
+	// Mock sizeChecker failure
+	mockFile := &mockSizeCheckerFile{File: f, failCheck: true}
+	assert.Error(t, rewrite(mockFile, []byte("data")))
+
+	// 4. XML Parsing with attributes and empty doc
+	xmlPath := filepath.Join(tmp, "config.xml")
+	require.NoError(t, os.WriteFile(xmlPath, []byte(`<ServerSettings><ServerPort>25565</ServerPort></ServerSettings>`), 0644))
+
+	var cfXml ConfigurationFile
+	require.NoError(t, json.Unmarshal([]byte(`{
+		"file": "config.xml",
+		"parser": "xml",
+		"replace": [
+			{"match": "ServerSettings.ServerPort", "replace_with": "[attr='true']"},
+			{"match": "ServerSettings.NewTag.Inner", "replace_with": "inner_value"}
+		]
+	}`), &cfXml))
+
+	fx, err := os.OpenFile(xmlPath, os.O_RDWR, 0)
+	require.NoError(t, err)
+	require.NoError(t, cfXml.Parse(fx))
+	_ = fx.Close()
+
+	xmlBytes, err := os.ReadFile(xmlPath)
+	require.NoError(t, err)
+	assert.Contains(t, string(xmlBytes), `attr="true"`)
+	assert.Contains(t, string(xmlBytes), "inner_value")
+
+	// 5. INI Parsing with brackets and missing sections
+	iniPath := filepath.Join(tmp, "test.ini")
+	require.NoError(t, os.WriteFile(iniPath, []byte("[default]\nport = 25565\n"), 0644))
+
+	var cfIni ConfigurationFile
+	require.NoError(t, json.Unmarshal([]byte(`{
+		"file": "test.ini",
+		"parser": "ini",
+		"replace": [
+			{"match": "[default].port", "replace_with": "25566"},
+			{"match": "newsection.key", "replace_with": "val"}
+		]
+	}`), &cfIni))
+
+	fi, err := os.OpenFile(iniPath, os.O_RDWR, 0)
+	require.NoError(t, err)
+	require.NoError(t, cfIni.Parse(fi))
+	_ = fi.Close()
+
+	iniBytes, err := os.ReadFile(iniPath)
+	require.NoError(t, err)
+	assert.Contains(t, string(iniBytes), "25566")
+	assert.Contains(t, string(iniBytes), "[newsection]")
+}
+
+

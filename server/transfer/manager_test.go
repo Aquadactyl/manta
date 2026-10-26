@@ -15,6 +15,7 @@ import (
 
 	"github.com/pterodactyl/wings/config"
 	"github.com/pterodactyl/wings/internal/progress"
+	"github.com/pterodactyl/wings/remote"
 	"github.com/pterodactyl/wings/server"
 	"github.com/pterodactyl/wings/server/filesystem"
 )
@@ -65,6 +66,10 @@ func TestTransferMethodsAndStatus(t *testing.T) {
 	tr.SendMessage("test transfer message")
 	tr.Error(nil, "some error occurred")
 	require.NotNil(t, tr.Log())
+
+	// Server nil Log()
+	trNilServer := &Transfer{}
+	require.NotNil(t, trNilServer.Log())
 
 	// Archive & Progress
 	arch := NewArchive(tr, 1000)
@@ -175,4 +180,36 @@ func TestPushArchiveToTarget_ErrorCases(t *testing.T) {
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "500")
 }
+
+func TestTransferArchiveCreation(t *testing.T) {
+	cfgDir := t.TempDir()
+	cfg, err := config.NewAtPath(filepath.Join(cfgDir, "config.yml"))
+	require.NoError(t, err)
+	cfg.AuthenticationToken = "test-token-12345678"
+	cfg.System.Data = filepath.Join(cfgDir, "data")
+	require.NoError(t, os.MkdirAll(cfg.System.Data, 0755))
+	config.Set(cfg)
+
+	uuid := "00000000-0000-0000-0000-000000000001"
+	srvDir := filepath.Join(cfg.System.Data, uuid)
+	require.NoError(t, os.MkdirAll(srvDir, 0755))
+	require.NoError(t, os.WriteFile(filepath.Join(srvDir, "hello.txt"), []byte("data"), 0644))
+
+	s, err := server.NewEmptyManager(nil).InitServer(uuid, remote.ServerConfigurationResponse{
+		Settings:             []byte(`{"uuid":"` + uuid + `"}`),
+		ProcessConfiguration: &remote.ProcessConfiguration{},
+	})
+	require.NoError(t, err)
+
+	tr := New(context.Background(), s)
+	arch, err := tr.Archive()
+	require.NoError(t, err)
+	require.NotNil(t, arch)
+
+	// Cached archive
+	arch2, err := tr.Archive()
+	require.NoError(t, err)
+	require.Same(t, arch, arch2)
+}
+
 

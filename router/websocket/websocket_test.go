@@ -19,6 +19,7 @@ import (
 
 	"github.com/pterodactyl/wings/config"
 	"github.com/pterodactyl/wings/environment"
+	"github.com/pterodactyl/wings/internal/database"
 	"github.com/pterodactyl/wings/remote"
 	"github.com/pterodactyl/wings/router/tokens"
 	"github.com/pterodactyl/wings/server"
@@ -40,6 +41,18 @@ type commandEnvironment struct {
 
 func (e *commandEnvironment) State() string {
 	return environment.ProcessRunningState
+}
+
+func (e *commandEnvironment) IsRunning(context.Context) (bool, error) {
+	return true, nil
+}
+
+func (e *commandEnvironment) Readlog(int) ([]string, error) {
+	return []string{"server console line"}, nil
+}
+
+func (e *commandEnvironment) WaitForStop(context.Context, time.Duration, bool) error {
+	return nil
 }
 
 func (e *commandEnvironment) SendCommand(string) error {
@@ -71,12 +84,12 @@ func setupHandlerClient(t *testing.T) (*Handler, *commandEnvironment, *websocket
 	cfg.AuthenticationToken = "test-token"
 	config.Set(cfg)
 
-	s, err := server.New(nil)
-	if err != nil {
-		t.Fatal(err)
-	}
 	settings, _ := json.Marshal(map[string]string{"uuid": serverUuid})
-	if err := s.SyncWithConfiguration(remote.ServerConfigurationResponse{Settings: settings, ProcessConfiguration: &remote.ProcessConfiguration{}}); err != nil {
+	s, err := server.NewEmptyManager(nil).InitServer(serverUuid, remote.ServerConfigurationResponse{
+		Settings:             settings,
+		ProcessConfiguration: &remote.ProcessConfiguration{},
+	})
+	if err != nil {
 		t.Fatal(err)
 	}
 	env := &commandEnvironment{}
@@ -278,3 +291,70 @@ func TestHandlerMethods(t *testing.T) {
 	// SendClose
 	_ = client.Close()
 }
+
+func TestHandlerInboundEvents(t *testing.T) {
+	func() { defer func() { _ = recover() }(); _ = database.Initialize() }()
+	h, env, _ := setupHandlerClient(t)
+
+	// 1. Inbound event before auth -> sends JWT error
+	err := h.HandleInbound(context.Background(), Message{Event: SendStatsEvent})
+	if err != nil {
+		t.Errorf("expected nil from unauthenticated event, got %v", err)
+	}
+
+	// 2. Authenticate with mismatched server UUID
+	tokBadServer, _ := signToken(t, otherServerUuid, PermissionConnect)
+	err = h.HandleInbound(context.Background(), Message{Event: AuthenticationEvent, Args: []string{tokBadServer}})
+	if !errors.Is(err, ErrJwtUuidMismatch) {
+		t.Errorf("expected ErrJwtUuidMismatch, got %v", err)
+	}
+
+	// 3. Authenticate successfully
+	tok, _ := signToken(t, serverUuid, PermissionConnect, PermissionSendCommand, PermissionSendPowerStart, PermissionSendPowerStop)
+	err = h.HandleInbound(context.Background(), Message{Event: AuthenticationEvent, Args: []string{tok}})
+	if err != nil {
+		t.Fatalf("auth failed: %v", err)
+	}
+
+	// Re-authenticate (refreshing token)
+	err = h.HandleInbound(context.Background(), Message{Event: AuthenticationEvent, Args: []string{tok}})
+	if err != nil {
+		t.Fatalf("re-auth failed: %v", err)
+	}
+
+	// 4. SendStatsEvent
+	err = h.HandleInbound(context.Background(), Message{Event: SendStatsEvent})
+	if err != nil {
+		t.Errorf("SendStatsEvent: %v", err)
+	}
+
+	// 5. SendServerLogsEvent
+	err = h.HandleInbound(context.Background(), Message{Event: SendServerLogsEvent})
+	if err != nil {
+		t.Errorf("SendServerLogsEvent: %v", err)
+	}
+
+	// 6. SendCommandEvent
+	err = h.HandleInbound(context.Background(), Message{Event: SendCommandEvent, Args: []string{"say hello"}})
+	if !errors.Is(err, errCommandSent) {
+		t.Errorf("expected errCommandSent, got %v", err)
+	}
+	if env.commands.Load() != 1 {
+		t.Errorf("expected 1 command, got %d", env.commands.Load())
+	}
+
+	// 7. SetStateEvent
+	_ = h.HandleInbound(context.Background(), Message{Event: SetStateEvent, Args: []string{"start"}})
+	_ = h.HandleInbound(context.Background(), Message{Event: SetStateEvent, Args: []string{"stop"}})
+
+	// 8. Suspended server
+	h.server.Config().SetSuspended(true)
+	err = h.HandleInbound(context.Background(), Message{Event: SendStatsEvent})
+	if !errors.Is(err, server.ErrSuspended) {
+		t.Errorf("expected ErrSuspended, got %v", err)
+	}
+
+	// 9. SendClose
+	_ = h.SendClose(websocket.CloseNormalClosure, "closing test")
+}
+

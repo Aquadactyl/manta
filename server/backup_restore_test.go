@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	"context"
+	"errors"
 	"io"
 	"os"
 	"path/filepath"
@@ -28,6 +29,10 @@ type restoreTestClient struct {
 }
 
 func (restoreTestClient) SendRestorationStatus(context.Context, string, bool) error {
+	return nil
+}
+
+func (restoreTestClient) SetBackupStatus(context.Context, string, remote.BackupRequest) error {
 	return nil
 }
 
@@ -193,3 +198,73 @@ func TestRestoreTruncatesBeforeRestoring(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, os.SameFile(before, after), "the server directory should be kept")
 }
+
+type mockFailingBackup struct {
+	backup.BackupInterface
+}
+
+func (mockFailingBackup) Identifier() string { return "fail-backup-id" }
+func (mockFailingBackup) Ignored() string    { return "" }
+func (mockFailingBackup) Generate(context.Context, *filesystem.Filesystem, string) (*backup.ArchiveDetails, error) {
+	return nil, errors.New("generate failed")
+}
+func (mockFailingBackup) Remove() error { return nil }
+
+func TestBackupGenerateFailure(t *testing.T) {
+	s, _, _ := newRestoreTestServer(t)
+	err := s.Backup(mockFailingBackup{})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "generate failed")
+}
+
+func TestServerwideIgnoredFilesMoreCases(t *testing.T) {
+	s, _, root := newRestoreTestServer(t)
+
+	// 1. Symlinked .pteroignore fails path resolution
+	realIgnore := filepath.Join(root, "target.txt")
+	require.NoError(t, os.WriteFile(realIgnore, []byte("ignored.txt"), 0644))
+	require.NoError(t, os.Symlink("target.txt", filepath.Join(root, ".pteroignore")))
+
+	_, err := s.getServerwideIgnoredFiles()
+	assert.Error(t, err)
+	_ = os.Remove(filepath.Join(root, ".pteroignore"))
+
+	// 2. Too large .pteroignore (> MaxIgnoreLength)
+	largeData := make([]byte, filesystem.MaxIgnoreLength+10)
+	require.NoError(t, os.WriteFile(filepath.Join(root, ".pteroignore"), largeData, 0644))
+	ignored, err := s.getServerwideIgnoredFiles()
+	require.NoError(t, err)
+	assert.Empty(t, ignored)
+	_ = os.Remove(filepath.Join(root, ".pteroignore"))
+
+	// 3. Valid .pteroignore
+	require.NoError(t, os.WriteFile(filepath.Join(root, ".pteroignore"), []byte("temp/\n*.log\n"), 0644))
+	ignored, err = s.getServerwideIgnoredFiles()
+	require.NoError(t, err)
+	assert.Contains(t, ignored, "temp/")
+}
+
+type runningWaitEnv struct {
+	environment.ProcessEnvironment
+	waited bool
+}
+
+func (e *runningWaitEnv) State() string { return environment.ProcessRunningState }
+func (e *runningWaitEnv) WaitForStop(context.Context, time.Duration, bool) error {
+	e.waited = true
+	return nil
+}
+
+func TestRestoreBackupRunningContainer(t *testing.T) {
+	s, backupDir, _ := newRestoreTestServer(t)
+	writeRestoreTestArchive(t, backupDir, func(tw *tar.Writer) {
+		addRestoreTestFile(t, tw, "restored.txt", 0o644, "hello")
+	})
+
+	waitEnv := &runningWaitEnv{}
+	s.Environment = waitEnv
+
+	require.NoError(t, s.RestoreBackup(restoreTestLocal(), nil, false))
+	assert.True(t, waitEnv.waited)
+}
+

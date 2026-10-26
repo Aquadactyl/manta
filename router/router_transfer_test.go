@@ -28,6 +28,7 @@ import (
 	"github.com/pterodactyl/wings/router/tokens"
 	wserver "github.com/pterodactyl/wings/server"
 	"github.com/pterodactyl/wings/server/transfer"
+	"github.com/pterodactyl/wings/system"
 )
 
 // transferTestUUID is a lowercase version 4 UUID, as the installer requires.
@@ -64,21 +65,45 @@ func (p *transferTestPanel) SetInstallationStatus(context.Context, string, remot
 	return nil
 }
 
+func (p *transferTestPanel) SendRestorationStatus(context.Context, string, bool) error {
+	return nil
+}
+
+func (p *transferTestPanel) SendArchiveStatus(context.Context, string, bool) error {
+	return nil
+}
+
+func (p *transferTestPanel) GetBackupRemoteUploadURLs(context.Context, string, int64) (remote.BackupRemoteUploadResponse, error) {
+	return remote.BackupRemoteUploadResponse{}, errors.New("cannot upload")
+}
+
+func (p *transferTestPanel) SetBackupStatus(context.Context, string, remote.BackupRequest) error {
+	return nil
+}
+
 // transferTestEnvironment stands in for the Docker environment so that no
 // container is needed.
 type transferTestEnvironment struct {
 	environment.ProcessEnvironment
+	st *system.AtomicString
 }
 
 func (transferTestEnvironment) Create() error { return nil }
 
-func (transferTestEnvironment) State() string { return environment.ProcessOfflineState }
+func (e transferTestEnvironment) State() string {
+	if e.st != nil {
+		return e.st.Load()
+	}
+	return environment.ProcessOfflineState
+}
 
 func (transferTestEnvironment) Destroy() error { return nil }
 
 func (transferTestEnvironment) Readlog(int) ([]string, error) { return []string{"line1", "line2"}, nil }
 
-func (transferTestEnvironment) IsRunning(context.Context) (bool, error) { return false, nil }
+func (e transferTestEnvironment) IsRunning(context.Context) (bool, error) {
+	return e.State() == environment.ProcessRunningState, nil
+}
 
 func (transferTestEnvironment) Config() *environment.Configuration { return &environment.Configuration{} }
 
@@ -88,7 +113,11 @@ func (transferTestEnvironment) SendCommand(string) error { return nil }
 
 func (transferTestEnvironment) InSituUpdate() error { return nil }
 
-func (transferTestEnvironment) SetState(string) {}
+func (e transferTestEnvironment) SetState(s string) {
+	if e.st != nil {
+		e.st.Store(s)
+	}
+}
 
 func (transferTestEnvironment) SetLogCallback(func([]byte)) {}
 
@@ -137,7 +166,7 @@ func (h *transferHarness) seedServer() *wserver.Server {
 
 	s, err := h.mgr.InitServer(transferTestUUID, h.panel.config)
 	require.NoError(h.t, err)
-	s.Environment = transferTestEnvironment{}
+	s.Environment = transferTestEnvironment{st: system.NewAtomicString(environment.ProcessOfflineState)}
 	require.True(h.t, h.mgr.AddIfMissing(s))
 	return s
 }

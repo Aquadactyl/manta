@@ -3,12 +3,17 @@ package filesystem
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"io"
 	"os"
+	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/pterodactyl/wings/config"
 )
 
 func TestFilesystemErrors(t *testing.T) {
@@ -127,4 +132,60 @@ func TestQuotaFileMethods(t *testing.T) {
 	assert.Equal(t, int64(17), n)
 
 	require.NoError(t, qf.Close())
+}
+
+func TestFilesystemMoreOps(t *testing.T) {
+	cfg := &config.Configuration{
+		AuthenticationToken: "tok",
+		System: config.SystemConfiguration{
+			DiskCheckInterval: 60,
+		},
+	}
+	config.Set(cfg)
+
+	// Error helpers
+	assert.False(t, IsErrorCode(nil, ErrCodeUnknownError))
+	assert.False(t, IsErrorCode(errors.New("other"), ErrCodeUnknownError))
+	assert.True(t, IsErrorCode(NewBadPathResolution("p", "r"), ErrCodePathResolution))
+
+	assert.Nil(t, wrapError(nil, ""))
+	badPath := NewBadPathResolution("p", "r")
+	assert.Equal(t, badPath, wrapError(badPath, ""))
+	wrapped := wrapError(errors.New("other"), "res")
+	assert.NotNil(t, wrapped)
+	assert.True(t, IsErrorCode(wrapped, ErrCodeUnknownError))
+
+	dir := t.TempDir()
+	fs, err := New(dir, 1024*1024, []string{})
+	require.NoError(t, err)
+
+	// Create a file
+	require.NoError(t, fs.Writefile("orig.txt", bytes.NewReader([]byte("sample content for copy"))))
+
+	// Chtimes
+	now := time.Now().Add(-time.Hour)
+	require.NoError(t, fs.Chtimes("orig.txt", now, now))
+
+	// Copy
+	require.NoError(t, fs.Copy("orig.txt"))
+	assert.FileExists(t, filepath.Join(dir, "orig copy.txt"))
+
+	// Copy again to exercise suffix loop
+	require.NoError(t, fs.Copy("orig.txt"))
+	assert.FileExists(t, filepath.Join(dir, "orig copy 1.txt"))
+
+	// DirectorySize
+	sz, err := fs.DirectorySize("/")
+	assert.NoError(t, err)
+	assert.True(t, sz > 0)
+
+	// DiskUsage
+	usage, err := fs.DiskUsage(false)
+	assert.NoError(t, err)
+	assert.True(t, usage > 0)
+
+	// Stat and CTime
+	st, err := fs.Stat("orig.txt")
+	require.NoError(t, err)
+	assert.NotZero(t, st.CTime())
 }

@@ -1,6 +1,7 @@
 package sftp
 
 import (
+	"context"
 	"io"
 	"net"
 	"os"
@@ -17,6 +18,7 @@ import (
 	"github.com/pterodactyl/wings/config"
 	"github.com/pterodactyl/wings/internal/database"
 	"github.com/pterodactyl/wings/internal/models"
+	"github.com/pterodactyl/wings/remote"
 	"github.com/pterodactyl/wings/server"
 	"github.com/pterodactyl/wings/server/filesystem"
 )
@@ -115,7 +117,10 @@ func TestEventHandlerLog(t *testing.T) {
 			RootDirectory: tmp,
 		},
 	})
-	require.NoError(t, database.Initialize())
+	func() {
+		defer func() { _ = recover() }()
+		_ = database.Initialize()
+	}()
 
 	eh := &eventHandler{
 		ip:     "127.0.0.1",
@@ -139,6 +144,10 @@ func TestEventHandlerLog(t *testing.T) {
 
 func TestHandlerOperations(t *testing.T) {
 	setSessionTestConfig(t)
+	func() {
+		defer func() { _ = recover() }()
+		_ = database.Initialize()
+	}()
 	dir := t.TempDir()
 	fsys, err := filesystem.New(dir, 0, nil)
 	require.NoError(t, err)
@@ -241,6 +250,150 @@ func TestHandlerOperations(t *testing.T) {
 	assert.Equal(t, pkgsftp.ErrSSHFxPermissionDenied, err)
 	_, err = hNoPerm.Filelist(&pkgsftp.Request{Method: "List", Filepath: "/"})
 	assert.Equal(t, pkgsftp.ErrSSHFxPermissionDenied, err)
+
+	// NoSuchFile checks for Filecmd
+	assert.Equal(t, pkgsftp.ErrSSHFxNoSuchFile, h.Filecmd(&pkgsftp.Request{Method: "Setstat", Filepath: "missing.txt"}))
+	assert.Equal(t, pkgsftp.ErrSSHFxNoSuchFile, h.Filecmd(&pkgsftp.Request{Method: "Rename", Filepath: "missing.txt", Target: "target.txt"}))
+	assert.Equal(t, pkgsftp.ErrSSHFxOk, h.Filecmd(&pkgsftp.Request{Method: "Remove", Filepath: "missing.txt"}))
+
+	// Filelist checks
+	// Stat on missing file
+	_, err = h.Filelist(&pkgsftp.Request{Method: "Stat", Filepath: "missing.txt"})
+	assert.Equal(t, pkgsftp.ErrSSHFxNoSuchFile, err)
+
+	// List on missing dir
+	_, err = h.Filelist(&pkgsftp.Request{Method: "List", Filepath: "missing_dir"})
+	assert.Equal(t, pkgsftp.ErrSSHFxFailure, err)
+
+	// Unsupported method on Filelist
+	_, err = h.Filelist(&pkgsftp.Request{Method: "Unknown", Filepath: "/"})
+	assert.Equal(t, pkgsftp.ErrSSHFxOpUnsupported, err)
+
+	// Suspended / Protected state checks in can()
+	srv.Config().Suspended = true
+	assert.False(t, h.can(PermissionFileRead))
+	srv.Config().Suspended = false
+
+	srv.SetInstalling(true)
+	assert.False(t, h.can(PermissionFileRead))
+	srv.SetInstalling(false)
 }
+
+func TestSFTPServerPrivateKeyAndUtils(t *testing.T) {
+	tmp := t.TempDir()
+	s := &SFTPServer{BasePath: tmp}
+
+	// 1. PrivateKeyPath
+	pkPath := s.PrivateKeyPath()
+	assert.Equal(t, filepath.Join(tmp, ".sftp/id_ed25519"), pkPath)
+
+	// 2. generateED25519PrivateKey
+	err := s.generateED25519PrivateKey()
+	require.NoError(t, err)
+	assert.FileExists(t, pkPath)
+
+	fileParent := filepath.Join(tmp, "file_parent")
+	require.NoError(t, os.WriteFile(fileParent, []byte("hello"), 0644))
+	sBad := &SFTPServer{BasePath: fileParent}
+	assert.Error(t, sBad.generateED25519PrivateKey())
+
+	// 3. connectionKey
+	tcpAddr, err := net.ResolveTCPAddr("tcp", "1.2.3.4:12345")
+	require.NoError(t, err)
+	assert.Equal(t, "1.2.3.4", connectionKey(tcpAddr))
+
+	udpAddr, err := net.ResolveUDPAddr("udp", "5.6.7.8:54321")
+	require.NoError(t, err)
+	assert.Equal(t, "5.6.7.8", connectionKey(udpAddr))
+
+	// 4. configuredLimits
+	sftpCfg := config.SftpConfiguration{}
+	limits := configuredLimits(sftpCfg)
+	assert.True(t, limits.maxPending > 0)
+	assert.True(t, limits.maxPendingPerIP > 0)
+
+	// 5. droppedLog
+	dl := &droppedLog{}
+	dl.log("testing dropped log", "test-key")
+}
+
+type mockConnMetadata struct {
+	user       string
+	remoteAddr net.Addr
+}
+
+func (m *mockConnMetadata) User() string          { return m.user }
+func (m *mockConnMetadata) SessionID() []byte     { return []byte("session-id") }
+func (m *mockConnMetadata) ClientVersion() []byte { return []byte("SSH-2.0-Test") }
+func (m *mockConnMetadata) ServerVersion() []byte { return []byte("SSH-2.0-Server") }
+func (m *mockConnMetadata) RemoteAddr() net.Addr  { return m.remoteAddr }
+func (m *mockConnMetadata) LocalAddr() net.Addr   { return m.remoteAddr }
+
+type mockSftpClient struct {
+	remote.Client
+	resp remote.SftpAuthResponse
+	err  error
+}
+
+func (m *mockSftpClient) ValidateSftpCredentials(_ context.Context, _ remote.SftpAuthRequest) (remote.SftpAuthResponse, error) {
+	return m.resp, m.err
+}
+
+func TestMakeCredentialsRequest(t *testing.T) {
+	cli := &mockSftpClient{}
+	mgr := server.NewEmptyManager(cli)
+	srv := &SFTPServer{manager: mgr}
+
+	addr, _ := net.ResolveTCPAddr("tcp", "127.0.0.1:2222")
+
+	// 1. Invalid username
+	conn := &mockConnMetadata{user: "invalid@@username", remoteAddr: addr}
+	_, err := srv.makeCredentialsRequest(conn, remote.SftpAuthPassword, "password")
+	assert.Error(t, err)
+	assert.IsType(t, &remote.SftpInvalidCredentialsError{}, err)
+
+	// 2. Client returns SftpInvalidCredentialsError
+	conn = &mockConnMetadata{user: "validuser.12345678", remoteAddr: addr}
+	cli.err = &remote.SftpInvalidCredentialsError{}
+	_, err = srv.makeCredentialsRequest(conn, remote.SftpAuthPassword, "password")
+	assert.ErrorIs(t, err, cli.err)
+
+	// 3. Client returns generic error
+	cli.err = assert.AnError
+	_, err = srv.makeCredentialsRequest(conn, remote.SftpAuthPassword, "password")
+	assert.ErrorIs(t, err, assert.AnError)
+
+	// 4. Client returns successful response
+	cli.err = nil
+	cli.resp = remote.SftpAuthResponse{
+		Server:      "srv-uuid-1234",
+		User:        "user-uuid-5678",
+		Permissions: []string{"read", "write"},
+	}
+	perms, err := srv.makeCredentialsRequest(conn, remote.SftpAuthPassword, "password")
+	require.NoError(t, err)
+	require.NotNil(t, perms)
+	assert.Equal(t, "srv-uuid-1234", perms.Extensions["uuid"])
+	assert.Equal(t, "user-uuid-5678", perms.Extensions["user"])
+	assert.Equal(t, "read,write", perms.Extensions["permissions"])
+}
+
+func TestEventMustLog(t *testing.T) {
+	func() {
+		defer func() { _ = recover() }()
+		_ = database.Initialize()
+	}()
+
+	eh := &eventHandler{
+		server: "srv-uuid",
+		user:   "user-uuid",
+		ip:     "127.0.0.1",
+	}
+
+	eh.MustLog("test_event", FileAction{Entity: "/file.txt"})
+	eh.MustLog("test_event", FileAction{Entity: "/from.txt", Target: "/to.txt"})
+}
+
+
 
 

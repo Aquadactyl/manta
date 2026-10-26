@@ -98,7 +98,9 @@ func (e *Environment) Attach(ctx context.Context) error {
 		if err := system.ScanReader(e.stream.Reader, func(v []byte) {
 			e.logCallbackMx.Lock()
 			defer e.logCallbackMx.Unlock()
-			e.logCallback(v)
+			if e.logCallback != nil {
+				e.logCallback(v)
+			}
 		}); err != nil && err != io.EOF {
 			log.WithField("error", err).WithField("container_id", e.Id).Warn("error processing scanner line in console output")
 			return
