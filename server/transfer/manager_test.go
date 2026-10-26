@@ -1,12 +1,22 @@
 package transfer
 
 import (
+	"bytes"
 	"context"
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/pterodactyl/wings/config"
+	"github.com/pterodactyl/wings/internal/progress"
 	"github.com/pterodactyl/wings/server"
+	"github.com/pterodactyl/wings/server/filesystem"
 )
 
 func newManagerTestTransfer(t *testing.T, uuid string) *Transfer {
@@ -33,3 +43,136 @@ func TestManagerTracksOneTransferPerServer(t *testing.T) {
 	m.Remove(first)
 	require.Nil(t, m.Get("server"))
 }
+
+func TestTransferMethodsAndStatus(t *testing.T) {
+	// Status.String()
+	require.Equal(t, "pending", StatusPending.String())
+	require.Equal(t, "processing", StatusProcessing.String())
+	require.Equal(t, "cancelling", StatusCancelling.String())
+	require.Equal(t, "cancelled", StatusCancelled.String())
+	require.Equal(t, "failed", StatusFailed.String())
+	require.Equal(t, "completed", StatusCompleted.String())
+
+	tr := newManagerTestTransfer(t, "test-server-transfer")
+	require.NotNil(t, tr.Context())
+	require.Equal(t, StatusPending, tr.Status())
+
+	// Status change
+	tr.SetStatus(StatusProcessing)
+	require.Equal(t, StatusProcessing, tr.Status())
+
+	// SendMessage & Error & Log
+	tr.SendMessage("test transfer message")
+	tr.Error(nil, "some error occurred")
+	require.NotNil(t, tr.Log())
+
+	// Archive & Progress
+	arch := NewArchive(tr, 1000)
+	require.NotNil(t, arch)
+	require.NotNil(t, arch.Progress())
+
+	// Cancel
+	tr.Cancel()
+	require.Equal(t, StatusCancelling, tr.Status())
+
+	// Cancel when already cancelling is a no-op
+	tr.Cancel()
+	require.Equal(t, StatusCancelling, tr.Status())
+
+	// Cancel when completed is a no-op
+	tr.SetStatus(StatusCompleted)
+	tr.Cancel()
+	require.Equal(t, StatusCompleted, tr.Status())
+}
+
+func TestManagerIncomingOutgoing(t *testing.T) {
+	require.NotNil(t, Incoming())
+	require.NotNil(t, Outgoing())
+}
+
+func TestPushArchiveToTarget(t *testing.T) {
+	config.Set(&config.Configuration{AuthenticationToken: "test-token"})
+	serverDir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(serverDir, "test.txt"), []byte("transfer data"), 0644))
+
+	fsys, err := filesystem.New(serverDir, 0, nil)
+	require.NoError(t, err)
+
+	var receivedChecksum string
+	var receivedFileContent []byte
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "Bearer secret-token", r.Header.Get("Authorization"))
+		mr, err := r.MultipartReader()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		for {
+			part, err := mr.NextPart()
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			if part.FormName() == "archive" {
+				receivedFileContent, _ = io.ReadAll(part)
+			} else if part.FormName() == "checksum" {
+				csum, _ := io.ReadAll(part)
+				receivedChecksum = string(csum)
+			}
+			_ = part.Close()
+		}
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"success":true}`))
+	}))
+	defer ts.Close()
+
+	tr := newManagerTestTransfer(t, "transfer-push")
+	arch := &Archive{
+		archive: &filesystem.Archive{
+			Filesystem: fsys,
+			Progress:   progress.NewProgress(100),
+		},
+	}
+	tr.archive = arch
+
+	// Test Stream directly
+	buf := new(bytes.Buffer)
+	require.NoError(t, arch.Stream(context.Background(), buf))
+	assert.True(t, buf.Len() > 0)
+
+	// Test PushArchiveToTarget
+	resp, err := tr.PushArchiveToTarget(ts.URL, "Bearer secret-token")
+	require.NoError(t, err)
+	assert.Equal(t, `{"success":true}`, string(resp))
+	assert.NotEmpty(t, receivedChecksum)
+	assert.True(t, len(receivedFileContent) > 0)
+}
+
+func TestPushArchiveToTarget_ErrorCases(t *testing.T) {
+	config.Set(&config.Configuration{AuthenticationToken: "test-token"})
+	serverDir := t.TempDir()
+	fsys, err := filesystem.New(serverDir, 0, nil)
+	require.NoError(t, err)
+
+	errServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer errServer.Close()
+
+	tr := newManagerTestTransfer(t, "transfer-err")
+	tr.archive = &Archive{
+		archive: &filesystem.Archive{
+			Filesystem: fsys,
+			Progress:   progress.NewProgress(100),
+		},
+	}
+
+	_, err = tr.PushArchiveToTarget(errServer.URL, "token")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "500")
+}
+

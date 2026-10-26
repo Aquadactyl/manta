@@ -23,6 +23,7 @@ import (
 
 	"github.com/pterodactyl/wings/config"
 	"github.com/pterodactyl/wings/environment"
+	"github.com/pterodactyl/wings/events"
 	"github.com/pterodactyl/wings/remote"
 	"github.com/pterodactyl/wings/router/tokens"
 	wserver "github.com/pterodactyl/wings/server"
@@ -55,6 +56,14 @@ func (p *transferTestPanel) SetTransferStatus(_ context.Context, _ string, succe
 	return p.statusErr
 }
 
+func (p *transferTestPanel) GetInstallationScript(context.Context, string) (remote.InstallationScript, error) {
+	return remote.InstallationScript{}, errors.New("cannot install")
+}
+
+func (p *transferTestPanel) SetInstallationStatus(context.Context, string, remote.InstallStatusRequest) error {
+	return nil
+}
+
 // transferTestEnvironment stands in for the Docker environment so that no
 // container is needed.
 type transferTestEnvironment struct {
@@ -66,6 +75,29 @@ func (transferTestEnvironment) Create() error { return nil }
 func (transferTestEnvironment) State() string { return environment.ProcessOfflineState }
 
 func (transferTestEnvironment) Destroy() error { return nil }
+
+func (transferTestEnvironment) Readlog(int) ([]string, error) { return []string{"line1", "line2"}, nil }
+
+func (transferTestEnvironment) IsRunning(context.Context) (bool, error) { return false, nil }
+
+func (transferTestEnvironment) Config() *environment.Configuration { return &environment.Configuration{} }
+
+func (transferTestEnvironment) Events() *events.Bus { return events.NewBus() }
+
+func (transferTestEnvironment) SendCommand(string) error { return nil }
+
+func (transferTestEnvironment) InSituUpdate() error { return nil }
+
+func (transferTestEnvironment) SetState(string) {}
+
+func (transferTestEnvironment) SetLogCallback(func([]byte)) {}
+
+func (transferTestEnvironment) WaitForStop(context.Context, time.Duration, bool) error { return nil }
+
+func (transferTestEnvironment) Stop(context.Context) error { return nil }
+
+func (transferTestEnvironment) Terminate(context.Context, string) error { return nil }
+
 
 type transferHarness struct {
 	t      *testing.T

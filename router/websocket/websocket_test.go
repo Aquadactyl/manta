@@ -196,3 +196,85 @@ func TestCommandIsNotAuthorizedByTokenForDifferentServer(t *testing.T) {
 		}
 	}
 }
+
+func TestIsJwtError(t *testing.T) {
+	if !IsJwtError(ErrJwtNotPresent) {
+		t.Error("expected ErrJwtNotPresent to be jwt error")
+	}
+	if !IsJwtError(ErrJwtNoConnectPerm) {
+		t.Error("expected ErrJwtNoConnectPerm to be jwt error")
+	}
+	if !IsJwtError(ErrJwtUuidMismatch) {
+		t.Error("expected ErrJwtUuidMismatch to be jwt error")
+	}
+	if !IsJwtError(ErrJwtOnDenylist) {
+		t.Error("expected ErrJwtOnDenylist to be jwt error")
+	}
+	if !IsJwtError(jwt.ErrExpValidation) {
+		t.Error("expected jwt.ErrExpValidation to be jwt error")
+	}
+	if IsJwtError(errors.New("generic error")) {
+		t.Error("expected generic error not to be jwt error")
+	}
+}
+
+func TestHandlerMethods(t *testing.T) {
+	h, _, client := setupHandlerClient(t)
+
+	// Uuid & Logger
+	if h.Uuid().String() == "" {
+		t.Error("expected non-empty uuid")
+	}
+	if h.Logger() == nil {
+		t.Error("expected non-nil logger")
+	}
+
+	// User when not authenticated
+	if h.User() != "" {
+		t.Errorf("expected empty user, got %s", h.User())
+	}
+
+	// TokenValid when not authenticated
+	if !errors.Is(h.TokenValid(), ErrJwtNotPresent) {
+		t.Errorf("expected ErrJwtNotPresent, got %v", h.TokenValid())
+	}
+
+	// Authenticate
+	tok, payload := signToken(t, serverUuid, PermissionConnect, PermissionSendCommand)
+	if err := h.HandleInbound(context.Background(), Message{Event: AuthenticationEvent, Args: []string{tok}}); err != nil {
+		t.Fatal(err)
+	}
+
+	if h.User() != payload.UserUUID {
+		t.Errorf("expected %s, got %s", payload.UserUUID, h.User())
+	}
+	if err := h.TokenValid(); err != nil {
+		t.Errorf("expected valid token, got %v", err)
+	}
+
+	// SendThrottled
+	if err := h.SendThrottled("command"); err != nil {
+		t.Errorf("SendThrottled: %v", err)
+	}
+
+	// SendErrorJson
+	if err := h.SendErrorJson(Message{Event: SendCommandEvent}, errors.New("fail")); err != nil {
+		t.Errorf("SendErrorJson: %v", err)
+	}
+	if err := h.SendErrorJson(Message{Event: SendCommandEvent}, ErrJwtNoConnectPerm); err != nil {
+		t.Errorf("SendErrorJson JWT: %v", err)
+	}
+
+	// OnAuthenticated callback
+	called := false
+	h.OnAuthenticated(func() error {
+		called = true
+		return nil
+	})
+	if err := h.onAuthenticated(); err != nil || !called {
+		t.Error("expected onAuthenticated to be called")
+	}
+
+	// SendClose
+	_ = client.Close()
+}
