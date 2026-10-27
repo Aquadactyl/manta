@@ -2,6 +2,7 @@ package server
 
 import (
 	"archive/tar"
+	"bytes"
 	"context"
 	"errors"
 	"io"
@@ -1567,4 +1568,25 @@ func TestServerRemainingCoverage(t *testing.T) {
 		assert.NotNil(t, sInit)
 		sInit.SyncWithEnvironment()
 	}
+
+	// 20. getServerwideIgnoredFiles size limit and invalid pattern
+	_ = s.Filesystem().Delete(".pteroignore")
+	bigIgnore := make([]byte, filesystem.MaxIgnoreLength+10)
+	require.NoError(t, s.Filesystem().Writefile(".pteroignore", bytes.NewReader(bigIgnore)))
+	ignored, err := s.getServerwideIgnoredFiles()
+	assert.NoError(t, err)
+	assert.Empty(t, ignored)
+
+	_ = s.Filesystem().Delete(".pteroignore")
+	invalidLine := strings.Repeat("*", 20)
+	require.NoError(t, s.Filesystem().Writefile(".pteroignore", bytes.NewReader([]byte(invalidLine))))
+	_, err = s.getServerwideIgnoredFiles()
+	assert.Error(t, err)
+	_ = s.Filesystem().Delete(".pteroignore")
+
+	// 21. EnsureDataDirectoryExists
+	assert.NoError(t, s.EnsureDataDirectoryExists())
+
+	// 22. checkMountPathParents
+	assert.NoError(t, checkMountPathParents("/tmp", 0))
 }

@@ -841,7 +841,7 @@ func TestHarnessPowerAndCommands(t *testing.T) {
 		}
 		// GET /api/servers/:uuid
 		_ = json.NewEncoder(w).Encode(map[string]any{
-			"status":      state,
+			"state":       state,
 			"utilization": map[string]any{},
 		})
 	}))

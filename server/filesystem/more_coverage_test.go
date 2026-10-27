@@ -835,4 +835,27 @@ func TestMoreCompressAndQuotaFileEdges(t *testing.T) {
 	fs.releaseDisk(50, 50)
 	assert.Equal(t, int64(50), fs.walkReserved)
 	fs.walking = false
+
+	// SpaceAvailableForDecompression with unknown archive
+	require.NoError(t, fs.Writefile("plain.txt", strings.NewReader("plain text not archive")))
+	fs.SetDiskLimit(1024 * 1024)
+	err = fs.SpaceAvailableForDecompression(context.Background(), "/", "plain.txt")
+	assert.True(t, IsErrorCode(err, ErrCodeUnknownArchive))
+
+	// DecompressFile single gzip file
+	var gzBuf bytes.Buffer
+	gw := gzip.NewWriter(&gzBuf)
+	_, _ = gw.Write([]byte("single gzipped content"))
+	_ = gw.Close()
+	require.NoError(t, fs.Writefile("single.txt.gz", bytes.NewReader(gzBuf.Bytes())))
+	assert.NoError(t, fs.DecompressFile(context.Background(), "/", "single.txt.gz"))
+
+	// ExtractTransfer with unknown archive format
+	err = fs.ExtractTransfer(context.Background(), strings.NewReader("bad bytes"))
+	assert.Error(t, err)
+
+	// New with zero disk limit
+	fsZero, err := New(t.TempDir(), 0, []string{})
+	assert.NoError(t, err)
+	assert.Equal(t, int64(0), fsZero.MaxDisk())
 }
