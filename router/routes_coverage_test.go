@@ -1752,6 +1752,8 @@ func TestFilesEndpointsAdvancedCoverage(t *testing.T) {
 func TestServerTransferAndLifecycleBranches(t *testing.T) {
 	h := newTransferHarness(t, &transferTestPanel{})
 	s := h.seedServer()
+	env := transferTestEnvironment{st: system.NewAtomicString(environment.ProcessOfflineState)}
+	s.Environment = env
 
 	// 1. postServerPower with negative wait_seconds and kill action
 	req := httptest.NewRequest(http.MethodPost, "/api/servers/"+s.ID()+"/power", strings.NewReader(`{"action":"kill","wait_seconds":-10}`))
@@ -1760,9 +1762,10 @@ func TestServerTransferAndLifecycleBranches(t *testing.T) {
 	w := httptest.NewRecorder()
 	h.router.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusAccepted, w.Code)
+	time.Sleep(50 * time.Millisecond)
 
 	// 2. postServerCommands with running server
-	s.Environment = transferTestEnvironment{st: system.NewAtomicString(environment.ProcessRunningState)}
+	env.st.Store(environment.ProcessRunningState)
 
 	// Invalid json
 	req = httptest.NewRequest(http.MethodPost, "/api/servers/"+s.ID()+"/commands", strings.NewReader(`{broken`))
@@ -1780,7 +1783,7 @@ func TestServerTransferAndLifecycleBranches(t *testing.T) {
 	h.router.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusNoContent, w.Code)
 
-	s.Environment = transferTestEnvironment{st: system.NewAtomicString(environment.ProcessOfflineState)}
+	env.st.Store(environment.ProcessOfflineState)
 
 	// 3. postServerDenyWSTokens invalid json
 	req = httptest.NewRequest(http.MethodPost, "/api/servers/"+s.ID()+"/ws/deny", strings.NewReader(`{broken`))

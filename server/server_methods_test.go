@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -29,6 +30,21 @@ import (
 	"github.com/pterodactyl/wings/server/backup"
 	"github.com/pterodactyl/wings/server/filesystem"
 )
+
+func init() {
+	config.Set(&config.Configuration{
+		AuthenticationToken: "abc",
+		System: config.SystemConfiguration{
+			RootDirectory:     "/tmp",
+			BackupDirectory:   "/tmp",
+			DiskCheckInterval: 150,
+			Backups: config.Backups{
+				WriteLimit:       0,
+				CompressionLevel: "gzip",
+			},
+		},
+	})
+}
 
 func TestServerErrorsAndPowerActions(t *testing.T) {
 	// Errors
@@ -268,6 +284,7 @@ func TestServerMountsPersistStatesAndAPIResponse(t *testing.T) {
 
 type fullMockEnv struct {
 	environment.ProcessEnvironment
+	mu             sync.RWMutex
 	state          string
 	exitCode       uint32
 	oomKilled      bool
@@ -283,9 +300,55 @@ type fullMockEnv struct {
 	bus            *events.Bus
 }
 
+func (m *fullMockEnv) setExitState(code uint32, oom bool, err error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.exitCode = code
+	m.oomKilled = oom
+	m.exitErr = err
+}
+
+func (m *fullMockEnv) setInSituErr(err error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.inSituErr = err
+}
+
+func (m *fullMockEnv) setWaitForStopErr(err error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.waitForStopErr = err
+}
+
+func (m *fullMockEnv) Stopped() bool {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.stopped
+}
+
+func (m *fullMockEnv) InSitu() bool {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.inSitu
+}
+
+func (m *fullMockEnv) Started() bool {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.started
+}
+
+func (m *fullMockEnv) Terminated() bool {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.terminated
+}
+
 func (m *fullMockEnv) Type() string                       { return "mock" }
 func (m *fullMockEnv) Config() *environment.Configuration { return m.cfg }
 func (m *fullMockEnv) Events() *events.Bus {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	if m.bus == nil {
 		m.bus = events.NewBus()
 	}
@@ -293,16 +356,32 @@ func (m *fullMockEnv) Events() *events.Bus {
 }
 func (m *fullMockEnv) Exists() (bool, error) { return true, nil }
 func (m *fullMockEnv) IsRunning(context.Context) (bool, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	return m.state == environment.ProcessRunningState, nil
 }
-func (m *fullMockEnv) ExitState() (uint32, bool, error)                     { return m.exitCode, m.oomKilled, m.exitErr }
+func (m *fullMockEnv) ExitState() (uint32, bool, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.exitCode, m.oomKilled, m.exitErr
+}
 func (m *fullMockEnv) SetStopConfiguration(remote.ProcessStopConfiguration) {}
 func (m *fullMockEnv) SetImage(string)                                      {}
-func (m *fullMockEnv) State() string                                        { return m.state }
-func (m *fullMockEnv) SetState(s string)                                    { m.state = s }
-func (m *fullMockEnv) SetLogCallback(func([]byte))                          {}
-func (m *fullMockEnv) Attach(context.Context) error                         { return nil }
+func (m *fullMockEnv) State() string {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.state
+}
+func (m *fullMockEnv) SetState(s string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.state = s
+}
+func (m *fullMockEnv) SetLogCallback(func([]byte))  {}
+func (m *fullMockEnv) Attach(context.Context) error { return nil }
 func (m *fullMockEnv) InSituUpdate() error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	m.inSitu = true
 	return m.inSituErr
 }
@@ -313,16 +392,22 @@ func (m *fullMockEnv) Readlog(int) ([]string, error)         { return m.logs, ni
 func (m *fullMockEnv) Uptime(context.Context) (int64, error) { return 100, nil }
 func (m *fullMockEnv) OnBeforeStart(context.Context) error   { return nil }
 func (m *fullMockEnv) Start(context.Context) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	m.started = true
 	m.state = environment.ProcessRunningState
 	return nil
 }
 func (m *fullMockEnv) Stop(context.Context) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	m.stopped = true
 	m.state = environment.ProcessOfflineState
 	return nil
 }
 func (m *fullMockEnv) WaitForStop(context.Context, time.Duration, bool) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	if m.waitForStopErr != nil {
 		return m.waitForStopErr
 	}
@@ -331,6 +416,8 @@ func (m *fullMockEnv) WaitForStop(context.Context, time.Duration, bool) error {
 	return nil
 }
 func (m *fullMockEnv) Terminate(context.Context, string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	m.terminated = true
 	m.state = environment.ProcessOfflineState
 	return nil
@@ -486,15 +573,15 @@ func TestServerSyncAndInstall(t *testing.T) {
 
 	// SyncWithEnvironment
 	s.SyncWithEnvironment()
-	assert.True(t, env.inSitu)
+	assert.True(t, env.InSitu())
 
 	// SyncWithEnvironment when suspended
 	s.Config().SetSuspended(true)
-	env.state = environment.ProcessRunningState
+	env.SetState(environment.ProcessRunningState)
 	s.SyncWithEnvironment()
 	// Allow background goroutine to call WaitForStop
 	time.Sleep(50 * time.Millisecond)
-	assert.True(t, env.stopped)
+	assert.True(t, env.Stopped())
 
 	// Install with SkipEggScripts = true
 	s.Config().SetSuspended(false)
@@ -780,10 +867,10 @@ func TestServerStateTransitionsAndListeners(t *testing.T) {
 	// Trigger environment events
 	s.Environment.Events().Publish(environment.ResourceEvent, []byte(`{"memory_bytes":1048576,"memory_limit_bytes":10485760}`))
 	s.Environment.Events().Publish(environment.StateChangeEvent, []byte(`"running"`))
-	time.Sleep(10 * time.Millisecond)
+	time.Sleep(50 * time.Millisecond)
 
 	// OnStateChange to offline
-	env.state = environment.ProcessOfflineState
+	env.SetState(environment.ProcessOfflineState)
 	s.OnStateChange()
 	assert.False(t, s.IsRunning())
 }
@@ -876,12 +963,12 @@ func TestManagerAndInstallAndSync(t *testing.T) {
 	// 5. SyncWithEnvironment
 	s.Config().Suspended = false
 	s.SyncWithEnvironment()
-	assert.True(t, env.inSitu)
+	assert.True(t, env.InSitu())
 
 	s.Config().Suspended = true
 	s.SyncWithEnvironment()
 	time.Sleep(50 * time.Millisecond)
-	assert.True(t, env.stopped)
+	assert.True(t, env.Stopped())
 }
 
 func TestServerEnsureDataDirectoryExists(t *testing.T) {
@@ -1139,18 +1226,18 @@ func TestServerRemainingCoverage(t *testing.T) {
 	time.Sleep(10 * time.Millisecond)
 
 	// 5. Update SyncWithEnvironment InSituUpdate error
-	env.inSituErr = errors.New("cannot update in situ")
+	env.setInSituErr(errors.New("cannot update in situ"))
 	s.Config().SetSuspended(false)
 	s.SyncWithEnvironment()
-	env.inSituErr = nil
+	env.setInSituErr(nil)
 
 	// Suspended with running process & WaitForStop error
 	s.Config().SetSuspended(true)
-	env.state = environment.ProcessRunningState
-	env.waitForStopErr = errors.New("cannot stop")
+	env.SetState(environment.ProcessRunningState)
+	env.setWaitForStopErr(errors.New("cannot stop"))
 	s.SyncWithEnvironment()
-	time.Sleep(20 * time.Millisecond)
-	env.waitForStopErr = nil
+	time.Sleep(50 * time.Millisecond)
+	env.setWaitForStopErr(nil)
 	s.Config().SetSuspended(false)
 
 	// 6. Config parser panic recovery and file touch error
@@ -1197,11 +1284,12 @@ func TestServerRemainingCoverage(t *testing.T) {
 	mockBackup := backup.NewLocal(remoteCli, uuid.New().String(), "")
 
 	// RestoreBackup with WaitForStop error
-	env.state = environment.ProcessRunningState
-	env.waitForStopErr = errors.New("cannot stop")
+	env.SetState(environment.ProcessRunningState)
+	env.setWaitForStopErr(errors.New("cannot stop"))
 	assert.Error(t, s.RestoreBackup(mockBackup, fakeReader, false))
-	env.waitForStopErr = nil
-	env.state = environment.ProcessOfflineState
+	time.Sleep(50 * time.Millisecond)
+	env.setWaitForStopErr(nil)
+	env.SetState(environment.ProcessOfflineState)
 
 	_ = s.RestoreBackup(mockBackup, fakeReader, false)
 
@@ -1391,22 +1479,21 @@ func TestServerRemainingCoverage(t *testing.T) {
 
 	// 14. OnStateChange crash detection
 	s.resources.State.Store(environment.ProcessStartingState)
-	env.state = environment.ProcessOfflineState
-	env.exitErr = errors.New("exit error")
+	env.SetState(environment.ProcessOfflineState)
+	env.setExitState(0, false, errors.New("exit error"))
 	s.Config().CrashDetectionEnabled = true
 	s.OnStateChange()
-	time.Sleep(50 * time.Millisecond)
+	time.Sleep(100 * time.Millisecond)
 
 	// Too frequent crash
 	s.crasher.SetLastCrash(time.Now())
 	cfg.System.CrashDetection.Timeout = 60
 	config.Set(cfg)
 	s.resources.State.Store(environment.ProcessStartingState)
-	env.exitErr = nil
-	env.exitCode = 1
+	env.setExitState(1, false, nil)
 	s.OnStateChange()
-	time.Sleep(50 * time.Millisecond)
-	env.exitCode = 0
+	time.Sleep(100 * time.Millisecond)
+	env.setExitState(0, false, nil)
 
 	// 15. restoreEntry coverage
 	hdrNoLink := &tar.Header{Typeflag: tar.TypeSymlink, Linkname: ""}
