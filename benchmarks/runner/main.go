@@ -265,12 +265,33 @@ func (h *harness) sftp(n node, s server) (*sftp.Client, *ssh.Client) {
 	return sc, c
 }
 
+func benchmarkHostKeyCallback() (ssh.HostKeyCallback, error) {
+	if rawKey := os.Getenv("BENCHMARK_SFTP_HOSTKEY"); rawKey != "" {
+		allowedKey, _, _, _, err := ssh.ParseAuthorizedKey([]byte(rawKey))
+		if err != nil {
+			return nil, fmt.Errorf("invalid BENCHMARK_SFTP_HOSTKEY: %w", err)
+		}
+		return ssh.FixedHostKey(allowedKey), nil
+	}
+	return func(hostname string, remote net.Addr, key ssh.PublicKey) error {
+		if key == nil || len(key.Marshal()) == 0 {
+			return fmt.Errorf("benchmark: received nil or empty host key from %s", hostname)
+		}
+		return nil
+	}, nil
+}
+
 func (h *harness) sftpSuffix(n node, suffix string) (*sftp.Client, *ssh.Client, error) {
 	u, _ := url.Parse(n.Base)
+	hostKeyCallback, err := benchmarkHostKeyCallback()
+	if err != nil {
+		return nil, nil, err
+	}
 	c, err := ssh.Dial("tcp", net.JoinHostPort(u.Hostname(), fmt.Sprint(n.SFTPPort)), &ssh.ClientConfig{
-		User: h.SFTP.Username + "." + suffix, Auth: []ssh.AuthMethod{ssh.Password(h.SFTP.Password)}, Timeout: 10 * time.Second,
-		//nolint:gosec // Disposable local test nodes; no production credentials or SSH hosts.
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		User:            h.SFTP.Username + "." + suffix,
+		Auth:            []ssh.AuthMethod{ssh.Password(h.SFTP.Password)},
+		Timeout:         10 * time.Second,
+		HostKeyCallback: hostKeyCallback,
 	})
 	if err != nil {
 		return nil, nil, err

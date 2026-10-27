@@ -617,6 +617,25 @@ func TestHarnessSftpMethods(t *testing.T) {
 	})
 }
 
+func TestBenchmarkHostKeyCallback(t *testing.T) {
+	// 1. Default fallback callback verifies non-empty key
+	cb, err := benchmarkHostKeyCallback()
+	require.NoError(t, err)
+	assert.Error(t, cb("localhost:2022", nil, nil))
+
+	// 2. Invalid BENCHMARK_SFTP_HOSTKEY returns error
+	t.Setenv("BENCHMARK_SFTP_HOSTKEY", "invalid-key-data")
+	_, err = benchmarkHostKeyCallback()
+	assert.Error(t, err)
+
+	// 3. Valid BENCHMARK_SFTP_HOSTKEY parses fixed host key
+	testKey := "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIG54lC8fV+qHj4V7qE5o8o6vjF9Y5u9O7Z8l6Q3e1A4/ test@benchmark"
+	t.Setenv("BENCHMARK_SFTP_HOSTKEY", testKey)
+	cb, err = benchmarkHostKeyCallback()
+	require.NoError(t, err)
+	assert.NotNil(t, cb)
+}
+
 func TestMainScenarios(t *testing.T) {
 	origArgs := os.Args
 	origCommandLine := flag.CommandLine
