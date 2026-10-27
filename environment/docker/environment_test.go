@@ -96,6 +96,9 @@ func TestDockerEnvironmentMethods(t *testing.T) {
 	uptime, err := env.Uptime(context.Background())
 	assert.Error(t, err)
 	assert.Equal(t, int64(0), uptime)
+
+	// InSituUpdate on nonexistent container
+	assert.NoError(t, env.InSituUpdate())
 }
 
 func TestDockerContainerCreateDestroy(t *testing.T) {

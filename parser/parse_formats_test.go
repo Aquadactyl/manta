@@ -366,4 +366,69 @@ func TestParserMoreCases(t *testing.T) {
 	assert.Contains(t, string(iniBytes), "[newsection]")
 }
 
+func TestParserErrorPaths(t *testing.T) {
+	tmp := t.TempDir()
+
+	// 1. Invalid JSON
+	badJsonPath := filepath.Join(tmp, "bad.json")
+	require.NoError(t, os.WriteFile(badJsonPath, []byte(`{"key": `), 0644))
+	f, err := os.OpenFile(badJsonPath, os.O_RDWR, 0)
+	require.NoError(t, err)
+	defer f.Close()
+
+	var cfJson ConfigurationFile
+	require.NoError(t, json.Unmarshal([]byte(`{"file":"bad.json","parser":"json","replace":[{"match":"key","replace_with":"v"}]}`), &cfJson))
+	assert.Error(t, cfJson.Parse(f))
+
+	// 2. Invalid YAML
+	badYamlPath := filepath.Join(tmp, "bad.yaml")
+	require.NoError(t, os.WriteFile(badYamlPath, []byte(`[invalid: {yaml`), 0644))
+	fYaml, err := os.OpenFile(badYamlPath, os.O_RDWR, 0)
+	require.NoError(t, err)
+	defer fYaml.Close()
+
+	var cfYaml ConfigurationFile
+	require.NoError(t, json.Unmarshal([]byte(`{"file":"bad.yaml","parser":"yaml","replace":[{"match":"key","replace_with":"v"}]}`), &cfYaml))
+	assert.Error(t, cfYaml.Parse(fYaml))
+
+	// 3. Invalid XML
+	badXmlPath := filepath.Join(tmp, "bad.xml")
+	require.NoError(t, os.WriteFile(badXmlPath, []byte(`<Server><Unclosed`), 0644))
+	fXml, err := os.OpenFile(badXmlPath, os.O_RDWR, 0)
+	require.NoError(t, err)
+	defer fXml.Close()
+
+	var cfXml ConfigurationFile
+	require.NoError(t, json.Unmarshal([]byte(`{"file":"bad.xml","parser":"xml","replace":[{"match":"Server.Port","replace_with":"8080"}]}`), &cfXml))
+	assert.Error(t, cfXml.Parse(fXml))
+
+	// 4. Invalid INI
+	badIniPath := filepath.Join(tmp, "bad.ini")
+	require.NoError(t, os.WriteFile(badIniPath, []byte(`[section`), 0644))
+	fIni, err := os.OpenFile(badIniPath, os.O_RDWR, 0)
+	require.NoError(t, err)
+	defer fIni.Close()
+
+	var cfIni ConfigurationFile
+	require.NoError(t, json.Unmarshal([]byte(`{"file":"bad.ini","parser":"ini","replace":[{"match":"section.key","replace_with":"val"}]}`), &cfIni))
+	assert.Error(t, cfIni.Parse(fIni))
+
+	// 5. Rewrite failure in file parser (opened read-only)
+	txtPath := filepath.Join(tmp, "ro.txt")
+	require.NoError(t, os.WriteFile(txtPath, []byte("match_me\n"), 0644))
+	fTxt, err := os.Open(txtPath)
+	require.NoError(t, err)
+	defer fTxt.Close()
+
+	var cfTxt ConfigurationFile
+	require.NoError(t, json.Unmarshal([]byte(`{"file":"ro.txt","parser":"file","replace":[{"match":"match_me","replace_with":"val"}]}`), &cfTxt))
+	assert.Error(t, cfTxt.Parse(fTxt))
+
+	// 6. getKeyValue with boolean
+	var cfrBool ConfigurationFileReplacement
+	require.NoError(t, json.Unmarshal([]byte(`{"match":"test","replace_with":true}`), &cfrBool))
+	assert.Equal(t, true, cfrBool.getKeyValue("true"))
+	assert.Equal(t, false, cfrBool.getKeyValue("false"))
+}
+
 

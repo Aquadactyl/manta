@@ -241,3 +241,30 @@ func TestS3FileUploaderErrors(t *testing.T) {
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "400")
 }
+
+func TestBackupIdentifierValidationAndMissingFileErrors(t *testing.T) {
+	// 1. Invalid UUID
+	bInvalid := NewLocal(nil, "invalid-uuid", "")
+	_, err := bInvalid.Size()
+	assert.Error(t, err)
+	_, err = bInvalid.Checksum()
+	assert.Error(t, err)
+	assert.Error(t, bInvalid.Remove())
+	_, _, err = LocateLocal(nil, "invalid-uuid")
+	assert.Error(t, err)
+	// S3 with invalid UUID
+	s3Invalid := NewS3(nil, "invalid-uuid", "")
+	assert.Error(t, s3Invalid.Remove())
+
+	assert.Error(t, bInvalid.Restore(context.Background(), nil, nil))
+
+	// 2. Valid UUID but file does not exist
+	bMissing := NewLocal(nil, "99999999-9999-4999-8999-999999999999", "")
+	_, err = bMissing.Size()
+	assert.Error(t, err)
+	_, err = bMissing.Checksum()
+	assert.Error(t, err)
+	_, err = bMissing.Details(context.Background(), nil)
+	assert.Error(t, err)
+	assert.Error(t, bMissing.Restore(context.Background(), nil, nil))
+}

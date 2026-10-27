@@ -8,6 +8,7 @@ import (
 
 	"github.com/pterodactyl/wings/config"
 	"github.com/pterodactyl/wings/server"
+	"github.com/pterodactyl/wings/system"
 )
 
 func TestScheduler(t *testing.T) {
@@ -40,6 +41,22 @@ func TestScheduler(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, s)
 	defer s.Clear()
+
+	// Run scheduled jobs
+	_ = s.RunByTag("activity")
+	_ = s.RunByTag("sftp")
+
+	// Test ErrCronRunning branch for activityCron
+	ac := &activityCron{mu: system.NewAtomicBool(true)}
+	assert.ErrorIs(t, ac.Run(context.Background()), ErrCronRunning)
+
+	// Test ErrCronRunning branch for sftpCron
+	sc := &sftpCron{mu: system.NewAtomicBool(true)}
+	assert.ErrorIs(t, sc.Run(context.Background()), ErrCronRunning)
+
+	// Test batchSize fallback
+	acEmpty := &activityCron{max: 0}
+	assert.Equal(t, 100, acEmpty.batchSize())
 
 	// Calling again should fail
 	s2, err2 := Scheduler(context.Background(), server.NewEmptyManager(nil))

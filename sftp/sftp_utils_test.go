@@ -425,6 +425,51 @@ func TestSFTPAdditionalCoverage(t *testing.T) {
 	require.NoError(t, os.MkdirAll(filepath.Dir(srv2.PrivateKeyPath()), 0755))
 	require.NoError(t, os.WriteFile(srv2.PrivateKeyPath(), []byte("invalid-key-data"), 0600))
 	assert.Error(t, srv2.Run())
+
+	// 4. AcceptInbound error on closed connection
+	pr, pw := net.Pipe()
+	_ = pr.Close()
+	srvAccept := &SFTPServer{}
+	assert.Error(t, srvAccept.AcceptInbound(pw, &ssh.ServerConfig{}))
+	_ = pw.Close()
+
+	// 5. MustLog error branch
+	ehBad := &eventHandler{}
+	ehBad.MustLog("test_err_event", FileAction{})
+}
+
+func TestFilecmdBranches(t *testing.T) {
+	tmp := t.TempDir()
+	fsys, err := filesystem.New(tmp, 0, nil)
+	require.NoError(t, err)
+
+	srv, err := server.New(nil)
+	require.NoError(t, err)
+
+	// Handler without permissions
+	hNoPerm := &Handler{
+		server:      srv,
+		fs:          fsys,
+		logger:      log.WithField("test", "test"),
+		permissions: []string{},
+	}
+
+	assert.Equal(t, pkgsftp.ErrSSHFxPermissionDenied, hNoPerm.Filecmd(&pkgsftp.Request{Method: "Setstat", Filepath: "/f"}))
+	assert.Equal(t, pkgsftp.ErrSSHFxPermissionDenied, hNoPerm.Filecmd(&pkgsftp.Request{Method: "Rename", Filepath: "/f", Target: "/t"}))
+	assert.Equal(t, pkgsftp.ErrSSHFxPermissionDenied, hNoPerm.Filecmd(&pkgsftp.Request{Method: "Rmdir", Filepath: "/d"}))
+	assert.Equal(t, pkgsftp.ErrSSHFxPermissionDenied, hNoPerm.Filecmd(&pkgsftp.Request{Method: "Remove", Filepath: "/f"}))
+	assert.Equal(t, pkgsftp.ErrSSHFxPermissionDenied, hNoPerm.Filecmd(&pkgsftp.Request{Method: "Mkdir", Filepath: "/d"}))
+
+	// Handler with permissions but non-existent files
+	hFull := &Handler{
+		server:      srv,
+		fs:          fsys,
+		logger:      log.WithField("test", "test"),
+		permissions: []string{PermissionFileUpdate, PermissionFileDelete, PermissionFileCreate},
+	}
+
+	assert.Equal(t, pkgsftp.ErrSSHFxNoSuchFile, hFull.Filecmd(&pkgsftp.Request{Method: "Rename", Filepath: "/nonexistent", Target: "/newname"}))
+	assert.Equal(t, pkgsftp.ErrSSHFxOpUnsupported, hFull.Filecmd(&pkgsftp.Request{Method: "UnsupportedMethod"}))
 }
 
 

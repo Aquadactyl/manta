@@ -353,8 +353,74 @@ func TestHandlerInboundEvents(t *testing.T) {
 	if !errors.Is(err, server.ErrSuspended) {
 		t.Errorf("expected ErrSuspended, got %v", err)
 	}
+	h.server.Config().SetSuspended(false)
 
-	// 9. SendClose
+	// 9. SetStateEvent without permission
+	_, pNoPower := signToken(t, serverUuid, PermissionConnect)
+	h.setJwt(pNoPower)
+	err = h.HandleInbound(context.Background(), Message{Event: SetStateEvent, Args: []string{"start"}})
+	if err != nil {
+		t.Errorf("expected nil for unauthorized power event, got %v", err)
+	}
+
+	_, pFull := signToken(t, serverUuid, PermissionConnect, PermissionSendCommand, PermissionSendPowerStart, PermissionSendPowerStop)
+	h.setJwt(pFull)
+
+	// 10. SendCommandEvent without permission
+	h.setJwt(pNoPower)
+	err = h.HandleInbound(context.Background(), Message{Event: SendCommandEvent, Args: []string{"test"}})
+	if err != nil {
+		t.Errorf("expected nil for unauthorized command event, got %v", err)
+	}
+	h.setJwt(pFull)
+
+	// 11. SendClose and then SendJson (triggers websocket.ErrCloseSent handling)
 	_ = h.SendClose(websocket.CloseNormalClosure, "closing test")
+	_ = h.SendJson(Message{Event: server.StatusEvent, Args: []string{"stopped"}})
+
+	// 12. validJwt branches
+	// a. Denylisted
+	_, pDeny := signToken(t, serverUuid, PermissionConnect)
+	pDeny.IssuedAt = jwt.NumericDate(time.Now().Add(-time.Minute))
+	tokens.DenyForServer(serverUuid, pDeny.UserUUID)
+	h.setJwt(pDeny)
+	_, err = h.validJwt()
+	if !errors.Is(err, ErrJwtOnDenylist) {
+		t.Errorf("expected ErrJwtOnDenylist, got %v", err)
+	}
+
+	// b. Missing PermissionConnect
+	tokNoConnect := &tokens.WebsocketPayload{
+		Payload: jwt.Payload{
+			IssuedAt:       jwt.NumericDate(time.Now().Add(time.Second * 2)),
+			ExpirationTime: jwt.NumericDate(time.Now().Add(time.Hour)),
+		},
+		UserUUID:    "clean-user-uuid-1",
+		Scoped:      tokens.Scoped{Scope: string(tokens.Websocket)},
+		ServerUUID:  serverUuid,
+		Permissions: []string{PermissionSendCommand},
+	}
+	h.setJwt(tokNoConnect)
+	_, err = h.validJwt()
+	if !errors.Is(err, ErrJwtNoConnectPerm) {
+		t.Errorf("expected ErrJwtNoConnectPerm, got %v", err)
+	}
+
+	// c. Server UUID mismatch
+	tokWrongSrv := &tokens.WebsocketPayload{
+		Payload: jwt.Payload{
+			IssuedAt:       jwt.NumericDate(time.Now().Add(time.Second * 2)),
+			ExpirationTime: jwt.NumericDate(time.Now().Add(time.Hour)),
+		},
+		UserUUID:    "clean-user-uuid-2",
+		Scoped:      tokens.Scoped{Scope: string(tokens.Websocket)},
+		ServerUUID:  otherServerUuid,
+		Permissions: []string{PermissionConnect},
+	}
+	h.setJwt(tokWrongSrv)
+	_, err = h.validJwt()
+	if !errors.Is(err, ErrJwtUuidMismatch) {
+		t.Errorf("expected ErrJwtUuidMismatch, got %v", err)
+	}
 }
 
