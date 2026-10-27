@@ -234,5 +234,3 @@ func TestTransferArchiveCreation(t *testing.T) {
 	trNilCancel.Cancel()
 	assert.Equal(t, StatusPending, trNilCancel.Status())
 }
-
-

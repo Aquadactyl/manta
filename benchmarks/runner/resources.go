@@ -41,6 +41,7 @@ func (h *harness) stats(container string) snapshot {
 	}
 	return snapshot{data.CPUStats.CPUUsage.Total, working, data.PidsStats.Current}
 }
+
 var (
 	resourceInitialWait = 5 * time.Second
 	resourceSampleCount = 15

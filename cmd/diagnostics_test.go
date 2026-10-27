@@ -135,4 +135,3 @@ func TestDiagnosticsHelpersAndEdgeCases(t *testing.T) {
 		_ = info
 	}
 }
-

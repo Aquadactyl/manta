@@ -334,7 +334,7 @@ func TestUnixFSAdditionalOps(t *testing.T) {
 	require.NoError(t, os.WriteFile(filepath.Join(root, "touched.txt"), []byte("hello"), 0644))
 
 	// TouchPath on existing path
-	dirfd, name, closeFd, err, exists = fs.TouchPath("touched.txt")
+	_, _, closeFd, err, exists = fs.TouchPath("touched.txt")
 	assert.NoError(t, err)
 	assert.True(t, exists)
 	if closeFd != nil {
@@ -430,4 +430,3 @@ func TestCheckOpenedTypeAndPath(t *testing.T) {
 	err = fs.checkOpenedPath(hostsFd, "hosts")
 	assert.ErrorIs(t, err, ErrBadPathResolution)
 }
-

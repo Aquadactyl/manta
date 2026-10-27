@@ -482,10 +482,3 @@ func TestShutdownOnSignalManagerError(t *testing.T) {
 	srv := &http.Server{}
 	shutdownOnSignal(signals, server.NewEmptyManager(nil), srv)
 }
-
-
-
-
-
-
-

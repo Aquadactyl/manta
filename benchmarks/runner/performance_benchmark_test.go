@@ -381,5 +381,3 @@ func TestHarnessResources(t *testing.T) {
 	})
 	assert.FileExists(t, outPath)
 }
-
-

@@ -88,4 +88,3 @@ func TestConfigurationFilesMoreCases(t *testing.T) {
 	require.NoError(t, os.WriteFile(filepath.Join(root, "broken.json"), []byte(`{invalid-json`), 0644))
 	s.UpdateConfigurationFiles()
 }
-

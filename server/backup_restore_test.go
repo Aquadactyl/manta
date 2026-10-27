@@ -267,4 +267,3 @@ func TestRestoreBackupRunningContainer(t *testing.T) {
 	require.NoError(t, s.RestoreBackup(restoreTestLocal(), nil, false))
 	assert.True(t, waitEnv.waited)
 }
-

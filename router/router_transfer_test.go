@@ -107,7 +107,9 @@ func (e transferTestEnvironment) IsRunning(context.Context) (bool, error) {
 	return e.State() == environment.ProcessRunningState, nil
 }
 
-func (transferTestEnvironment) Config() *environment.Configuration { return &environment.Configuration{} }
+func (transferTestEnvironment) Config() *environment.Configuration {
+	return &environment.Configuration{}
+}
 
 func (transferTestEnvironment) Events() *events.Bus { return events.NewBus() }
 
@@ -128,7 +130,6 @@ func (transferTestEnvironment) WaitForStop(context.Context, time.Duration, bool)
 func (transferTestEnvironment) Stop(context.Context) error { return nil }
 
 func (transferTestEnvironment) Terminate(context.Context, string) error { return nil }
-
 
 type transferHarness struct {
 	t      *testing.T
@@ -493,7 +494,7 @@ type failConfigPanel struct {
 	transferTestPanel
 }
 
-func (failConfigPanel) GetServerConfiguration(context.Context, string) (remote.ServerConfigurationResponse, error) {
+func (*failConfigPanel) GetServerConfiguration(context.Context, string) (remote.ServerConfigurationResponse, error) {
 	return remote.ServerConfigurationResponse{}, errors.New("cannot fetch config")
 }
 
@@ -527,5 +528,3 @@ func TestTransferSuccessFlow(t *testing.T) {
 	// all earlier branches (archive extract, checksum loop, verification) are fully exercised!
 	assert.Contains(t, []int{http.StatusOK, http.StatusBadRequest, http.StatusInternalServerError}, w.Code)
 }
-
-

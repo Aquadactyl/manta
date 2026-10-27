@@ -84,5 +84,3 @@ func TestDatabase(t *testing.T) {
 	})
 	assert.Error(t, Initialize())
 }
-
-

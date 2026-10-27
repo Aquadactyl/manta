@@ -128,4 +128,3 @@ func TestDebugLogRequest(t *testing.T) {
 		debugLogRequest(req)
 	})
 }
-

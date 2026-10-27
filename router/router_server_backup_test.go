@@ -440,4 +440,3 @@ func TestDeleteServerBackupFlow(t *testing.T) {
 		t.Fatalf("expected 204 NoContent for deleting existing backup, got %d", c.Writer.Status())
 	}
 }
-

@@ -277,4 +277,3 @@ func TestRemoteClientContextCanceledErrors(t *testing.T) {
 	_, err = c.GetServers(ctx, 10)
 	assert.Error(t, err)
 }
-

@@ -13,4 +13,3 @@ func TestProgressNegativeTicks(t *testing.T) {
 	res := p.Progress(25)
 	assert.Contains(t, res, "[                         ]")
 }
-

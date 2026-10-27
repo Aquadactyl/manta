@@ -24,6 +24,7 @@ func TestCountedReader(t *testing.T) {
 	// Read remaining
 	buf2 := make([]byte, 100)
 	n2, err := cr.Read(buf2)
+	assert.True(t, err == nil || err == io.EOF)
 	assert.Equal(t, 6, n2)
 	assert.Equal(t, int64(13), cr.BytesRead())
 	assert.NoError(t, cr.Error()) // EOF is returned as nil error by Error()

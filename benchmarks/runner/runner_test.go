@@ -712,8 +712,3 @@ func TestHarnessMoreBranches(t *testing.T) {
 	dur := h2.power(n2, s2, "stop")
 	assert.True(t, dur >= 0)
 }
-
-
-
-
-

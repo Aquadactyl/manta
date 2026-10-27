@@ -244,4 +244,3 @@ func TestPostCreateServerValidationError(t *testing.T) {
 		t.Fatalf("expected 422 Unprocessable Entity, got %d", recorder.Code)
 	}
 }
-

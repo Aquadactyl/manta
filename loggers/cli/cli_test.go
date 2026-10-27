@@ -97,6 +97,3 @@ func (noGoexitError) Format(s fmt.State, _ rune) {
 func (noGoexitError) StackTrace() errors.StackTrace {
 	return nil
 }
-
-
-

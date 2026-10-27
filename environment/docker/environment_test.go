@@ -510,10 +510,3 @@ func TestDockerStartFailure(t *testing.T) {
 	assert.Error(t, err)
 	assert.Equal(t, environment.ProcessOfflineState, env.State())
 }
-
-
-
-
-
-
-

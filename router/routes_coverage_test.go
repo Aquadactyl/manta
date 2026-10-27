@@ -2155,13 +2155,3 @@ func TestFileOperationsComprehensiveCoverage(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 	assert.Contains(t, w.Body.String(), "has reached its limit of 3 simultaneous remote file downloads")
 }
-
-
-
-
-
-
-
-
-
-

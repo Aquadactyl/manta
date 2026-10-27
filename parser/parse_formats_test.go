@@ -430,5 +430,3 @@ func TestParserErrorPaths(t *testing.T) {
 	assert.Equal(t, true, cfrBool.getKeyValue("true"))
 	assert.Equal(t, false, cfrBool.getKeyValue("false"))
 }
-
-

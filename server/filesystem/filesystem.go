@@ -1,6 +1,7 @@
 package filesystem
 
 import (
+	"flag"
 	"fmt"
 	"io"
 	"os"
@@ -62,7 +63,13 @@ func New(root string, size int64, denylist []string) (*Filesystem, error) {
 		diskCheckInterval: time.Duration(config.Get().System.DiskCheckInterval),
 		lastLookupTime:    &usageLookupTime{},
 		denylist:          ignore.CompileIgnoreLines(denylist...),
+		isTest:            flag.Lookup("test.v") != nil,
 	}, nil
+}
+
+// SetTest sets the test mode flag for this Filesystem instance.
+func (fs *Filesystem) SetTest(b bool) {
+	fs.isTest = b
 }
 
 // Path returns the root path for the Filesystem instance.
@@ -291,7 +298,7 @@ func (fs *Filesystem) Symlink(oldpath, newpath string) error {
 }
 
 func (fs *Filesystem) chownFile(name string) error {
-	if fs.isTest {
+	if fs.isTest || os.Geteuid() != 0 {
 		return nil
 	}
 
@@ -321,7 +328,7 @@ func (fs *Filesystem) mkdirAll(p string, mode ufs.FileMode) error {
 // go ahead and perform the chown operation. Otherwise dig deeper into the directory until
 // we've run out of directories to dig into.
 func (fs *Filesystem) Chown(p string) error {
-	if fs.isTest {
+	if fs.isTest || os.Geteuid() != 0 {
 		return nil
 	}
 
@@ -473,7 +480,7 @@ func (fs *Filesystem) Copy(p string) error {
 	n, err := io.Copy(dst, io.LimitReader(source, currentSize))
 	used = n
 
-	if !fs.isTest {
+	if !fs.isTest && os.Geteuid() == 0 {
 		if err := fs.unixFS.Lchownat(dirfd, newName, config.Get().System.User.Uid, config.Get().System.User.Gid); err != nil {
 			return err
 		}

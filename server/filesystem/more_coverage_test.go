@@ -498,8 +498,11 @@ func TestFilesystemWriteAndCopyEdgeCases(t *testing.T) {
 
 	fs.isTest = true
 	assert.NoError(t, fs.Chown("/"))
-	fs.isTest = false
-	assert.NoError(t, fs.Chown("/"))
+	if os.Geteuid() == 0 {
+		fs.isTest = false
+		assert.NoError(t, fs.Chown("/"))
+		fs.isTest = true
+	}
 
 	entries, err := fs.ListDirectory("/")
 	require.NoError(t, err)
@@ -653,12 +656,14 @@ func TestFilesystemChownChtimesAndFile(t *testing.T) {
 		config.Set(cfg)
 	}()
 
-	fs.isTest = false
-	assert.NoError(t, fs.Chown("/"))
-	assert.NoError(t, fs.Chown("src.txt"))
-	assert.NoError(t, fs.Chtimes("src.txt", time.Now(), time.Now()))
-	assert.NoError(t, fs.Copy("src.txt"))
-	fs.isTest = true
+	if os.Geteuid() == 0 {
+		fs.isTest = false
+		assert.NoError(t, fs.Chown("/"))
+		assert.NoError(t, fs.Chown("src.txt"))
+		assert.NoError(t, fs.Chtimes("src.txt", time.Now(), time.Now()))
+		assert.NoError(t, fs.Copy("src.txt"))
+		fs.isTest = true
+	}
 
 	f, st, err := fs.File("src.txt")
 	require.NoError(t, err)
@@ -807,4 +812,3 @@ func TestMoreCompressAndQuotaFileEdges(t *testing.T) {
 	_, err = qf.Write([]byte("test"))
 	assert.Error(t, err)
 }
-

@@ -135,4 +135,3 @@ func TestConfigureGetRequestAndMore(t *testing.T) {
 	// writePanelConfiguration with unwritable path
 	require.Error(t, writePanelConfiguration("/unwritable-dir-xyz/conf.yml", "http://panel.test", []byte(`{"token_id":"id","token":"tok"}`)))
 }
-

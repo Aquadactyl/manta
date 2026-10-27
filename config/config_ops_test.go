@@ -530,7 +530,3 @@ func TestConfigureDirectoriesBranches(t *testing.T) {
 	Set(&cfg)
 	assert.Error(t, ConfigurePasswd())
 }
-
-
-
-

@@ -291,27 +291,37 @@ func (m *fullMockEnv) Events() *events.Bus {
 	}
 	return m.bus
 }
-func (m *fullMockEnv) Exists() (bool, error)                                  { return true, nil }
-func (m *fullMockEnv) IsRunning(context.Context) (bool, error)                { return m.state == environment.ProcessRunningState, nil }
-func (m *fullMockEnv) ExitState() (uint32, bool, error)                       { return m.exitCode, m.oomKilled, m.exitErr }
-func (m *fullMockEnv) SetStopConfiguration(remote.ProcessStopConfiguration)   {}
-func (m *fullMockEnv) SetImage(string)                                        {}
-func (m *fullMockEnv) State() string                                          { return m.state }
-func (m *fullMockEnv) SetState(s string)                                      { m.state = s }
-func (m *fullMockEnv) SetLogCallback(func([]byte))                            {}
-func (m *fullMockEnv) Attach(context.Context) error                           { return nil }
+func (m *fullMockEnv) Exists() (bool, error) { return true, nil }
+func (m *fullMockEnv) IsRunning(context.Context) (bool, error) {
+	return m.state == environment.ProcessRunningState, nil
+}
+func (m *fullMockEnv) ExitState() (uint32, bool, error)                     { return m.exitCode, m.oomKilled, m.exitErr }
+func (m *fullMockEnv) SetStopConfiguration(remote.ProcessStopConfiguration) {}
+func (m *fullMockEnv) SetImage(string)                                      {}
+func (m *fullMockEnv) State() string                                        { return m.state }
+func (m *fullMockEnv) SetState(s string)                                    { m.state = s }
+func (m *fullMockEnv) SetLogCallback(func([]byte))                          {}
+func (m *fullMockEnv) Attach(context.Context) error                         { return nil }
 func (m *fullMockEnv) InSituUpdate() error {
 	m.inSitu = true
 	return m.inSituErr
 }
-func (m *fullMockEnv) Create() error                                          { return nil }
-func (m *fullMockEnv) Destroy() error                                         { return nil }
-func (m *fullMockEnv) SendCommand(string) error                               { return nil }
-func (m *fullMockEnv) Readlog(int) ([]string, error)                          { return m.logs, nil }
-func (m *fullMockEnv) Uptime(context.Context) (int64, error)                  { return 100, nil }
-func (m *fullMockEnv) OnBeforeStart(context.Context) error                     { return nil }
-func (m *fullMockEnv) Start(context.Context) error                            { m.started = true; m.state = environment.ProcessRunningState; return nil }
-func (m *fullMockEnv) Stop(context.Context) error                             { m.stopped = true; m.state = environment.ProcessOfflineState; return nil }
+func (m *fullMockEnv) Create() error                         { return nil }
+func (m *fullMockEnv) Destroy() error                        { return nil }
+func (m *fullMockEnv) SendCommand(string) error              { return nil }
+func (m *fullMockEnv) Readlog(int) ([]string, error)         { return m.logs, nil }
+func (m *fullMockEnv) Uptime(context.Context) (int64, error) { return 100, nil }
+func (m *fullMockEnv) OnBeforeStart(context.Context) error   { return nil }
+func (m *fullMockEnv) Start(context.Context) error {
+	m.started = true
+	m.state = environment.ProcessRunningState
+	return nil
+}
+func (m *fullMockEnv) Stop(context.Context) error {
+	m.stopped = true
+	m.state = environment.ProcessOfflineState
+	return nil
+}
 func (m *fullMockEnv) WaitForStop(context.Context, time.Duration, bool) error {
 	if m.waitForStopErr != nil {
 		return m.waitForStopErr
@@ -320,19 +330,23 @@ func (m *fullMockEnv) WaitForStop(context.Context, time.Duration, bool) error {
 	m.state = environment.ProcessOfflineState
 	return nil
 }
-func (m *fullMockEnv) Terminate(context.Context, string) error                { m.terminated = true; m.state = environment.ProcessOfflineState; return nil }
+func (m *fullMockEnv) Terminate(context.Context, string) error {
+	m.terminated = true
+	m.state = environment.ProcessOfflineState
+	return nil
+}
 
 type fullMockRemoteClient struct {
 	remote.Client
-	installStatusSuccess    bool
-	installStatusReinst     bool
-	installStatusErr        error
-	configResponse          remote.ServerConfigurationResponse
-	configErr               error
-	scriptResponse          remote.InstallationScript
-	installScriptErr        error
-	getServersFunc          func(context.Context, int) ([]remote.RawServerData, error)
-	setBackupStatusErr      error
+	installStatusSuccess     bool
+	installStatusReinst      bool
+	installStatusErr         error
+	configResponse           remote.ServerConfigurationResponse
+	configErr                error
+	scriptResponse           remote.InstallationScript
+	installScriptErr         error
+	getServersFunc           func(context.Context, int) ([]remote.RawServerData, error)
+	setBackupStatusErr       error
 	sendRestorationStatusErr error
 }
 
@@ -370,8 +384,8 @@ func (c *fullMockRemoteClient) GetServers(ctx context.Context, perPage int) ([]r
 	}
 	return []remote.RawServerData{
 		{
-			Uuid: "11111111-2222-3333-4444-555555555555",
-			Settings: []byte(`{"uuid":"11111111-2222-3333-4444-555555555555"}`),
+			Uuid:                 "11111111-2222-3333-4444-555555555555",
+			Settings:             []byte(`{"uuid":"11111111-2222-3333-4444-555555555555"}`),
 			ProcessConfiguration: []byte(`{}`),
 		},
 	}, nil
@@ -1052,7 +1066,7 @@ func (m *mockFileInfo) Size() int64        { return m.size }
 func (m *mockFileInfo) Mode() os.FileMode  { return m.mode }
 func (m *mockFileInfo) ModTime() time.Time { return m.modTime }
 func (m *mockFileInfo) IsDir() bool        { return m.isDir }
-func (m *mockFileInfo) Sys() any          { return m.sys }
+func (m *mockFileInfo) Sys() any           { return m.sys }
 
 func TestServerRemainingCoverage(t *testing.T) {
 	tempDir := t.TempDir()
@@ -1229,13 +1243,13 @@ func TestServerRemainingCoverage(t *testing.T) {
 	}
 
 	// 10. Power HandlePowerAction timeout, terminate without lock, restart onBeforeStart error, unknown action
-	s.powerLock.Acquire()
+	_ = s.powerLock.Acquire()
 	err = s.HandlePowerAction(PowerActionStart, 1)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "could not acquire lock")
 	s.powerLock.Release()
 
-	s.powerLock.Acquire()
+	_ = s.powerLock.Acquire()
 	assert.NoError(t, s.HandlePowerAction(PowerActionTerminate))
 	s.powerLock.Release()
 
@@ -1266,6 +1280,7 @@ func TestServerRemainingCoverage(t *testing.T) {
 	chownFailDir := filepath.Join(tempDir, "chown_fail_dir")
 	chownFs, err := filesystem.New(chownFailDir, 0, nil)
 	require.NoError(t, err)
+	chownFs.SetTest(false)
 	_ = os.RemoveAll(chownFailDir)
 	s.fs = chownFs
 	assert.Error(t, s.onBeforeStart())
@@ -1465,10 +1480,3 @@ func TestServerRemainingCoverage(t *testing.T) {
 		sInit.SyncWithEnvironment()
 	}
 }
-
-
-
-
-
-
-

@@ -423,4 +423,3 @@ func TestHandlerInboundEvents(t *testing.T) {
 		t.Errorf("expected ErrJwtUuidMismatch, got %v", err)
 	}
 }
-

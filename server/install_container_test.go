@@ -37,13 +37,13 @@ type installerCreateRequest struct {
 // path. It records the create body, fails the start call so Execute returns
 // without a real container, and serves a fixed log body.
 type fakeInstallerDocker struct {
-	mu       sync.Mutex
-	create   *installerCreateRequest
-	logs      string
-	startErr  bool
-	failPull  bool
-	failList  bool
-	createErr bool
+	mu          sync.Mutex
+	create      *installerCreateRequest
+	logs        string
+	startErr    bool
+	failPull    bool
+	failList    bool
+	createErr   bool
 	waitErr     bool
 	logsErr     bool
 	logsCopyErr bool
@@ -436,5 +436,3 @@ func TestInstallationProcessPullScannerError(t *testing.T) {
 	p := newInstallerTestProcess(t, fake)
 	assert.Error(t, p.pullInstallationImage())
 }
-
-

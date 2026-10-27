@@ -111,4 +111,3 @@ func TestNew_RemoteErrors(t *testing.T) {
 		assert.True(t, inst.StartOnCompletion)
 	})
 }
-

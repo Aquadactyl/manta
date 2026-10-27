@@ -471,8 +471,3 @@ func TestFilecmdBranches(t *testing.T) {
 	assert.Equal(t, pkgsftp.ErrSSHFxNoSuchFile, hFull.Filecmd(&pkgsftp.Request{Method: "Rename", Filepath: "/nonexistent", Target: "/newname"}))
 	assert.Equal(t, pkgsftp.ErrSSHFxOpUnsupported, hFull.Filecmd(&pkgsftp.Request{Method: "UnsupportedMethod"}))
 }
-
-
-
-
-
