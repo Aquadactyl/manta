@@ -41,9 +41,17 @@ func (h *harness) stats(container string) snapshot {
 	}
 	return snapshot{data.CPUStats.CPUUsage.Total, working, data.PidsStats.Current}
 }
+var (
+	resourceInitialWait = 5 * time.Second
+	resourceSampleCount = 15
+	resourceSampleWait  = 2 * time.Second
+	resourcePingCount   = 50
+	resourceLogWait     = 500 * time.Millisecond
+)
+
 func (h *harness) resources() {
 	h.startAll()
-	time.Sleep(5 * time.Second)
+	time.Sleep(resourceInitialWait)
 	for _, load := range []bool{false, true} {
 		label := "idle"
 		if load {
@@ -95,7 +103,7 @@ func (h *harness) resources() {
 			}
 		}
 		started := time.Now()
-		for i := 0; i < 15; i++ {
+		for i := 0; i < resourceSampleCount; i++ {
 			for _, group := range containers {
 				for _, id := range group {
 					st := h.stats(id)
@@ -105,7 +113,7 @@ func (h *harness) resources() {
 					}
 				}
 			}
-			time.Sleep(2 * time.Second)
+			time.Sleep(resourceSampleWait)
 		}
 		elapsed := time.Since(started)
 		for variant, group := range containers {
@@ -123,7 +131,7 @@ func (h *harness) resources() {
 			for _, s := range n.Servers {
 				lat := []float64{}
 				var status string
-				for i := 0; i < 50; i++ {
+				for i := 0; i < resourcePingCount; i++ {
 					start := time.Now()
 					var err error
 					if s.Kind == "paper" {
@@ -146,7 +154,7 @@ func (h *harness) resources() {
 			}
 			p := h.find(n, "paper")
 			h.commands(n, p, "tps", "mspt")
-			time.Sleep(500 * time.Millisecond)
+			time.Sleep(resourceLogWait)
 			raw := string(h.api(n, "GET", "/api/servers/"+p.UUID+"/logs?size=100", nil))
 			re := regexp.MustCompile(`\x1b\[[0-9;]*m`)
 			h.add(map[string]any{"type": "game_console", "test": "paper_ticks_" + label, "variant": variant, "logs": re.ReplaceAllString(raw, "")})

@@ -236,3 +236,150 @@ func TestHarnessResourcesAndPings(t *testing.T) {
 	assert.Equal(t, "1.20.4", bedrockVer)
 }
 
+func TestHarnessResources(t *testing.T) {
+	prevInitial := resourceInitialWait
+	prevCount := resourceSampleCount
+	prevWait := resourceSampleWait
+	prevPing := resourcePingCount
+	prevLog := resourceLogWait
+	defer func() {
+		resourceInitialWait = prevInitial
+		resourceSampleCount = prevCount
+		resourceSampleWait = prevWait
+		resourcePingCount = prevPing
+		resourceLogWait = prevLog
+	}()
+
+	resourceInitialWait = 0
+	resourceSampleCount = 1
+	resourceSampleWait = 0
+	resourcePingCount = 1
+	resourceLogWait = 0
+
+	// 1. Mock Minecraft TCP Server
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	defer ln.Close()
+
+	go func() {
+		for {
+			conn, err := ln.Accept()
+			if err != nil {
+				return
+			}
+			go func(c net.Conn) {
+				defer c.Close()
+				buf := make([]byte, 1024)
+				_, _ = c.Read(buf)
+				jsonStr := `{"version":{"name":"1.20.4"}}`
+				resp := append([]byte{byte(len(jsonStr) + 2), 0x00, byte(len(jsonStr))}, []byte(jsonStr)...)
+				_, _ = c.Write(resp)
+			}(conn)
+		}
+	}()
+	tcpPort := ln.Addr().(*net.TCPAddr).Port
+
+	// 2. Mock Bedrock UDP Server
+	udpConn, err := net.ListenUDP("udp", &net.UDPAddr{IP: net.ParseIP("127.0.0.1"), Port: 0})
+	require.NoError(t, err)
+	defer udpConn.Close()
+
+	go func() {
+		for {
+			buf := make([]byte, 2048)
+			n, remoteAddr, err := udpConn.ReadFrom(buf)
+			if err != nil {
+				return
+			}
+			if n > 0 {
+				resp := make([]byte, 35)
+				resp[0] = 0x1c
+				resp = append(resp, []byte("MCPE;Dedicated Server;486;1.20.4;0;10;123456789;Bedrock level;Survival;1;19132;19133;")...)
+				_, _ = udpConn.WriteTo(resp, remoteAddr)
+			}
+		}
+	}()
+	udpPort := udpConn.LocalAddr().(*net.UDPAddr).Port
+
+	// 3. Mock Node API Server
+	nodeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/logs") {
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte("[12:00:00 INFO]: TPS: 20.0, MSPT: 10.0\n"))
+			return
+		}
+		if strings.HasSuffix(r.URL.Path, "/commands") {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		// Server state
+		_ = json.NewEncoder(w).Encode(map[string]any{"state": "running"})
+	}))
+	defer nodeServer.Close()
+
+	// 4. Mock Docker Server
+	dockerServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"cpu_stats": map[string]any{
+				"cpu_usage": map[string]any{
+					"total_usage": 1000000000,
+				},
+			},
+			"memory_stats": map[string]any{
+				"usage": 50 * 1024 * 1024,
+				"stats": map[string]uint64{
+					"inactive_file": 1024 * 1024,
+				},
+			},
+			"pids_stats": map[string]any{
+				"current": 12,
+			},
+		})
+	}))
+	defer dockerServer.Close()
+
+	dockerClient := &http.Client{
+		Transport: mockRoundTripper(func(r *http.Request) (*http.Response, error) {
+			r.URL.Scheme = "http"
+			r.URL.Host = dockerServer.Listener.Addr().String()
+			return http.DefaultTransport.RoundTrip(r)
+		}),
+	}
+
+	outPath := filepath.Join(t.TempDir(), "resources.json")
+	h := &harness{
+		output: outPath,
+		http:   nodeServer.Client(),
+		docker: dockerClient,
+		manifest: manifest{
+			Nodes: map[string]node{
+				"manta": {
+					Base:      nodeServer.URL,
+					Token:     "test-token",
+					Container: "manta-daemon",
+					Servers: []server{
+						{UUID: "127.0.0.1", Kind: "paper", Name: "Paper", Port: tcpPort},
+						{UUID: "127.0.0.1", Kind: "bedrock", Name: "Bedrock", Port: udpPort},
+					},
+				},
+				"wings": {
+					Base:      nodeServer.URL,
+					Token:     "test-token",
+					Container: "wings-daemon",
+					Servers: []server{
+						{UUID: "127.0.0.1", Kind: "paper", Name: "Paper", Port: tcpPort},
+						{UUID: "127.0.0.1", Kind: "bedrock", Name: "Bedrock", Port: udpPort},
+					},
+				},
+			},
+		},
+	}
+
+	assert.NotPanics(t, func() {
+		h.resources()
+	})
+	assert.FileExists(t, outPath)
+}
+
+
