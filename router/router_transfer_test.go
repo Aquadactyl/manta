@@ -352,6 +352,24 @@ func TestPostServerTransferRejectsRestoringServer(t *testing.T) {
 	assert.False(t, s.IsTransferring())
 }
 
+// An outbound transfer is rejected if the target URL fails validation.
+func TestPostServerTransferRejectsInvalidURL(t *testing.T) {
+	h := newTransferHarness(t, &transferTestPanel{})
+	s := h.seedServer()
+
+	payload := []byte(`{"url":"ftp://invalid-target/api/transfers","token":"Bearer test","server":{"uuid":"` +
+		transferTestUUID + `","start_on_completion":false}}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/servers/"+transferTestUUID+"/transfer", bytes.NewReader(payload))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer test-token")
+	w := httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Contains(t, w.Body.String(), "The provided transfer URL is invalid.")
+	assert.False(t, s.IsTransferring())
+}
+
 // Cancelling an incoming transfer that does not exist is refused, rather than
 // failing with a server error.
 func TestDeleteTransferForUnknownServer(t *testing.T) {

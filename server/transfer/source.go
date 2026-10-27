@@ -9,14 +9,47 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
+	"net/url"
+	"regexp"
 	"time"
 
 	"github.com/pterodactyl/wings/internal/progress"
 )
 
+var validTransferURLRegexp = regexp.MustCompile(`^https?://[a-zA-Z0-9.\-_~%:\[\]]+(/[^?#\s]*)?(\?[^#\s]*)?$`)
+
+// IsValidRedirectURL validates that the target URL uses http or https, has a valid
+// host, and does not contain illegal characters or ambiguous authority components.
+func IsValidRedirectURL(raw string) bool {
+	if !validTransferURLRegexp.MatchString(raw) {
+		return false
+	}
+	parsed, err := url.Parse(raw)
+	if err != nil || parsed.Host == "" || parsed.Hostname() == "" {
+		return false
+	}
+	if parsed.Scheme != "http" && parsed.Scheme != "https" {
+		return false
+	}
+	return true
+}
+
+func isValidRedirectUrl(raw string) bool {
+	return IsValidRedirectURL(raw)
+}
+
 // PushArchiveToTarget POSTs the archive to the target node and returns the
 // response body.
-func (t *Transfer) PushArchiveToTarget(url, token string) ([]byte, error) {
+func (t *Transfer) PushArchiveToTarget(targetURL, token string) ([]byte, error) {
+	if !isValidRedirectUrl(targetURL) {
+		return nil, fmt.Errorf("transfer: invalid target URL %q", targetURL)
+	}
+
+	parsedURL, err := url.Parse(targetURL)
+	if err != nil {
+		return nil, fmt.Errorf("transfer: failed to parse target URL: %w", err)
+	}
+
 	ctx, cancel := context.WithCancel(t.ctx)
 	defer cancel()
 
@@ -51,7 +84,7 @@ func (t *Transfer) PushArchiveToTarget(url, token string) ([]byte, error) {
 	body, writer := io.Pipe()
 	defer body.Close()
 	defer writer.Close()
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, body)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, parsedURL.String(), body)
 	if err != nil {
 		return nil, err
 	}
@@ -126,7 +159,12 @@ func (t *Transfer) PushArchiveToTarget(url, token string) ([]byte, error) {
 	}()
 
 	t.Log().Debug("sending archive to destination")
-	client := http.Client{Timeout: 0}
+	client := http.Client{
+		Timeout: 0,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
 	res, err := client.Do(req)
 	if err != nil {
 		t.Log().Debug("error while sending archive to destination")

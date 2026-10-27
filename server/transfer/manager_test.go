@@ -234,3 +234,32 @@ func TestTransferArchiveCreation(t *testing.T) {
 	trNilCancel.Cancel()
 	assert.Equal(t, StatusPending, trNilCancel.Status())
 }
+
+func TestIsValidRedirectURL(t *testing.T) {
+	valid := []string{
+		"http://127.0.0.1:1/api/transfers",
+		"http://127.0.0.1:9999/transfer",
+		"https://example.com/api/transfers",
+		"https://node.example.com:8080/api/transfers",
+		"http://[::1]:8080/api/transfers",
+		"http://example.com/api/transfers?key=value&foo=bar",
+	}
+	for _, u := range valid {
+		assert.True(t, IsValidRedirectURL(u), "expected %s to be valid", u)
+	}
+
+	invalid := []string{
+		"",
+		"://invalid-url",
+		"ftp://example.com",
+		"http://",
+		"http://attacker.com@internal/",
+		"http://internal/#attacker.com",
+		"javascript:alert(1)",
+		"http://[invalid-ipv6",
+		"http://\nnewline",
+	}
+	for _, u := range invalid {
+		assert.False(t, IsValidRedirectURL(u), "expected %s to be invalid", u)
+	}
+}

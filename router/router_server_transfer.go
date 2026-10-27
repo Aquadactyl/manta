@@ -23,10 +23,22 @@ type serverTransferRequest struct {
 	Server installer.ServerDetails `json:"server"`
 }
 
+// isValidRedirectUrl checks that the destination URL has a valid scheme and host.
+func isValidRedirectUrl(raw string) bool {
+	return transfer.IsValidRedirectURL(raw)
+}
+
 // postServerTransfer handles the start of a transfer for a server.
 func postServerTransfer(c *gin.Context) {
 	var data serverTransferRequest
 	if err := middleware.BindJSON(c, &data); err != nil {
+		return
+	}
+
+	if !isValidRedirectUrl(data.URL) {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
+			"error": "The provided transfer URL is invalid.",
+		})
 		return
 	}
 
