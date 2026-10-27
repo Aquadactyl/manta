@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -320,6 +321,7 @@ type fullMockRemoteClient struct {
 	scriptResponse       remote.InstallationScript
 	installScriptErr     error
 	getServersFunc       func(context.Context, int) ([]remote.RawServerData, error)
+	setBackupStatusErr   error
 }
 
 func (c *fullMockRemoteClient) SetInstallationStatus(_ context.Context, _ string, req remote.InstallStatusRequest) error {
@@ -343,7 +345,7 @@ func (c *fullMockRemoteClient) GetInstallationScript(_ context.Context, _ string
 }
 
 func (c *fullMockRemoteClient) SetBackupStatus(_ context.Context, _ string, _ remote.BackupRequest) error {
-	return nil
+	return c.setBackupStatusErr
 }
 
 func (c *fullMockRemoteClient) GetServers(ctx context.Context, perPage int) ([]remote.RawServerData, error) {
@@ -632,11 +634,19 @@ func TestServerActivityAndDatabase(t *testing.T) {
 }
 
 func TestServerBackupMethods(t *testing.T) {
+	tempDir := t.TempDir()
+	config.Set(&config.Configuration{
+		AuthenticationToken: "test",
+		System: config.SystemConfiguration{
+			RootDirectory:   tempDir,
+			BackupDirectory: tempDir,
+		},
+	})
+
 	remoteCli := &fullMockRemoteClient{}
 	s, err := New(remoteCli)
 	require.NoError(t, err)
 
-	tempDir := t.TempDir()
 	fs, err := filesystem.New(tempDir, 1024*1024*1024, nil)
 	require.NoError(t, err)
 	s.fs = fs
@@ -666,6 +676,44 @@ func TestServerBackupMethods(t *testing.T) {
 	require.NoError(t, os.WriteFile(filepath.Join(tempDir, "file.txt"), []byte("sample file data"), 0644))
 	err = s.Backup(b)
 	assert.NoError(t, err)
+
+	// getServerwideIgnoredFiles tests
+	_ = os.Remove(filepath.Join(tempDir, ".pteroignore"))
+	ign, err = s.getServerwideIgnoredFiles()
+	assert.NoError(t, err)
+	assert.Empty(t, ign)
+
+	// Valid .pteroignore
+	require.NoError(t, os.WriteFile(filepath.Join(tempDir, ".pteroignore"), []byte("*.log\n"), 0644))
+	ign, err = s.getServerwideIgnoredFiles()
+	assert.NoError(t, err)
+	assert.Equal(t, "*.log\n", ign)
+
+	// Invalid .pteroignore
+	require.NoError(t, os.WriteFile(filepath.Join(tempDir, ".pteroignore"), []byte(strings.Repeat("*a", 17)), 0644))
+	_, err = s.getServerwideIgnoredFiles()
+	assert.Error(t, err)
+
+	// Backup with invalid .pteroignore
+	b2 := backup.NewLocal(remoteCli, uuid.New().String(), "")
+	assert.NoError(t, s.Backup(b2))
+
+	// Too large .pteroignore
+	require.NoError(t, os.WriteFile(filepath.Join(tempDir, ".pteroignore"), make([]byte, filesystem.MaxIgnoreLength+10), 0644))
+	ign, err = s.getServerwideIgnoredFiles()
+	assert.NoError(t, err)
+	assert.Empty(t, ign)
+	_ = os.Remove(filepath.Join(tempDir, ".pteroignore"))
+
+	// notifyPanelOfBackup with remote.RequestError
+	remoteCli.setBackupStatusErr = &remote.RequestError{Detail: "bad request"}
+	assert.Error(t, s.notifyPanelOfBackup("backup-uuid-1", ad, true))
+
+	// Backup notifyPanelOfBackup returns error (b.Remove called, returns generate err)
+	remoteCli.setBackupStatusErr = errors.New("cannot notify")
+	b3 := backup.NewLocal(remoteCli, uuid.New().String(), "")
+	assert.NoError(t, s.Backup(b3))
+	remoteCli.setBackupStatusErr = nil
 }
 
 func TestServerStateTransitionsAndListeners(t *testing.T) {

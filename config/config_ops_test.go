@@ -332,5 +332,74 @@ func TestConfigMoreOperations(t *testing.T) {
 	assert.False(t, ok)
 }
 
+func TestEnsurePterodactylUserAndPasswd(t *testing.T) {
+	orig := Get()
+	defer Set(orig)
+
+	// 1. ConfigurePasswd disabled
+	cfg := *orig
+	cfg.System.Passwd.Enable = false
+	Set(&cfg)
+	assert.NoError(t, ConfigurePasswd())
+
+	// 2. ConfigurePasswd enabled
+	tmp := t.TempDir()
+	cfg.System.Passwd.Enable = true
+	cfg.System.Passwd.Directory = tmp
+	cfg.System.User.Uid = 988
+	cfg.System.User.Gid = 988
+	Set(&cfg)
+	require.NoError(t, ConfigurePasswd())
+	assert.FileExists(t, filepath.Join(tmp, "group"))
+	assert.FileExists(t, filepath.Join(tmp, "passwd"))
+
+	// 3. EnsurePterodactylUser rootless mode
+	cfg.System.User.Rootless.Enabled = true
+	Set(&cfg)
+	require.NoError(t, EnsurePterodactylUser())
+	assert.NotEmpty(t, Get().System.Username)
+
+	// 4. EnsurePterodactylUser with existing root user
+	cfg.System.User.Rootless.Enabled = false
+	cfg.System.Username = "root"
+	Set(&cfg)
+	require.NoError(t, EnsurePterodactylUser())
+	assert.Equal(t, 0, Get().System.User.Uid)
+	assert.Equal(t, 0, Get().System.User.Gid)
+
+	// 5. Load tests
+	loaded, err := Load(filepath.Join(tmp, "passwd"))
+	assert.Error(t, err) // invalid yaml
+	assert.Nil(t, loaded)
+
+	_, err = Load(filepath.Join(tmp, "non-existent.yml"))
+	assert.Error(t, err)
+
+	validYaml := filepath.Join(tmp, "valid.yml")
+	require.NoError(t, os.WriteFile(validYaml, []byte("debug: true\n"), 0644))
+	loaded, err = Load(validYaml)
+	require.NoError(t, err)
+	assert.True(t, loaded.Debug)
+
+	// 6. ConfigureTimezone tests
+	cfg.System.Timezone = "UTC"
+	Set(&cfg)
+	assert.NoError(t, ConfigureTimezone())
+
+	cfg.System.Timezone = "America/New_York"
+	Set(&cfg)
+	assert.NoError(t, ConfigureTimezone())
+
+	cfg.System.Timezone = "Invalid/Timezone"
+	Set(&cfg)
+	assert.Error(t, ConfigureTimezone())
+
+	cfg.System.Timezone = ""
+	t.Setenv("TZ", "Europe/London")
+	Set(&cfg)
+	assert.NoError(t, ConfigureTimezone())
+	assert.Equal(t, "Europe/London", Get().System.Timezone)
+}
+
 
 
