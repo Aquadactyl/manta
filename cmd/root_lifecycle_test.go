@@ -72,6 +72,10 @@ func TestRootCmdRunLifecycle(t *testing.T) {
 	require.NoError(t, cfg.ResolveToken(false))
 	cfg.System.RootDirectory = tmpDir
 	cfg.System.LogDirectory = filepath.Join(tmpDir, "logs")
+	lrDir := t.TempDir()
+	config.SetLogrotateDirectory(lrDir)
+	defer config.SetLogrotateDirectory("/etc/logrotate.d")
+
 	cfg.System.Data = filepath.Join(tmpDir, "data")
 	cfg.System.ArchiveDirectory = filepath.Join(tmpDir, "archives")
 	cfg.System.BackupDirectory = filepath.Join(tmpDir, "backups")
@@ -80,6 +84,7 @@ func TestRootCmdRunLifecycle(t *testing.T) {
 	cfg.System.User.Rootless.Enabled = true
 	cfg.System.Passwd.Enable = false
 	cfg.System.MachineID.Enable = false
+	cfg.System.EnableLogRotate = false
 	cfg.System.Timezone = "UTC"
 	cfg.System.Sftp.Address = "127.0.0.1"
 	cfg.System.Sftp.Port = 20225

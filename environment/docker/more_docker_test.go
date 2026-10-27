@@ -9,6 +9,7 @@ import (
 
 	"github.com/apex/log"
 	cerrdefs "github.com/containerd/errdefs"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -281,21 +282,36 @@ func TestDockerEnsureImageExistsLocal(t *testing.T) {
 }
 
 func TestDockerExistingContainerOperations(t *testing.T) {
-	config.Set(&config.Configuration{
+	dataDir := t.TempDir()
+	cfg := &config.Configuration{
 		AuthenticationToken: "test-auth-token-12345",
-	})
-	const existingContainer = "82595161-eed8-4536-8f50-689b2c2912bb"
-	cfg := environment.NewConfiguration(environment.Settings{
-		Allocations: environment.Allocations{},
+	}
+	cfg.Docker.Network.Mode = "bridge"
+	cfg.Docker.TmpfsSize = 100
+	cfg.System.User.Uid = 0
+	cfg.System.User.Gid = 0
+	config.Set(cfg)
+
+	envCfg := environment.NewConfiguration(environment.Settings{
+		Mounts: []environment.Mount{
+			{Target: "/home/container", Source: dataDir, ReadOnly: false},
+		},
 		Limits: environment.Limits{
 			CpuLimit:    100,
 			MemoryLimit: 512,
 		},
 	}, []string{})
-	meta := &Metadata{Image: "~alpine:latest"}
+	meta := &Metadata{
+		Image: "ghcr.io/pterodactyl/installers:alpine",
+		Stop:  remote.ProcessStopConfiguration{Type: remote.ProcessStopSignal, Value: "SIGKILL"},
+	}
 
-	env, err := New(existingContainer, meta, cfg)
+	containerID := "test-existing-" + uuid.New().String()
+	env, err := New(containerID, meta, envCfg)
 	require.NoError(t, err)
+	defer func() { _ = env.Destroy() }()
+
+	require.NoError(t, env.Create())
 
 	// Exists
 	exists, err := env.Exists()
@@ -316,7 +332,7 @@ func TestDockerExistingContainerOperations(t *testing.T) {
 	// Readlog
 	logs, err := env.Readlog(5)
 	assert.NoError(t, err)
-	assert.NotNil(t, logs)
+	assert.Empty(t, logs)
 
 	// ContainerInspect fastEnabled true and false
 	fastEnabled = true
@@ -364,14 +380,15 @@ func TestDockerCgroupBurstMore(t *testing.T) {
 		config.Set(c)
 	}()
 
-	cfg := environment.NewConfiguration(environment.Settings{}, []string{})
-	meta := &Metadata{Image: "alpine:latest"}
-	env, err := New("82595161-eed8-4536-8f50-689b2c2912bb", meta, cfg)
+	burstCfg := environment.NewConfiguration(environment.Settings{}, []string{})
+	burstMeta := &Metadata{Image: "ghcr.io/pterodactyl/installers:alpine"}
+	burstContainerID := "test-burst-" + uuid.New().String()
+	env, err := New(burstContainerID, burstMeta, burstCfg)
 	require.NoError(t, err)
 
-	SetCpuBurst(context.Background(), env.client, "82595161-eed8-4536-8f50-689b2c2912bb", 1000)
+	SetCpuBurst(context.Background(), env.client, burstContainerID, 1000)
 	SetCpuBurst(context.Background(), env.client, "nonexistent-container-uuid", 1000)
-	SetCpuBurst(context.Background(), env.client, "82595161-eed8-4536-8f50-689b2c2912bb", 0)
+	SetCpuBurst(context.Background(), env.client, burstContainerID, 0)
 
 	// 3. resolveCgroupCpuFile parsing variations
 	_, err = resolveCgroupCpuFile("1:memory:/docker/123", false)

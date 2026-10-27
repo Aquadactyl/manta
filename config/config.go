@@ -802,6 +802,12 @@ func ConfigureDirectories() error {
 	return nil
 }
 
+// SetLogrotateDirectory sets the directory path for logrotate configurations.
+// This is primarily intended for tests to avoid writing to /etc/logrotate.d.
+func SetLogrotateDirectory(dir string) {
+	logrotateDirectory = dir
+}
+
 // EnableLogRotation writes a logrotate file for wings to the system logrotate
 // configuration directory if one exists and a logrotate file is not found. This
 // allows us to basically automate away the log rotation for most installs, but
@@ -809,8 +815,8 @@ func ConfigureDirectories() error {
 //
 // This function IS NOT thread-safe.
 func EnableLogRotation() error {
-	if !_config.System.EnableLogRotate {
-		log.Info("skipping log rotate configuration, disabled in wings config file")
+	if !_config.System.EnableLogRotate || _config.System.User.Rootless.Enabled {
+		log.Info("skipping log rotate configuration, disabled in wings config file or rootless mode enabled")
 		return nil
 	}
 

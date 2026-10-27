@@ -1587,6 +1587,15 @@ func TestServerRemainingCoverage(t *testing.T) {
 	// 21. EnsureDataDirectoryExists
 	assert.NoError(t, s.EnsureDataDirectoryExists())
 
-	// 22. checkMountPathParents
-	assert.NoError(t, checkMountPathParents("/tmp", 0))
+	// 22. checkMountPathParents scoped to test root
+	tempMountRoot, err := filepath.EvalSymlinks(t.TempDir())
+	require.NoError(t, err)
+	require.NoError(t, os.Chmod(tempMountRoot, 0o755))
+	origMountRoot := mountPathCheckRoot
+	mountPathCheckRoot = tempMountRoot
+	defer func() { mountPathCheckRoot = origMountRoot }()
+
+	mountSubDir := filepath.Join(tempMountRoot, "sub")
+	require.NoError(t, os.Mkdir(mountSubDir, 0o755))
+	assert.NoError(t, checkMountPathParents(filepath.Join(mountSubDir, "child"), os.Geteuid()))
 }
