@@ -70,6 +70,11 @@ type ReplaceValue struct {
 	valueType jsonparser.ValueType
 }
 
+// NewReplaceValue creates a ReplaceValue instance with the given value and type.
+func NewReplaceValue(value []byte, valueType jsonparser.ValueType) ReplaceValue {
+	return ReplaceValue{value: value, valueType: valueType}
+}
+
 // Value returns the underlying value of the replacement. Be aware that this
 // can include escaped UTF-8 sequences that will need to be handled by the caller
 // in order to avoid accidentally injecting invalid sequences into the running

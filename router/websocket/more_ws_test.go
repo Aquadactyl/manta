@@ -41,7 +41,7 @@ func TestGetHandler(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	var lastHandler *Handler
+	handlerChan := make(chan *Handler, 10)
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		c, _ := gin.CreateTestContext(w)
 		c.Request = r
@@ -49,7 +49,7 @@ func TestGetHandler(t *testing.T) {
 		if err != nil {
 			return
 		}
-		lastHandler = h
+		handlerChan <- h
 	}))
 	defer ts.Close()
 
@@ -61,6 +61,12 @@ func TestGetHandler(t *testing.T) {
 	conn, resp, err := dialer.Dial(wsURL, header)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusSwitchingProtocols, resp.StatusCode)
+	var lastHandler *Handler
+	select {
+	case lastHandler = <-handlerChan:
+	case <-time.After(2 * time.Second):
+		t.Fatal("timed out waiting for handler")
+	}
 	assert.NotNil(t, lastHandler)
 	assert.NotEmpty(t, lastHandler.Uuid().String())
 	assert.Equal(t, s, lastHandler.server)

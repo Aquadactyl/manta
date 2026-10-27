@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -41,10 +42,13 @@ type fakeInstallerDocker struct {
 	logs      string
 	startErr  bool
 	failPull  bool
+	failList  bool
 	createErr bool
-	waitErr   bool
-	logsErr   bool
-	deleteErr bool
+	waitErr     bool
+	logsErr     bool
+	logsCopyErr bool
+	deleteErr   bool
+	hugeScan    bool
 }
 
 func (f *fakeInstallerDocker) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -53,6 +57,12 @@ func (f *fakeInstallerDocker) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 
 	switch {
 	case r.Method == http.MethodPost && strings.Contains(r.URL.Path, "/images/create"):
+		if f.hugeScan {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(strings.Repeat("a", 70000)))
+			return
+		}
 		if f.failPull {
 			w.WriteHeader(http.StatusInternalServerError)
 			_, _ = w.Write([]byte(`{"message":"pull failed"}`))
@@ -62,6 +72,11 @@ func (f *fakeInstallerDocker) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(`{"status":"Downloading"}` + "\n" + `{"status":"Extracting"}` + "\n" + `{"status":"Pull complete"}` + "\n"))
 	case r.Method == http.MethodGet && strings.Contains(r.URL.Path, "/images/json"):
+		if f.failList {
+			w.WriteHeader(http.StatusInternalServerError)
+			_, _ = w.Write([]byte(`{"message":"list failed"}`))
+			return
+		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(`[{"RepoTags":["ghcr.io/pterodactyl/installers:debian"]}]`))
@@ -100,6 +115,12 @@ func (f *fakeInstallerDocker) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		if f.logsErr {
 			w.WriteHeader(http.StatusInternalServerError)
 			_, _ = w.Write([]byte(`{"message":"logs failed"}`))
+			return
+		}
+		if f.logsCopyErr {
+			w.Header().Set("Content-Length", "100")
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte("short"))
 			return
 		}
 		w.WriteHeader(http.StatusOK)
@@ -230,6 +251,9 @@ func TestInstallationProcessAlreadyInstalling(t *testing.T) {
 }
 
 func TestInstallationProcessWithRegistryAuth(t *testing.T) {
+	fake := &fakeInstallerDocker{logs: "ok\n"}
+	p := newInstallerTestProcess(t, fake)
+
 	cfg := config.Get()
 	if cfg.Docker.Registries == nil {
 		cfg.Docker.Registries = make(map[string]config.RegistryConfiguration)
@@ -240,8 +264,6 @@ func TestInstallationProcessWithRegistryAuth(t *testing.T) {
 	}
 	config.Set(cfg)
 
-	fake := &fakeInstallerDocker{logs: "ok\n"}
-	p := newInstallerTestProcess(t, fake)
 	require.NoError(t, os.MkdirAll(filepath.Join(config.Get().System.LogDirectory, "install"), 0o700))
 	require.NoError(t, p.pullInstallationImage())
 }
@@ -250,6 +272,10 @@ func TestInstallationProcessPullFallback(t *testing.T) {
 	fake := &fakeInstallerDocker{failPull: true}
 	p := newInstallerTestProcess(t, fake)
 	require.NoError(t, p.pullInstallationImage())
+
+	// ImageList fails
+	fake.failList = true
+	assert.Error(t, p.pullInstallationImage())
 }
 
 func TestInstallationProcessRemoveContainer(t *testing.T) {
@@ -337,6 +363,18 @@ func TestInstallationProcessExecuteErrors(t *testing.T) {
 	p.Server.fs = mkdirFailFs
 	_, err = p.Execute()
 	assert.Error(t, err)
+
+	// defer removeAll tempDir failure in Execute
+	p2 := newInstallerTestProcess(t, fake)
+	require.NoError(t, os.MkdirAll(p2.tempDir(), 0755))
+	immTempFile := filepath.Join(p2.tempDir(), "imm.txt")
+	require.NoError(t, os.WriteFile(immTempFile, []byte("x"), 0644))
+	if exec.Command("chattr", "+i", immTempFile).Run() == nil {
+		fake.startErr = true
+		_, _ = p2.Execute()
+		_ = exec.Command("chattr", "-i", immTempFile).Run()
+		fake.startErr = false
+	}
 }
 
 func TestInstallationProcessStreamOutput(t *testing.T) {
@@ -346,6 +384,9 @@ func TestInstallationProcessStreamOutput(t *testing.T) {
 
 	fake.logsErr = false
 	fake.logs = "stream line 1\nstream line 2\n"
+	assert.NoError(t, p.StreamOutput(context.Background(), "test-id"))
+
+	fake.logsCopyErr = true
 	assert.NoError(t, p.StreamOutput(context.Background(), "test-id"))
 }
 
@@ -359,6 +400,41 @@ func TestInstallationProcessRunErrors(t *testing.T) {
 	fake.deleteErr = false
 	fake.createErr = true
 	assert.Error(t, p.Run())
+
+	// AfterExecute fails inside Run()
+	fake.createErr = false
+	fake.logsErr = true
+	assert.NoError(t, p.Run())
+}
+
+func TestInstallationProcessAfterExecuteOpenLogFail(t *testing.T) {
+	fake := &fakeInstallerDocker{logs: "hello"}
+	p := newInstallerTestProcess(t, fake)
+	// Block GetLogPath() by making install directory a regular file
+	oldLogDir := config.Get().System.LogDirectory
+	logDir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(logDir, "install"), []byte("not a dir"), 0644))
+	cfg := config.Get()
+	cfg.System.LogDirectory = logDir
+	config.Set(cfg)
+
+	assert.Error(t, p.AfterExecute("container-123"))
+
+	cfg.System.LogDirectory = oldLogDir
+	config.Set(cfg)
+}
+
+func TestInstallationProcessAfterExecuteCopyFail(t *testing.T) {
+	fake := &fakeInstallerDocker{logsCopyErr: true}
+	p := newInstallerTestProcess(t, fake)
+	require.NoError(t, os.MkdirAll(filepath.Join(config.Get().System.LogDirectory, "install"), 0o700))
+	assert.Error(t, p.AfterExecute("container-123"))
+}
+
+func TestInstallationProcessPullScannerError(t *testing.T) {
+	fake := &fakeInstallerDocker{hugeScan: true}
+	p := newInstallerTestProcess(t, fake)
+	assert.Error(t, p.pullInstallationImage())
 }
 
 

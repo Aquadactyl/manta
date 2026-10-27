@@ -3,17 +3,18 @@ package server
 import (
 	"archive/tar"
 	"context"
-	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/buger/jsonparser"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -1218,10 +1219,14 @@ func TestServerRemainingCoverage(t *testing.T) {
 	truncateFsDir := filepath.Join(tempDir, "truncate_fail")
 	truncateFs, err := filesystem.New(truncateFsDir, 0, nil)
 	require.NoError(t, err)
-	_ = os.RemoveAll(truncateFsDir)
-	s.fs = truncateFs
-	assert.Error(t, s.RestoreBackup(mockBackup, nil, true))
-	s.fs = oldFs
+	immFile := filepath.Join(truncateFsDir, "imm.txt")
+	require.NoError(t, os.WriteFile(immFile, []byte("x"), 0644))
+	if exec.Command("chattr", "+i", immFile).Run() == nil {
+		s.fs = truncateFs
+		assert.Error(t, s.RestoreBackup(mockBackup, nil, true))
+		_ = exec.Command("chattr", "-i", immFile).Run()
+		s.fs = oldFs
+	}
 
 	// 10. Power HandlePowerAction timeout, terminate without lock, restart onBeforeStart error, unknown action
 	s.powerLock.Acquire()
@@ -1298,6 +1303,15 @@ func TestServerRemainingCoverage(t *testing.T) {
 	assert.Error(t, s.internalInstall())
 	remoteCli.installScriptErr = nil
 
+	remoteCli.scriptResponse = remote.InstallationScript{
+		ContainerImage: "ghcr.io/pterodactyl/installers:debian",
+		Entrypoint:     "bash",
+		Script:         "echo 1",
+	}
+	s.installing.Store(true)
+	assert.Error(t, s.internalInstall())
+	s.installing.Store(false)
+
 	// 12. Sync with 404 remote error
 	ts := httptest.NewServer(http.NotFoundHandler())
 	defer ts.Close()
@@ -1333,15 +1347,20 @@ func TestServerRemainingCoverage(t *testing.T) {
 	s.fs = testFs
 	assert.NoError(t, s.EnsureDataDirectoryExists()) // recreates directory
 
-	// EnsureDataDirectoryExists: MkdirAll error (parent is a regular file)
-	mkdirFailDir := filepath.Join(tempDir, "mkdir_fail_parent", "child")
+	// EnsureDataDirectoryExists: MkdirAll error (parent is immutable)
+	immParent := filepath.Join(tempDir, "imm_mkdir_parent")
+	require.NoError(t, os.Mkdir(immParent, 0755))
+	mkdirFailDir := filepath.Join(immParent, "child")
 	mkdirFailFs, err := filesystem.New(mkdirFailDir, 0, nil)
 	require.NoError(t, err)
-	_ = os.RemoveAll(filepath.Join(tempDir, "mkdir_fail_parent"))
-	require.NoError(t, os.WriteFile(filepath.Join(tempDir, "mkdir_fail_parent"), []byte("not a dir"), 0644))
-	s.fs = mkdirFailFs
-	assert.Error(t, s.EnsureDataDirectoryExists())
-	_ = os.Remove(filepath.Join(tempDir, "mkdir_fail_parent"))
+	_ = os.Remove(mkdirFailDir)
+	if exec.Command("chattr", "+i", immParent).Run() == nil {
+		s.fs = mkdirFailFs
+		assert.Error(t, s.EnsureDataDirectoryExists())
+		assert.Error(t, s.CreateEnvironment())
+		_ = exec.Command("chattr", "-i", immParent).Run()
+		s.fs = oldFs
+	}
 
 	// EnsureDataDirectoryExists: Lstat error that is not os.ErrNotExist (symlink loop parent)
 	loopParent := filepath.Join(tempDir, "stat_loop_parent")
@@ -1395,9 +1414,16 @@ func TestServerRemainingCoverage(t *testing.T) {
 	remoteCli.setBackupStatusErr = nil
 
 	// 16. Config parser panic recovery
-	var cf parser.ConfigurationFile
-	err = json.Unmarshal([]byte(`{"file":"server.properties","parser":"properties","replace":[{"match":"server-port","replace_with":"\\"}]}`), &cf)
-	require.NoError(t, err)
+	cf := parser.ConfigurationFile{
+		FileName: "server.properties",
+		Parser:   parser.Properties,
+		Replace: []parser.ConfigurationFileReplacement{
+			{
+				Match:       "server-port",
+				ReplaceWith: parser.NewReplaceValue([]byte(`"bad\uZZZZ"`), jsonparser.String),
+			},
+		},
+	}
 	s.procConfig.ConfigurationFiles = []parser.ConfigurationFile{cf}
 	require.NoError(t, os.WriteFile(filepath.Join(s.Filesystem().Path(), "server.properties"), []byte("server-port=25565\n"), 0644))
 	s.UpdateConfigurationFiles()
