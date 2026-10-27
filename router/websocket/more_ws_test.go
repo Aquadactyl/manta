@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -17,7 +18,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/pterodactyl/wings/config"
-	"github.com/pterodactyl/wings/internal/database"
 	"github.com/pterodactyl/wings/remote"
 	"github.com/pterodactyl/wings/router/tokens"
 	"github.com/pterodactyl/wings/server"
@@ -27,11 +27,20 @@ import (
 func TestGetHandler(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	cfg, err := config.NewAtPath(filepath.Join(t.TempDir(), "config.yml"))
+	root := t.TempDir()
+	cfg, err := config.NewAtPath(filepath.Join(root, "config.yml"))
 	require.NoError(t, err)
 	cfg.AuthenticationToken = "test-token-12345678"
 	cfg.PanelLocation = "https://panel.example.com"
 	cfg.AllowedOrigins = []string{"https://other.example.com"}
+	cfg.System.RootDirectory = root
+	cfg.System.Data = filepath.Join(root, "volumes")
+	cfg.System.ArchiveDirectory = filepath.Join(root, "archives")
+	cfg.System.BackupDirectory = filepath.Join(root, "backups")
+	cfg.System.LogDirectory = filepath.Join(root, "logs")
+	cfg.System.TmpDirectory = filepath.Join(root, "tmp")
+	cfg.System.MachineID.Enable = false
+	require.NoError(t, os.MkdirAll(cfg.System.Data, 0755))
 	config.Set(cfg)
 
 	settings, _ := json.Marshal(map[string]string{"uuid": serverUuid})
@@ -89,9 +98,17 @@ func TestGetHandler(t *testing.T) {
 }
 
 func TestNewTokenPayload_DenylistAndPermissions(t *testing.T) {
-	cfg, err := config.NewAtPath(filepath.Join(t.TempDir(), "config.yml"))
+	root := t.TempDir()
+	cfg, err := config.NewAtPath(filepath.Join(root, "config.yml"))
 	require.NoError(t, err)
 	cfg.AuthenticationToken = "test-token"
+	cfg.System.RootDirectory = root
+	cfg.System.Data = filepath.Join(root, "volumes")
+	cfg.System.ArchiveDirectory = filepath.Join(root, "archives")
+	cfg.System.BackupDirectory = filepath.Join(root, "backups")
+	cfg.System.LogDirectory = filepath.Join(root, "logs")
+	cfg.System.TmpDirectory = filepath.Join(root, "tmp")
+	cfg.System.MachineID.Enable = false
 	config.Set(cfg)
 
 	// 1. Valid token
@@ -101,11 +118,8 @@ func TestNewTokenPayload_DenylistAndPermissions(t *testing.T) {
 	assert.True(t, payload.HasPermission(PermissionConnect))
 
 	// 2. Denylisted token
-	func() {
-		defer func() { _ = recover() }()
-		_ = database.Initialize()
-	}()
 	jti := "denylisted-jti-123"
+	tokens.DenyJTI(jti)
 	now := time.Now()
 	customPayload := &tokens.WebsocketPayload{
 		Payload: jwt.Payload{
@@ -118,9 +132,10 @@ func TestNewTokenPayload_DenylistAndPermissions(t *testing.T) {
 			JWTID:          jti,
 		},
 		Scoped:      tokens.Scoped{Scope: string(tokens.Websocket)},
+		ServerUUID:  serverUuid,
+		UserUUID:    "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
 		Permissions: []string{PermissionConnect},
 	}
-	_ = database.Instance().Exec("INSERT INTO denylist (jti, created_at) VALUES (?, ?)", jti, time.Now()).Error
 
 	denylistedBytes, err := jwt.Sign(customPayload, config.GetJwtAlgorithm())
 	require.NoError(t, err)

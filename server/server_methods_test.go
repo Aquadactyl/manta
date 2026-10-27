@@ -36,7 +36,11 @@ func init() {
 		AuthenticationToken: "abc",
 		System: config.SystemConfiguration{
 			RootDirectory:     "/tmp",
-			BackupDirectory:   "/tmp",
+			Data:              "/tmp/volumes",
+			ArchiveDirectory:  "/tmp/archives",
+			BackupDirectory:   "/tmp/backups",
+			LogDirectory:      "/tmp/logs",
+			TmpDirectory:      "/tmp",
 			DiskCheckInterval: 150,
 			Backups: config.Backups{
 				WriteLimit:       0,
@@ -1364,17 +1368,14 @@ func TestServerRemainingCoverage(t *testing.T) {
 	// onBeforeStart CheckPermissionsOnBoot
 	cfg.System.CheckPermissionsOnBoot = true
 	config.Set(cfg)
-	_ = s.onBeforeStart()
-	chownFailDir := filepath.Join(tempDir, "chown_fail_dir")
-	chownFs, err := filesystem.New(chownFailDir, 0, nil)
-	require.NoError(t, err)
-	chownFs.SetTest(false)
-	_ = os.RemoveAll(chownFailDir)
-	s.fs = chownFs
-	assert.Error(t, s.onBeforeStart())
-	s.fs = oldFs
+	assert.NoError(t, s.onBeforeStart())
 	cfg.System.CheckPermissionsOnBoot = false
 	config.Set(cfg)
+
+	// onBeforeStart sync error
+	remoteCli.configErr = errors.New("sync failed")
+	assert.Error(t, s.onBeforeStart())
+	remoteCli.configErr = nil
 
 	// onBeforeStart suspended check
 	remoteCli.configResponse.Settings = []byte(`{"uuid":"11111111-2222-3333-4444-555555555555","suspended":true}`)

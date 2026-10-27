@@ -1158,6 +1158,8 @@ func TestMoreBackupAndRestoreEndpoints(t *testing.T) {
 	h.router.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusNoContent, w.Code)
 	assert.NoFileExists(t, backupFile)
+	time.Sleep(100 * time.Millisecond)
+	_ = os.Remove(filepath.Join(config.Get().System.BackupDirectory, bUUID+".tar.gz"))
 }
 
 func TestFilesEndpointsAdvanced(t *testing.T) {

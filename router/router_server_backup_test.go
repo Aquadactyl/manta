@@ -26,7 +26,17 @@ import (
 )
 
 func init() {
-	config.Set(&config.Configuration{AuthenticationToken: "test-token"})
+	config.Set(&config.Configuration{
+		AuthenticationToken: "test-token",
+		System: config.SystemConfiguration{
+			RootDirectory:    "/tmp",
+			Data:             "/tmp/volumes",
+			ArchiveDirectory: "/tmp/archives",
+			BackupDirectory:  "/tmp/backups",
+			LogDirectory:     "/tmp/logs",
+			TmpDirectory:     "/tmp",
+		},
+	})
 }
 
 type backupTestRemoteClient struct {

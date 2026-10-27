@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -47,12 +48,23 @@ func startWebsocketTestServerFor(t *testing.T) (string, *server.Server) {
 // newWebsocketTestManager returns a manager holding a single running server.
 func newWebsocketTestManager(t *testing.T) (*server.Manager, *server.Server) {
 	t.Helper()
-	cfg, err := config.NewAtPath(filepath.Join(t.TempDir(), "config.yml"))
+	root := t.TempDir()
+	cfg, err := config.NewAtPath(filepath.Join(root, "config.yml"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	cfg.AuthenticationToken = "test-token"
 	cfg.PanelLocation = "http://panel.test"
+	cfg.System.RootDirectory = root
+	cfg.System.Data = filepath.Join(root, "volumes")
+	cfg.System.ArchiveDirectory = filepath.Join(root, "archives")
+	cfg.System.BackupDirectory = filepath.Join(root, "backups")
+	cfg.System.LogDirectory = filepath.Join(root, "logs")
+	cfg.System.TmpDirectory = filepath.Join(root, "tmp")
+	cfg.System.MachineID.Enable = false
+	if err := os.MkdirAll(cfg.System.Data, 0755); err != nil {
+		t.Fatal(err)
+	}
 	config.Set(cfg)
 
 	s, err := server.New(nil)

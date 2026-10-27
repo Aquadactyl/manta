@@ -147,8 +147,16 @@ func newTransferHarness(t *testing.T, panel *transferTestPanel) *transferHarness
 	cfg, err := config.NewAtPath(filepath.Join(root, "config.yml"))
 	require.NoError(t, err)
 	cfg.AuthenticationToken = "test-token"
+	cfg.System.RootDirectory = root
 	cfg.System.Data = filepath.Join(root, "volumes")
+	cfg.System.ArchiveDirectory = filepath.Join(root, "archives")
+	cfg.System.BackupDirectory = filepath.Join(root, "backups")
+	cfg.System.LogDirectory = filepath.Join(root, "logs")
+	cfg.System.TmpDirectory = filepath.Join(root, "tmp")
 	cfg.System.MachineID.Enable = false
+	require.NoError(t, os.MkdirAll(cfg.System.Data, 0755))
+	require.NoError(t, os.MkdirAll(cfg.System.ArchiveDirectory, 0755))
+	require.NoError(t, os.MkdirAll(cfg.System.BackupDirectory, 0755))
 	config.Set(cfg)
 
 	settings, err := json.Marshal(map[string]string{"uuid": transferTestUUID})

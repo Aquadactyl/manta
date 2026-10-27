@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -24,6 +25,22 @@ import (
 	"github.com/pterodactyl/wings/router/tokens"
 	"github.com/pterodactyl/wings/server"
 )
+
+func init() {
+	config.Set(&config.Configuration{
+		AuthenticationToken: "test-token",
+		System: config.SystemConfiguration{
+			RootDirectory:    "/tmp",
+			Data:             "/tmp/volumes",
+			ArchiveDirectory: "/tmp/archives",
+			BackupDirectory:  "/tmp/backups",
+			LogDirectory:     "/tmp/logs",
+			TmpDirectory:     "/tmp",
+		},
+	})
+	_ = os.MkdirAll("/tmp/volumes", 0755)
+	_ = database.Initialize()
+}
 
 const (
 	serverUuid      = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
@@ -77,11 +94,22 @@ func setupHandler(t *testing.T) (*Handler, *commandEnvironment) {
 func setupHandlerClient(t *testing.T) (*Handler, *commandEnvironment, *websocket.Conn) {
 	t.Helper()
 
-	cfg, err := config.NewAtPath(filepath.Join(t.TempDir(), "config.yml"))
+	root := t.TempDir()
+	cfg, err := config.NewAtPath(filepath.Join(root, "config.yml"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	cfg.AuthenticationToken = "test-token"
+	cfg.System.RootDirectory = root
+	cfg.System.Data = filepath.Join(root, "volumes")
+	cfg.System.ArchiveDirectory = filepath.Join(root, "archives")
+	cfg.System.BackupDirectory = filepath.Join(root, "backups")
+	cfg.System.LogDirectory = filepath.Join(root, "logs")
+	cfg.System.TmpDirectory = filepath.Join(root, "tmp")
+	cfg.System.MachineID.Enable = false
+	if err := os.MkdirAll(cfg.System.Data, 0755); err != nil {
+		t.Fatal(err)
+	}
 	config.Set(cfg)
 
 	settings, _ := json.Marshal(map[string]string{"uuid": serverUuid})
