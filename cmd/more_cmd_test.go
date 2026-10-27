@@ -482,3 +482,9 @@ func TestShutdownOnSignalManagerError(t *testing.T) {
 	srv := &http.Server{}
 	shutdownOnSignal(signals, server.NewEmptyManager(nil), srv)
 }
+
+func TestIgnoreCertificateErrorsFlag(t *testing.T) {
+	flag := rootCommand.Flags().Lookup("ignore-certificate-errors")
+	require.NotNil(t, flag)
+	assert.NotEmpty(t, flag.Deprecated)
+}

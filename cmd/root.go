@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"context"
-	"crypto/tls"
 	"errors"
 	"fmt"
 	log2 "log"
@@ -86,7 +85,8 @@ func init() {
 	rootCommand.Flags().Int("pprof-port", 6060, "If provided with --pprof, the port it will run on")
 	rootCommand.Flags().Bool("auto-tls", false, "pass in order to have wings generate and manage its own SSL certificates using Let's Encrypt")
 	rootCommand.Flags().String("tls-hostname", "", "required with --auto-tls, the FQDN for the generated SSL certificate")
-	rootCommand.Flags().Bool("ignore-certificate-errors", false, "ignore certificate verification errors when executing API calls")
+	rootCommand.Flags().Bool("ignore-certificate-errors", false, "ignore certificate verification errors when executing API calls (deprecated)")
+	_ = rootCommand.Flags().MarkDeprecated("ignore-certificate-errors", "insecure certificate error bypass is no longer supported; configure a valid TLS certificate chain instead")
 
 	rootCommand.AddCommand(versionCommand)
 	rootCommand.AddCommand(configureCmd)
@@ -99,10 +99,8 @@ func rootCmdRun(cmd *cobra.Command, _ []string) {
 	log.WithField("config_file", configPath).Info("loading configuration from file")
 
 	if ok, _ := cmd.Flags().GetBool("ignore-certificate-errors"); ok {
-		log.Warn("running with --ignore-certificate-errors: TLS certificate host chains and name will not be verified")
-		http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{
-			InsecureSkipVerify: true, //nolint:gosec // opt-in via --ignore-certificate-errors
-		}
+		log.Fatal("the --ignore-certificate-errors flag is insecure and is no longer supported; configure a valid TLS certificate chain and hostname trust instead")
+		return
 	}
 
 	if err := config.ConfigureTimezone(); err != nil {
