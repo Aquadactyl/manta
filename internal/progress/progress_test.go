@@ -72,6 +72,12 @@ func TestProgress(t *testing.T) {
 			// We can write to written using Write
 			p.Write(make([]byte, 1000))
 			g.Assert(p.Progress(25)).Equal("[=========================] 1000 B / 1 B")
+
+			// Overflow float to negative int
+			p2 := progress.NewProgress(1)
+			p2.SetTotal(1)
+			// Set written to huge by calling Write multiple times or with large size
+			p2.Write(make([]byte, 1000000000)) // will test ticks
 		})
 	})
 }
