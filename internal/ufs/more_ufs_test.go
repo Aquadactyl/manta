@@ -362,3 +362,72 @@ func TestUnixFSAdditionalOps(t *testing.T) {
 	assert.Empty(t, entries)
 }
 
+func TestDirentNilFsAndOpen(t *testing.T) {
+	// Nil fs on dirent
+	deNil := dirent{}
+	info, err := deNil.Info()
+	assert.NoError(t, err)
+	assert.Nil(t, info)
+
+	f, err := deNil.Open()
+	assert.NoError(t, err)
+	assert.Nil(t, f)
+
+	// Valid fs on dirent
+	root := t.TempDir()
+	fs, err := NewUnixFS(root, false)
+	require.NoError(t, err)
+	defer fs.Close()
+
+	testPath := filepath.Join(root, "sample.txt")
+	require.NoError(t, os.WriteFile(testPath, []byte("content"), 0644))
+
+	rootFd, err := unix.Open(root, unix.O_DIRECTORY|unix.O_RDONLY, 0)
+	require.NoError(t, err)
+	defer unix.Close(rootFd)
+
+	deWithFs := dirent{fs: fs, dirfd: rootFd, name: "sample.txt"}
+	info, err = deWithFs.Info()
+	assert.NoError(t, err)
+	require.NotNil(t, info)
+	assert.Equal(t, int64(7), info.Size())
+
+	file, err := deWithFs.Open()
+	assert.NoError(t, err)
+	require.NotNil(t, file)
+	_ = file.Close()
+}
+
+func TestCheckOpenedTypeAndPath(t *testing.T) {
+	// 1. checkOpenedType with pipe (not S_IFREG and not S_IFDIR)
+	var p [2]int
+	require.NoError(t, unix.Pipe(p[:]))
+	defer unix.Close(p[0])
+	defer unix.Close(p[1])
+
+	err := checkOpenedType(p[0], "pipe")
+	assert.ErrorIs(t, err, ErrNotRegular)
+
+	// Invalid fd (-1) returns fstat error
+	assert.Error(t, checkOpenedType(-1, "bad"))
+
+	// 2. checkOpenedPath outside base root
+	root := t.TempDir()
+	fs, err := NewUnixFS(root, false)
+	require.NoError(t, err)
+	defer fs.Close()
+
+	// Open /etc/hosts (outside root)
+	hostsFd, err := unix.Open("/etc/hosts", unix.O_RDONLY, 0)
+	require.NoError(t, err)
+	defer unix.Close(hostsFd)
+
+	err = fs.checkOpenedPath(hostsFd, "hosts")
+	assert.ErrorIs(t, err, ErrBadPathResolution)
+
+	// With useOpenat2 = true
+	fs.useOpenat2 = true
+	err = fs.checkOpenedPath(hostsFd, "hosts")
+	assert.ErrorIs(t, err, ErrBadPathResolution)
+}
+

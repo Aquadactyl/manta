@@ -2,6 +2,7 @@ package ufs
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"testing"
 
@@ -56,6 +57,38 @@ func TestCountedWriter(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, int64(6), n2)
 	assert.Equal(t, int64(12), cw.BytesWritten())
+}
+
+type mockErrReader struct{}
+
+func (mockErrReader) Read(p []byte) (int, error) { return 0, errors.New("read error") }
+
+func TestCountedReaderWriterErrors(t *testing.T) {
+	cr := NewCountedReader(mockErrReader{})
+	buf := make([]byte, 10)
+	_, err := cr.Read(buf)
+	assert.NoError(t, err) // returns nil, stores in cr.err
+	assert.Equal(t, "read error", cr.Error().Error())
+	// Subsequent read returns io.EOF
+	_, err = cr.Read(buf)
+	assert.Equal(t, io.EOF, err)
+
+	dir := t.TempDir()
+	fs, err := NewUnixFS(dir, false)
+	require.NoError(t, err)
+	defer fs.Close()
+
+	f, err := fs.Create("cw_err.txt")
+	require.NoError(t, err)
+	cw := NewCountedWriter(f)
+	_ = f.Close()
+
+	_, err = cw.Write([]byte("data"))
+	assert.NoError(t, err) // returns nil, stores in cw.err
+	assert.Error(t, cw.Error())
+	// Subsequent write returns io.EOF
+	_, err = cw.Write([]byte("data"))
+	assert.Equal(t, io.EOF, err)
 }
 
 func TestQuotaGettersSetters(t *testing.T) {
