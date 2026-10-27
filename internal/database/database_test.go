@@ -54,5 +54,16 @@ func TestDatabase(t *testing.T) {
 	assert.Panics(t, func() {
 		_ = Initialize()
 	})
+
+	// Error path: unwritable path
+	o.Store(false)
+	config.Set(&config.Configuration{
+		AuthenticationToken: "test-token",
+		System: config.SystemConfiguration{
+			RootDirectory: "/dev/null/impossible-path",
+		},
+	})
+	assert.Error(t, Initialize())
 }
+
 

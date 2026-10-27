@@ -676,6 +676,44 @@ func TestMainScenarios(t *testing.T) {
 	assert.FileExists(t, filepath.Join(outDir, "unknown.json"))
 }
 
+func TestHarnessMoreBranches(t *testing.T) {
+	h := &harness{
+		http: http.DefaultClient,
+	}
+	n := node{Base: "http://127.0.0.1:1", Token: "token"}
+
+	// 1. request with invalid method
+	_, _, err := h.request(n, "INVALID METHOD\n", "/path", nil, false, false)
+	assert.Error(t, err)
+
+	// 2. request with client.Do error (connection refused)
+	_, _, err = h.request(n, "GET", "/path", nil, false, false)
+	assert.Error(t, err)
+
+	// 3. power with "stop" action
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/power") {
+			w.WriteHeader(http.StatusAccepted)
+			return
+		}
+		if strings.HasSuffix(r.URL.Path, "/srv-stop") {
+			_ = json.NewEncoder(w).Encode(map[string]any{"state": "offline"})
+			return
+		}
+		http.NotFound(w, r)
+	}))
+	defer ts.Close()
+
+	h2 := &harness{
+		http: ts.Client(),
+	}
+	n2 := node{Base: ts.URL, Token: "token"}
+	s2 := server{UUID: "srv-stop"}
+	dur := h2.power(n2, s2, "stop")
+	assert.True(t, dur >= 0)
+}
+
+
 
 
 

@@ -91,5 +91,24 @@ func TestNew_RemoteErrors(t *testing.T) {
 		assert.Nil(t, inst)
 		assert.Contains(t, err.Error(), "installer: could not init server instance")
 	})
+
+	t.Run("successful creation", func(t *testing.T) {
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			_ = json.NewEncoder(w).Encode(remote.ServerConfigurationResponse{
+				Settings:             json.RawMessage(`{"uuid":"` + uuid + `"}`),
+				ProcessConfiguration: &remote.ProcessConfiguration{},
+			})
+		}))
+		defer ts.Close()
+
+		client := remote.New(ts.URL, remote.WithCredentials("id", "token"))
+		m := server.NewEmptyManager(client)
+
+		inst, err := New(context.Background(), m, ServerDetails{UUID: uuid, StartOnCompletion: true})
+		assert.NoError(t, err)
+		assert.NotNil(t, inst)
+		assert.NotNil(t, inst.Server())
+		assert.True(t, inst.StartOnCompletion)
+	})
 }
 

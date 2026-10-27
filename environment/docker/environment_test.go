@@ -424,6 +424,7 @@ func TestDockerPowerAndImageHelpers(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	_ = env.WaitForStop(ctx, 10*time.Millisecond, true)
+	_ = env.WaitForStop(ctx, 10*time.Millisecond, false)
 
 	// 5. Exists, IsRunning, ExitState, ContainerInspect on nonexistent container
 	exists, err := env.Exists()

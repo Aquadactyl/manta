@@ -138,6 +138,7 @@ func TestConfigureSystemDirectoriesAndTimezone(t *testing.T) {
 	}
 	cfg.System.RootDirectory = filepath.Join(tmp, "root")
 	cfg.System.Data = filepath.Join(tmp, "data")
+	cfg.System.LogDirectory = filepath.Join(tmp, "logs")
 	cfg.System.TmpDirectory = filepath.Join(tmp, "tmp")
 	cfg.System.ArchiveDirectory = filepath.Join(tmp, "archive")
 	cfg.System.BackupDirectory = filepath.Join(tmp, "backup")
@@ -160,6 +161,16 @@ func TestConfigureSystemDirectoriesAndTimezone(t *testing.T) {
 
 	require.NoError(t, EnableLogRotation())
 	require.NoError(t, ConfigureTimezone())
+
+	// Symlinked data directory
+	realData := filepath.Join(tmp, "real_data")
+	require.NoError(t, os.MkdirAll(realData, 0700))
+	symData := filepath.Join(tmp, "sym_data")
+	require.NoError(t, os.Symlink(realData, symData))
+	cfg.System.Data = symData
+	Set(cfg)
+	require.NoError(t, ConfigureDirectories())
+	assert.Equal(t, realData, Get().System.Data)
 
 	// ConfigurePasswd enabled
 	require.NoError(t, ConfigurePasswd())
@@ -333,8 +344,15 @@ func TestConfigMoreOperations(t *testing.T) {
 }
 
 func TestEnsurePterodactylUserAndPasswd(t *testing.T) {
-	orig := Get()
-	defer Set(orig)
+	var orig *Configuration
+	if _config != nil {
+		c := *_config
+		orig = &c
+		defer Set(orig)
+	} else {
+		orig = &Configuration{AuthenticationToken: "test"}
+		Set(orig)
+	}
 
 	// 1. ConfigurePasswd disabled
 	cfg := *orig
@@ -399,7 +417,72 @@ func TestEnsurePterodactylUserAndPasswd(t *testing.T) {
 	Set(&cfg)
 	assert.NoError(t, ConfigureTimezone())
 	assert.Equal(t, "Europe/London", Get().System.Timezone)
+
+	// 7. NewAtPath empty path returns error
+	_, err = NewAtPath("")
+	assert.Error(t, err)
+
+	// 8. ConfigureTimezone when Timezone is empty and TZ is empty
+	cfg.System.Timezone = ""
+	t.Setenv("TZ", "")
+	Set(&cfg)
+	_ = ConfigureTimezone()
+
+	// 9. ResolveToken when env has invalid file path
+	t.Setenv("WINGS_TOKEN_ID", "file:///invalid/nonexistent/secret/path/to/token")
+	cfg.AuthenticationTokenId = "test"
+	assert.Error(t, cfg.ResolveToken(false))
+	t.Setenv("WINGS_TOKEN_ID", "")
 }
+
+func TestConfigureDirectoriesBranches(t *testing.T) {
+	orig := _config
+	if orig != nil {
+		defer Set(orig)
+	} else {
+		orig = &Configuration{AuthenticationToken: "test"}
+	}
+
+	tmp := t.TempDir()
+	cfg := *orig
+	cfg.System.RootDirectory = filepath.Join(tmp, "root")
+	cfg.System.Data = filepath.Join(tmp, "data")
+	cfg.System.LogDirectory = filepath.Join(tmp, "logs")
+	cfg.System.TmpDirectory = filepath.Join(tmp, "tmp")
+	cfg.System.ArchiveDirectory = filepath.Join(tmp, "archive")
+	cfg.System.BackupDirectory = filepath.Join(tmp, "backup")
+	cfg.System.Passwd.Enable = true
+	cfg.System.Passwd.Directory = filepath.Join(tmp, "passwd")
+	cfg.System.MachineID.Enable = true
+	cfg.System.MachineID.Directory = filepath.Join(tmp, "machine-id")
+	Set(&cfg)
+
+	require.NoError(t, ConfigureDirectories())
+	assert.DirExists(t, cfg.System.Data)
+	assert.DirExists(t, cfg.System.TmpDirectory)
+	assert.DirExists(t, cfg.System.ArchiveDirectory)
+	assert.DirExists(t, cfg.System.BackupDirectory)
+	assert.DirExists(t, cfg.System.Passwd.Directory)
+	assert.DirExists(t, cfg.System.MachineID.Directory)
+
+	// Error when directory is blocked by a file
+	blocker := filepath.Join(tmp, "blocker")
+	require.NoError(t, os.WriteFile(blocker, []byte("file"), 0644))
+	cfg.System.Data = filepath.Join(blocker, "sub")
+	Set(&cfg)
+	assert.Error(t, ConfigureDirectories())
+
+	// WriteToDisk error when path is invalid
+	badCfg := *orig
+	badCfg.path = filepath.Join(blocker, "config.yml")
+	assert.Error(t, WriteToDisk(&badCfg))
+
+	// ConfigurePasswd error when path is blocked
+	cfg.System.Passwd.Directory = blocker
+	Set(&cfg)
+	assert.Error(t, ConfigurePasswd())
+}
+
 
 
 

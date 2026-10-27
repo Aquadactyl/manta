@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 
@@ -1920,6 +1921,168 @@ func TestFileOperationsComprehensiveCoverage(t *testing.T) {
 	w = httptest.NewRecorder()
 	h.router.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusOK, w.Code)
+
+	// 8. postServerCompressFiles no space available (409)
+	s.Filesystem().SetDiskLimit(1)
+	req = httptest.NewRequest(http.MethodPost, "/api/servers/"+s.ID()+"/files/compress", strings.NewReader(`{"root":"/","files":["sample.txt"]}`))
+	req.Header.Set("Authorization", "Bearer test-token")
+	req.Header.Set("Content-Type", "application/json")
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusConflict, w.Code)
+	s.Filesystem().SetDiskLimit(0)
+
+	// 9. postServerDecompressFiles successful extraction (204)
+	var tbuf bytes.Buffer
+	gz := gzip.NewWriter(&tbuf)
+	tw := tar.NewWriter(gz)
+	_ = tw.WriteHeader(&tar.Header{Name: "decompressed.txt", Mode: 0644, Size: 4, Typeflag: tar.TypeReg})
+	_, _ = tw.Write([]byte("test"))
+	_ = tw.Close()
+	_ = gz.Close()
+
+	require.NoError(t, os.WriteFile(filepath.Join(s.Filesystem().Path(), "test.tar.gz"), tbuf.Bytes(), 0644))
+	req = httptest.NewRequest(http.MethodPost, "/api/servers/"+s.ID()+"/files/decompress", strings.NewReader(`{"root":"/","file":"test.tar.gz"}`))
+	req.Header.Set("Authorization", "Bearer test-token")
+	req.Header.Set("Content-Type", "application/json")
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusNoContent, w.Code)
+	assert.FileExists(t, filepath.Join(s.Filesystem().Path(), "decompressed.txt"))
+
+	// 10. completeIncomingTransfer and deleteTransfer
+	tr := h.startInFlightReceive(s)
+	completeIncomingTransfer(h.mgr, tr, false)
+	tr2 := h.startInFlightReceive(s)
+	completeIncomingTransfer(h.mgr, tr2, true)
+
+	// deleteTransfer when not transferring (409)
+	req = httptest.NewRequest(http.MethodDelete, "/api/transfers/"+s.ID(), nil)
+	req.Header.Set("Authorization", "Bearer test-token")
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusConflict, w.Code)
+
+	// deleteTransfer when transferring (202)
+	tr3 := h.startInFlightReceive(s)
+	transfer.Incoming().Add(tr3)
+	req = httptest.NewRequest(http.MethodDelete, "/api/transfers/"+s.ID(), nil)
+	req.Header.Set("Authorization", "Bearer test-token")
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusAccepted, w.Code)
+
+	// 11. Named pipe rejection in getServerFileContents
+	fifoPath := filepath.Join(s.Filesystem().Path(), "namedfifo")
+	if err := syscall.Mkfifo(fifoPath, 0644); err == nil {
+		req = httptest.NewRequest(http.MethodGet, "/api/servers/"+s.ID()+"/files/contents?file=namedfifo", nil)
+		req.Header.Set("Authorization", "Bearer test-token")
+		w = httptest.NewRecorder()
+		h.router.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+		assert.Contains(t, w.Body.String(), "Cannot open files of this type")
+		_ = os.Remove(fifoPath)
+	}
+
+	// 12. postServerUploadFiles error paths
+	h.mgr.AddIfMissing(s)
+
+	// Invalid token
+	req = httptest.NewRequest(http.MethodPost, "/upload/file?token=invalid.jwt.token", nil)
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	assert.Contains(t, []int{http.StatusBadRequest, http.StatusInternalServerError}, w.Code)
+
+	// Valid token format for missing server -> 404
+	now := time.Now().Add(2 * time.Second)
+	missingTok := tokens.UploadPayload{
+		Payload: jwt.Payload{
+			Issuer:         "wings-test",
+			IssuedAt:       jwt.NumericDate(now),
+			NotBefore:      jwt.NumericDate(now.Add(-5 * time.Second)),
+			ExpirationTime: jwt.NumericDate(now.Add(10 * time.Minute)),
+			Subject:        "user-uuid",
+		},
+		Scoped: tokens.Scoped{
+			Scope: string(tokens.FileUpload),
+		},
+		ServerUuid: uuid.New().String(),
+		UserUuid:   "user-uuid",
+		UniqueId:   uuid.New().String(),
+	}
+	signedTok, err := jwt.Sign(&missingTok, config.GetJwtAlgorithm())
+	require.NoError(t, err)
+
+	req = httptest.NewRequest(http.MethodPost, "/upload/file?token="+string(signedTok), nil)
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusNotFound, w.Code)
+
+	// Upload token for existing server but no files in multipart -> 400
+	validTok := tokens.UploadPayload{
+		Payload: jwt.Payload{
+			Issuer:         "wings-test",
+			IssuedAt:       jwt.NumericDate(now),
+			NotBefore:      jwt.NumericDate(now.Add(-5 * time.Second)),
+			ExpirationTime: jwt.NumericDate(now.Add(10 * time.Minute)),
+			Subject:        "user-uuid",
+		},
+		Scoped: tokens.Scoped{
+			Scope: string(tokens.FileUpload),
+		},
+		ServerUuid: s.ID(),
+		UserUuid:   "user-uuid",
+		UniqueId:   uuid.New().String(),
+	}
+	signedValidTok, err := jwt.Sign(&validTok, config.GetJwtAlgorithm())
+	require.NoError(t, err)
+
+	var emptyBuf bytes.Buffer
+	mw := multipart.NewWriter(&emptyBuf)
+	_ = mw.WriteField("other_field", "value")
+	_ = mw.Close()
+
+	req = httptest.NewRequest(http.MethodPost, "/upload/file?token="+string(signedValidTok), &emptyBuf)
+	req.Header.Set("Content-Type", mw.FormDataContentType())
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Contains(t, w.Body.String(), "No files were found")
+
+	// 13. postServerDecompressFiles unknown archive format
+	require.NoError(t, os.MkdirAll(s.Filesystem().Path(), 0755))
+	notArchiveFile := filepath.Join(s.Filesystem().Path(), "not-archive.txt")
+	require.NoError(t, os.WriteFile(notArchiveFile, []byte("plain text content"), 0644))
+	req = httptest.NewRequest(http.MethodPost, "/api/servers/"+s.ID()+"/files/decompress", strings.NewReader(`{"root":"/","file":"not-archive.txt"}`))
+	req.Header.Set("Authorization", "Bearer test-token")
+	req.Header.Set("Content-Type", "application/json")
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	assert.Contains(t, []int{http.StatusBadRequest, http.StatusInternalServerError}, w.Code)
+
+	// 14. postServerWriteFile with .pteroignore
+	req = httptest.NewRequest(http.MethodPost, "/api/servers/"+s.ID()+"/files/write?file=.pteroignore", strings.NewReader("ignored"))
+	req.Header.Set("Authorization", "Bearer test-token")
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	assert.Contains(t, []int{http.StatusBadRequest, http.StatusInternalServerError, http.StatusNoContent}, w.Code)
+
+	// 15. postServerPullRemoteFile foreground download error
+	originFail := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer originFail.Close()
+
+	nextCfg := *config.Get()
+	nextCfg.Api.RemoteDownloadAllowlist = []string{"127.0.0.1"}
+	config.Set(&nextCfg)
+
+	req = httptest.NewRequest(http.MethodPost, "/api/servers/"+s.ID()+"/files/pull", strings.NewReader(`{"root":"/","url":"`+originFail.URL+`/file.txt","foreground":true}`))
+	req.Header.Set("Authorization", "Bearer test-token")
+	req.Header.Set("Content-Type", "application/json")
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	assert.Contains(t, []int{http.StatusBadRequest, http.StatusInternalServerError}, w.Code)
 }
 
 
