@@ -217,7 +217,7 @@ func Benchmark_ScanReader(b *testing.B) {
 	reader := strings.NewReader(str)
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = ScanReader(reader, func(line []byte) {
 			// no op
 		})

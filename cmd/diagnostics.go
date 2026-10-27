@@ -156,7 +156,7 @@ func buildDiagnosticsReport(output *strings.Builder, dockerVersion types.Version
 				fmt.Fprintln(output, w)
 			}
 		}
-	} else if dockerErr != nil {
+	} else {
 		fmt.Fprintln(output, dockerErr.Error())
 	}
 

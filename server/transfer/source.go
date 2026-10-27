@@ -184,13 +184,13 @@ func (t *Transfer) PushArchiveToTarget(targetURL, token string) ([]byte, error) 
 		return nil, ctx.Err()
 	case err2 := <-errChan:
 		t.Log().Debug("stream completed")
-		if err != nil || err2 != nil {
-			if err == context.Canceled {
-				return nil, err
+		if err2 != nil {
+			if errors.Is(err2, context.Canceled) {
+				return nil, err2
 			}
 
-			t.Log().WithError(err).Debug("failed to send archive to destination")
-			return nil, fmt.Errorf("http error: %w, multipart error: %v", err, err2)
+			t.Log().WithError(err2).Debug("failed to send archive to destination")
+			return nil, fmt.Errorf("multipart error: %w", err2)
 		}
 		defer res.Body.Close()
 		t.Log().Debug("received response from destination")

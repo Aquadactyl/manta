@@ -56,7 +56,7 @@ func BenchmarkConsoleThrottle(b *testing.B) {
 	t := newConsoleThrottle(10, time.Millisecond*10)
 
 	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		t.Allow()
 	}
 }

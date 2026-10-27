@@ -20,6 +20,7 @@ import (
 
 	"github.com/pterodactyl/wings/config"
 	"github.com/pterodactyl/wings/environment"
+	"github.com/pterodactyl/wings/events"
 	"github.com/pterodactyl/wings/remote"
 	"github.com/pterodactyl/wings/router/downloader"
 	"github.com/pterodactyl/wings/router/tokens"
@@ -503,14 +504,32 @@ func TestRouterRemainingCoverage(t *testing.T) {
 	h.router.ServeHTTP(w, authReq(http.MethodPost, "/api/servers/"+s.ID()+"/sync", ""))
 	assert.Equal(t, http.StatusNoContent, w.Code)
 
+	sink := make(chan []byte, 10)
+	s.Events().On(sink)
+	defer s.Events().Off(sink)
+
+	waitInstall := func() {
+		for {
+			select {
+			case data := <-sink:
+				if events.MustDecode(data).Topic == wserver.InstallCompletedEvent {
+					return
+				}
+			case <-time.After(3 * time.Second):
+				t.Fatal("timed out waiting for install completed event")
+			}
+		}
+	}
+
 	w = httptest.NewRecorder()
 	h.router.ServeHTTP(w, authReq(http.MethodPost, "/api/servers/"+s.ID()+"/install", ""))
 	assert.Equal(t, http.StatusAccepted, w.Code)
+	waitInstall()
 
 	w = httptest.NewRecorder()
 	h.router.ServeHTTP(w, authReq(http.MethodPost, "/api/servers/"+s.ID()+"/reinstall", ""))
 	assert.Equal(t, http.StatusAccepted, w.Code)
-	time.Sleep(30 * time.Millisecond)
+	waitInstall()
 
 	// 10. deleteServer when IsTransferring and Environment.Destroy fails
 	s.SetTransferring(true)
@@ -652,20 +671,6 @@ func TestRouterRemainingCoverage(t *testing.T) {
 	w = httptest.NewRecorder()
 	h.router.ServeHTTP(w, authReq(http.MethodPost, "/api/update", `{invalid`))
 	assert.Equal(t, http.StatusBadRequest, w.Code)
-
-	// 17. postServerSync, postServerInstall, postServerReinstall
-	w = httptest.NewRecorder()
-	h.router.ServeHTTP(w, authReq(http.MethodPost, "/api/servers/"+s.ID()+"/sync", ""))
-	// either 204 or 500 depending on remote panel response
-	assert.True(t, w.Code == http.StatusNoContent || w.Code == http.StatusInternalServerError)
-
-	w = httptest.NewRecorder()
-	h.router.ServeHTTP(w, authReq(http.MethodPost, "/api/servers/"+s.ID()+"/install", ""))
-	assert.Equal(t, http.StatusAccepted, w.Code)
-
-	w = httptest.NewRecorder()
-	h.router.ServeHTTP(w, authReq(http.MethodPost, "/api/servers/"+s.ID()+"/reinstall", ""))
-	assert.Equal(t, http.StatusAccepted, w.Code)
 
 	// 18. postServerRestoreBackup with local adapter error and missing backup
 	w = httptest.NewRecorder()

@@ -106,7 +106,8 @@ func (h *Handler) HandleLog(e *log.Entry) error {
 			var b strings.Builder
 			var endOfStack bool
 			for _, s := range strings.Split(formatted, "\n") {
-				b.WriteString(s + "\n")
+				b.WriteString(s)
+				b.WriteByte('\n')
 
 				if s == "runtime.goexit" {
 					endOfStack = true

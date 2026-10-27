@@ -81,7 +81,7 @@ func TestCliHandler(t *testing.T) {
 		Level:   log.ErrorLevel,
 		Message: "no goexit",
 		Fields: log.Fields{
-			"error": noGoexitError{},
+			"error": &noGoexitError{},
 		},
 	}
 	require.NoError(t, h.HandleLog(customEntry))
@@ -90,10 +90,10 @@ func TestCliHandler(t *testing.T) {
 
 type noGoexitError struct{}
 
-func (noGoexitError) Error() string { return "custom error without goexit" }
-func (noGoexitError) Format(s fmt.State, _ rune) {
+func (*noGoexitError) Error() string { return "custom error without goexit" }
+func (*noGoexitError) Format(s fmt.State, _ rune) {
 	_, _ = io.WriteString(s, "custom error without goexit")
 }
-func (noGoexitError) StackTrace() errors.StackTrace {
+func (*noGoexitError) StackTrace() errors.StackTrace {
 	return nil
 }

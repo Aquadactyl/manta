@@ -411,6 +411,9 @@ func (e *Environment) Readlog(lines int) ([]string, error) {
 	for scanner.Scan() {
 		out = append(out, scanner.Text())
 	}
+	if err := scanner.Err(); err != nil {
+		return nil, errors.WithStack(err)
+	}
 
 	return out, nil
 }

@@ -172,7 +172,7 @@ func TestSink(t *testing.T) {
 			pool.On(make(chan []byte))
 
 			for i := 0; i < 100; i++ {
-				pool.Push([]byte(fmt.Sprintf("iteration %d", i)))
+				pool.Push(fmt.Appendf(nil, "iteration %d", i))
 			}
 
 			time.Sleep(time.Millisecond * 20)

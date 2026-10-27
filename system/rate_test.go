@@ -61,7 +61,7 @@ func BenchmarkRate_Try(b *testing.B) {
 	r := NewRate(10, time.Millisecond*100)
 
 	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		r.Try()
 	}
 }
