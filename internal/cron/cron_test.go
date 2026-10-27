@@ -2,7 +2,9 @@ package cron
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -43,10 +45,32 @@ func TestScheduler(t *testing.T) {
 	cfg.System.ActivitySendInterval = 60
 	config.Set(cfg)
 
-	s, err = Scheduler(context.Background(), server.NewEmptyManager(nil))
+	blockCh := make(chan struct{})
+	gateServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		<-blockCh
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]any{"data": []any{}})
+	}))
+	defer gateServer.Close()
+
+	s, err = Scheduler(context.Background(), server.NewEmptyManager(remote.New(gateServer.URL)))
 	assert.NoError(t, err)
 	assert.NotNil(t, s)
 	defer s.Clear()
+
+	// Run scheduled jobs concurrently to trigger ErrCronRunning in Scheduler callbacks
+	insertActivity(t, "server:console.command", validIP, "blocked-cmd")
+	go func() { _ = s.RunByTag("activity") }()
+	time.Sleep(20 * time.Millisecond)
+	_ = s.RunByTag("activity")
+
+	insertActivity(t, "server:sftp.write", validIP, `{"files":["/blocked-sftp"]}`)
+	go func() { _ = s.RunByTag("sftp") }()
+	time.Sleep(20 * time.Millisecond)
+	_ = s.RunByTag("sftp")
+
+	close(blockCh)
+	time.Sleep(30 * time.Millisecond)
 
 	// Run scheduled jobs
 	_ = s.RunByTag("activity")
@@ -190,4 +214,32 @@ func TestCronEdgeCasesAndDeliveryErrors(t *testing.T) {
 	sched.StartAsync()
 	time.Sleep(150 * time.Millisecond)
 	sched.Stop()
+
+	// 7. pruneActivity with rows exceeding max
+	insertActivity(t, "server:console.command", validIP, "prune-1")
+	insertActivity(t, "server:console.command", validIP, "prune-2")
+	insertActivity(t, "server:console.command", validIP, "prune-3")
+	assert.NoError(t, pruneActivity(context.Background(), 1))
+
+	// 8. 50-batch completion reaches return nil in activityCron and sftpCron
+	okSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]any{"data": []any{}})
+	}))
+	defer okSrv.Close()
+	okMgr := server.NewEmptyManager(remote.New(okSrv.URL))
+
+	setupDatabase(t)
+	for i := 0; i < 50; i++ {
+		insertActivity(t, "server:console.command", validIP, fmt.Sprintf("cmd-%d", i))
+	}
+	ac50 := &activityCron{mu: system.NewAtomicBool(false), manager: okMgr, max: 1}
+	assert.NoError(t, ac50.Run(context.Background()))
+
+	setupDatabase(t)
+	for i := 0; i < 50; i++ {
+		insertActivity(t, "server:sftp.write", validIP, fmt.Sprintf("{\"files\":[\"/file-%d\"]}", i))
+	}
+	sc50 := &sftpCron{mu: system.NewAtomicBool(false), manager: okMgr, max: 1}
+	assert.NoError(t, sc50.Run(context.Background()))
 }

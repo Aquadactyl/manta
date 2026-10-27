@@ -337,4 +337,22 @@ func TestPushArchiveToTarget_AdvancedBranches(t *testing.T) {
 	_, err = tr3.PushArchiveToTarget(truncatedBodySrv.URL, "token")
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to read response body")
+
+	// 4. Non-200 status code from destination
+	badStatusSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = io.Copy(io.Discard, r.Body)
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer badStatusSrv.Close()
+
+	tr4 := newManagerTestTransfer(t, "transfer-bad-status")
+	tr4.archive = &Archive{
+		archive: &filesystem.Archive{
+			Filesystem: fsys,
+			Progress:   progress.NewProgress(100),
+		},
+	}
+	_, err = tr4.PushArchiveToTarget(badStatusSrv.URL, "token")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "unexpected status code from destination: 500")
 }

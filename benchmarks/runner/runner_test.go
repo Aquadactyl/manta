@@ -11,6 +11,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -769,4 +770,53 @@ func TestJavaPingBadPacketLength(t *testing.T) {
 	_, err = javaPing(host, port)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "bad packet length")
+}
+
+func TestDkNon200(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer ts.Close()
+
+	u, _ := url.Parse(ts.URL)
+	h := &harness{
+		docker: &http.Client{
+			Transport: &http.Transport{
+				DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+					return net.Dial("tcp", u.Host)
+				},
+			},
+		},
+	}
+	assert.Panics(t, func() {
+		h.dk("/bad")
+	})
+}
+
+func TestSocketNoAuthenticationResult(t *testing.T) {
+	upgrader := websocket.Upgrader{
+		CheckOrigin: func(r *http.Request) bool { return true },
+	}
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		conn, err := upgrader.Upgrade(w, r, nil)
+		if err != nil {
+			return
+		}
+		defer conn.Close()
+		var msg map[string]any
+		_ = conn.ReadJSON(&msg)
+		for i := 0; i < 11; i++ {
+			_ = conn.WriteJSON(map[string]any{"event": "other-event"})
+		}
+	}))
+	defer ts.Close()
+
+	h := &harness{manifest: manifest{PanelOrigin: "http://example.com"}}
+	n := node{Base: ts.URL}
+	s := server{UUID: "test-uuid"}
+	conn, res := h.socket(n, s, "token")
+	if conn != nil {
+		_ = conn.Close()
+	}
+	assert.Equal(t, "no authentication result", res)
 }

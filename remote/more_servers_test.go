@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"emperror.dev/errors"
@@ -276,4 +277,38 @@ func TestRemoteClientContextCanceledErrors(t *testing.T) {
 	assert.Error(t, c.SendActivityLogs(ctx, nil))
 	_, err = c.GetServers(ctx, 10)
 	assert.Error(t, err)
+}
+
+type postCancelCtx struct {
+	context.Context
+	cancelNow bool
+}
+
+func (c *postCancelCtx) Err() error {
+	if c.cancelNow {
+		return context.Canceled
+	}
+	return c.Context.Err()
+}
+
+func TestGetServers_ContextCanceledAfterFirstPage(t *testing.T) {
+	pCtx := &postCancelCtx{Context: context.Background()}
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"data": []any{},
+			"meta": map[string]any{
+				"pagination": map[string]any{
+					"current_page": 1,
+					"total_pages":  1,
+				},
+			},
+		})
+		pCtx.cancelNow = true
+	}))
+	defer s.Close()
+
+	c := New(s.URL)
+	_, err := c.GetServers(pCtx, 10)
+	assert.ErrorIs(t, err, context.Canceled)
 }

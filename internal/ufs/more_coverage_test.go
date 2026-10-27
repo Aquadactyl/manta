@@ -383,6 +383,19 @@ func TestUFSUnixAndRemoveAllBranches(t *testing.T) {
 	assert.ErrorIs(t, ufs.checkOpenedPath(int(outsideFile.Fd()), "out"), ErrBadPathResolution)
 	ufs.useOpenat2 = false
 
+	// checkOpenedPath with deleted files (EvalSymlinks returns ErrNotExist)
+	delOut, err := os.CreateTemp(t.TempDir(), "del_out")
+	require.NoError(t, err)
+	defer delOut.Close()
+	_ = os.Remove(delOut.Name())
+	assert.ErrorIs(t, ufs.checkOpenedPath(int(delOut.Fd()), "del_out"), ErrBadPathResolution)
+
+	delIn, err := os.CreateTemp(ufs.BasePath(), "del_in")
+	require.NoError(t, err)
+	defer delIn.Close()
+	_ = os.Remove(delIn.Name())
+	assert.ErrorIs(t, ufs.checkOpenedPath(int(delIn.Fd()), "del_in"), ErrNotExist)
+
 	assert.Error(t, checkOpenedType(-1, "badfd"))
 	devNull, err := os.Open("/dev/null")
 	require.NoError(t, err)

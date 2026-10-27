@@ -201,3 +201,12 @@ func TestDownloaderCacheAndLifecycle(t *testing.T) {
 	instance.remove(dl.Identifier)
 	assert.Nil(t, ByID(dl.Identifier))
 }
+
+func TestDownloaderExecute_NilURL(t *testing.T) {
+	s := newUniquePullTestServer(t)
+	dl := New(s, DownloadRequest{Directory: "/", URL: nil, FileName: "test.bin"})
+	defer dl.Cancel()
+	err := dl.Execute()
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid download URL")
+}

@@ -682,3 +682,32 @@ func TestConfigRemainingBranches(t *testing.T) {
 	assert.Equal(t, "docker.io", dom)
 	assert.Equal(t, "library/v2", pth)
 }
+
+func TestUseOpenat2Modes(t *testing.T) {
+	c := Get()
+	origMode := c.System.OpenatMode
+	defer func() {
+		c.System.OpenatMode = origMode
+		Set(c)
+	}()
+
+	// mode: openat2
+	c.System.OpenatMode = "openat2"
+	Set(c)
+	openat2Set.Store(false)
+	assert.True(t, UseOpenat2())
+	assert.True(t, UseOpenat2()) // cached
+
+	// mode: openat
+	c.System.OpenatMode = "openat"
+	Set(c)
+	openat2Set.Store(false)
+	assert.False(t, UseOpenat2())
+	assert.False(t, UseOpenat2()) // cached
+
+	// mode: default
+	c.System.OpenatMode = ""
+	Set(c)
+	openat2Set.Store(false)
+	_ = UseOpenat2()
+}

@@ -8,13 +8,16 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
 
+	pkgsftp "github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
 
 	"github.com/pterodactyl/wings/config"
+	"github.com/pterodactyl/wings/internal/models"
 	"github.com/pterodactyl/wings/server"
 )
 
@@ -306,6 +309,12 @@ func TestSFTPServerRunAndHandleBranches(t *testing.T) {
 	if ErrSSHQuotaExceeded.As(&wrongType) {
 		t.Fatal("expected As to return false for non-sftp.fxerr uint32")
 	}
+
+	fxerrType := reflect.TypeOf((&pkgsftp.StatusError{Code: 1}).FxCode())
+	target := reflect.New(fxerrType).Interface()
+	if !ErrSSHQuotaExceeded.As(target) {
+		t.Fatal("expected As to return true for fxerr target")
+	}
 }
 
 type flakyListener struct {
@@ -322,3 +331,11 @@ func (f *flakyListener) Accept() (net.Conn, error) {
 
 func (f *flakyListener) Close() error   { return nil }
 func (f *flakyListener) Addr() net.Addr { return &net.TCPAddr{} }
+
+func TestMustLogErrorPath(t *testing.T) {
+	eh := &eventHandler{
+		server: "test-server",
+		user:   "test-user",
+	}
+	eh.MustLog(models.Event("test:event"), FileAction{Entity: "test.txt"})
+}
