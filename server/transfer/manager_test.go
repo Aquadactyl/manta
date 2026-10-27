@@ -356,3 +356,31 @@ func TestPushArchiveToTarget_AdvancedBranches(t *testing.T) {
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "unexpected status code from destination: 500")
 }
+
+func TestTransferArchiveCacheAndRedirectURLs(t *testing.T) {
+	assert.False(t, IsValidRedirectURL("ftp://example.com"))
+	assert.False(t, IsValidRedirectURL("http://"))
+	assert.False(t, IsValidRedirectURL("http://user:pass@example.com"))
+	assert.True(t, IsValidRedirectURL("http://127.0.0.1:8080/path"))
+	assert.False(t, isValidRedirectUrl("invalid://url"))
+
+	tr := newManagerTestTransfer(t, "transfer-cache")
+	dataDir := t.TempDir()
+	fsys, err := filesystem.New(dataDir, 1024*1024, []string{})
+	require.NoError(t, err)
+	arch := &Archive{
+		archive: &filesystem.Archive{
+			Filesystem: fsys,
+			Progress:   progress.NewProgress(100),
+		},
+	}
+	tr.archive = arch
+
+	a1, err := tr.Archive()
+	require.NoError(t, err)
+	assert.Same(t, arch, a1)
+
+	_, err = tr.PushArchiveToTarget("invalid-url", "token")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid target URL")
+}

@@ -60,3 +60,12 @@ func TestLockerWaitersAreReleasedOnDestroy(t *testing.T) {
 	}
 	require.False(t, l.IsLocked())
 }
+
+func TestLockerTryAcquireCanceledContext(t *testing.T) {
+	l := NewLocker()
+	require.NoError(t, l.Acquire())
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	err := l.TryAcquire(ctx)
+	require.ErrorIs(t, err, ErrLockerLocked)
+}
