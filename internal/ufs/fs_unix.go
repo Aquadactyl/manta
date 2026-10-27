@@ -277,7 +277,11 @@ func (fs *UnixFS) OpenFile(name string, flag int, mode FileMode) (File, error) {
 	// Do not close `fd` here, it is passed to a file that needs the fd, the
 	// caller of this function is responsible for calling Close() on the File
 	// to release the file descriptor.
-	return os.NewFile(uintptr(fd), name), nil
+	if strings.Contains(name, "..") {
+		name = filepath.Clean("/" + name)
+	}
+	cleanName := filepath.Clean("/" + name)
+	return os.NewFile(uintptr(fd), cleanName), nil
 }
 
 func (fs *UnixFS) openFile(name string, flag int, mode FileMode) (int, error) {
@@ -297,7 +301,11 @@ func (fs *UnixFS) OpenFileat(dirfd int, name string, flag int, mode FileMode) (F
 	// Do not close `fd` here, it is passed to a file that needs the fd, the
 	// caller of this function is responsible for calling Close() on the File
 	// to release the file descriptor.
-	return os.NewFile(uintptr(fd), name), nil
+	if strings.Contains(name, "..") {
+		name = filepath.Clean("/" + name)
+	}
+	cleanName := filepath.Clean("/" + name)
+	return os.NewFile(uintptr(fd), cleanName), nil
 }
 
 // ReadDir reads the named directory,

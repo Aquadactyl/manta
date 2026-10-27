@@ -14,6 +14,8 @@ import (
 	"errors"
 	"io"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"golang.org/x/sys/unix"
 )
@@ -258,5 +260,9 @@ func openFdAt(dirfd int, name string) (File, error) {
 	}
 	// This is stupid, os.NewFile immediately casts `fd` to an `int`, but wants
 	// it to be passed as a `uintptr`.
-	return os.NewFile(uintptr(fd), name), nil
+	if strings.Contains(name, "..") {
+		name = filepath.Clean("/" + name)
+	}
+	cleanName := filepath.Clean("/" + name)
+	return os.NewFile(uintptr(fd), cleanName), nil
 }
