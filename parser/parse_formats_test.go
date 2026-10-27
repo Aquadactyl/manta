@@ -430,3 +430,235 @@ func TestParserErrorPaths(t *testing.T) {
 	assert.Equal(t, true, cfrBool.getKeyValue("true"))
 	assert.Equal(t, false, cfrBool.getKeyValue("false"))
 }
+
+type mockParserFile struct {
+	ufs.File
+	statInfo os.FileInfo
+	statErr  error
+	readErr  error
+	seekErr  error
+	truncErr error
+	writeErr error
+	data     []byte
+	pos      int
+}
+
+func (m *mockParserFile) Name() string { return "mock.cfg" }
+func (m *mockParserFile) Stat() (ufs.FileInfo, error) {
+	if m.statErr != nil {
+		return nil, m.statErr
+	}
+	return m.statInfo, nil
+}
+func (m *mockParserFile) Read(p []byte) (int, error) {
+	if m.readErr != nil {
+		return 0, m.readErr
+	}
+	if m.pos >= len(m.data) {
+		return 0, os.ErrClosed
+	}
+	n := copy(p, m.data[m.pos:])
+	m.pos += n
+	return n, nil
+}
+func (m *mockParserFile) Seek(offset int64, whence int) (int64, error) {
+	if m.seekErr != nil {
+		return 0, m.seekErr
+	}
+	return 0, nil
+}
+func (m *mockParserFile) Truncate(size int64) error {
+	return m.truncErr
+}
+func (m *mockParserFile) Write(p []byte) (int, error) {
+	if m.writeErr != nil {
+		return 0, m.writeErr
+	}
+	return len(p), nil
+}
+
+func TestParserRemainingCoverage(t *testing.T) {
+	config.Set(&config.Configuration{
+		AuthenticationToken: "test-auth-token-12345678901234567890",
+	})
+
+	// 1. xmlDepth(nil) and NewReplaceValue and panic branches in String()/Bytes()
+	assert.Equal(t, 0, xmlDepth(nil))
+	rv := NewReplaceValue([]byte("hello"), jsonparser.String)
+	assert.Equal(t, "hello", rv.String())
+
+	badEscape := ReplaceValue{value: []byte(`\uZZZZ`), valueType: jsonparser.String}
+	assert.Panics(t, func() { _ = badEscape.String() })
+	assert.Panics(t, func() { _ = badEscape.Bytes() })
+
+	// 2. UnmarshalJSON error branches
+	var cfr ConfigurationFileReplacement
+	assert.Error(t, json.Unmarshal([]byte(`{"match":"a","if_value":[1,2],"replace_with":"b"}`), &cfr))
+	assert.Error(t, json.Unmarshal([]byte(`{"match":"a"}`), &cfr))
+	assert.Error(t, cfr.UnmarshalJSON([]byte(`{"match":"a","replace_with":bad}`)))
+
+	// 3. Parse on closed file (file.Stat() error)
+	tmp := t.TempDir()
+	p := filepath.Join(tmp, "closed.json")
+	require.NoError(t, os.WriteFile(p, []byte(`{}`), 0o644))
+	fClosed, err := os.Open(p)
+	require.NoError(t, err)
+	st, err := fClosed.Stat()
+	require.NoError(t, err)
+	_ = fClosed.Close()
+
+	cf := ConfigurationFile{FileName: "closed.json", Parser: Json}
+	assert.Error(t, cf.Parse(fClosed))
+
+	// 4. Empty XML file (doc.Root() == nil) creates ProcInst and root element
+	emptyXmlPath := filepath.Join(tmp, "empty.xml")
+	require.NoError(t, os.WriteFile(emptyXmlPath, []byte(""), 0o644))
+	fEmptyXml, err := os.OpenFile(emptyXmlPath, os.O_RDWR, 0)
+	require.NoError(t, err)
+	var cfEmptyXml ConfigurationFile
+	require.NoError(t, json.Unmarshal([]byte(`{
+		"file": "empty.xml",
+		"parser": "xml",
+		"replace": [{"match": "Root.Child", "replace_with": "val"}]
+	}`), &cfEmptyXml))
+	require.NoError(t, cfEmptyXml.Parse(fEmptyXml))
+	_ = fEmptyXml.Close()
+	xmlOut, err := os.ReadFile(emptyXmlPath)
+	require.NoError(t, err)
+	assert.Contains(t, string(xmlOut), "<Root>")
+
+	// 5. INI with bracketed dot and multi-dot key, plus empty key error
+	iniPath := filepath.Join(tmp, "bracket.ini")
+	require.NoError(t, os.WriteFile(iniPath, []byte("[sec.one]\na.b=1\n"), 0o644))
+	fIni, err := os.OpenFile(iniPath, os.O_RDWR, 0)
+	require.NoError(t, err)
+	var cfIni ConfigurationFile
+	require.NoError(t, json.Unmarshal([]byte(`{
+		"file": "bracket.ini",
+		"parser": "ini",
+		"replace": [{"match": "[sec.one].a.b", "replace_with": "2"}]
+	}`), &cfIni))
+	require.NoError(t, cfIni.Parse(fIni))
+	_ = fIni.Close()
+
+	// Empty key in INI triggers NewKey error
+	fIniErr, err := os.OpenFile(iniPath, os.O_RDWR, 0)
+	require.NoError(t, err)
+	var cfIniEmptyKey ConfigurationFile
+	require.NoError(t, json.Unmarshal([]byte(`{
+		"file": "bracket.ini",
+		"parser": "ini",
+		"replace": [{"match": "sec.", "replace_with": "2"}]
+	}`), &cfIniEmptyKey))
+	assert.Error(t, cfIniEmptyKey.Parse(fIniErr))
+	_ = fIniErr.Close()
+
+	// 6. Invalid properties syntax (bad unicode escape)
+	propPath := filepath.Join(tmp, "bad.properties")
+	require.NoError(t, os.WriteFile(propPath, []byte("key=\\uZZZZ\n"), 0o644))
+	fProp, err := os.OpenFile(propPath, os.O_RDWR, 0)
+	require.NoError(t, err)
+	var cfProp ConfigurationFile
+	require.NoError(t, json.Unmarshal([]byte(`{
+		"file": "bad.properties",
+		"parser": "properties",
+		"replace": [{"match": "key", "replace_with": "val"}]
+	}`), &cfProp))
+	assert.Error(t, cfProp.Parse(fProp))
+	_ = fProp.Close()
+
+	// 7. IterateOverJson wildcard & non-wildcard with regex not found, invalid regex, and array index > 0 error
+	var cfHelpers ConfigurationFile
+	require.NoError(t, json.Unmarshal([]byte(`{
+		"file": "test.json",
+		"parser": "json",
+		"replace": [
+			{"match": "items.*.missing", "if_value": "regex:^foo$", "replace_with": "bar"},
+			{"match": "missing_top", "if_value": "regex:^foo$", "replace_with": "bar"},
+			{"match": "existing", "if_value": "regex:[invalid", "replace_with": "bar"},
+			{"match": "arr[0]", "replace_with": "first"}
+		]
+	}`), &cfHelpers))
+	container, err := cfHelpers.IterateOverJson([]byte(`{"items":{"a":{"other":"1"}},"existing":"hello"}`))
+	require.NoError(t, err)
+	assert.NotNil(t, container)
+
+	// Wildcard child error (array index 5 on missing array)
+	var cfWildErr ConfigurationFile
+	require.NoError(t, json.Unmarshal([]byte(`{
+		"file": "test.json",
+		"parser": "json",
+		"replace": [{"match": "items.*.arr[5].sub", "replace_with": "bar"}]
+	}`), &cfWildErr))
+	_, err = cfWildErr.IterateOverJson([]byte(`{"items":{"a":{}}}`))
+	assert.Error(t, err)
+
+	// Non-wildcard error (array index 5 on missing array)
+	var cfNonWildErr ConfigurationFile
+	require.NoError(t, json.Unmarshal([]byte(`{
+		"file": "test.json",
+		"parser": "json",
+		"replace": [{"match": "arr[5].sub", "replace_with": "bar"}]
+	}`), &cfNonWildErr))
+	_, err = cfNonWildErr.IterateOverJson([]byte(`{}`))
+	assert.Error(t, err)
+
+	// 8. LookupConfigurationValue with Object target and with malformed f.configuration
+	var cfrObj ConfigurationFileReplacement
+	require.NoError(t, json.Unmarshal([]byte(`{"match":"k","replace_with":"{{ config.docker }}"}`), &cfrObj))
+	cfLookup := ConfigurationFile{
+		FileName:      "test.json",
+		configuration: []byte(`{"docker":{"interface":"127.0.0.1"}}`),
+	}
+	val, err := cfLookup.LookupConfigurationValue(cfrObj)
+	require.NoError(t, err)
+	assert.Equal(t, "{{ config.docker }}", val)
+
+	var cfrBadLookup ConfigurationFileReplacement
+	require.NoError(t, json.Unmarshal([]byte(`{"match":"k","replace_with":"{{ config.docker.interface }}"}`), &cfrBadLookup))
+	cfBadConfig := ConfigurationFile{
+		FileName:      "test.json",
+		configuration: []byte(`{"docker":{"interface":invalid}}`),
+		Replace:       []ConfigurationFileReplacement{cfrBadLookup},
+	}
+	_, err = cfBadConfig.LookupConfigurationValue(cfrBadLookup)
+	assert.Error(t, err)
+
+	// Trigger LookupConfigurationValue error in IterateOverJson, parseXmlFile, parseIniFile, parsePropertiesFile, parseYamlFile
+	_, err = cfBadConfig.IterateOverJson([]byte(`{}`))
+	assert.Error(t, err)
+
+	xmlValidPath := filepath.Join(tmp, "valid_for_err.xml")
+	require.NoError(t, os.WriteFile(xmlValidPath, []byte("<Root></Root>"), 0o644))
+	fXmlDummy, err := os.OpenFile(xmlValidPath, os.O_RDWR, 0)
+	require.NoError(t, err)
+	defer fXmlDummy.Close()
+	assert.Error(t, cfBadConfig.parseXmlFile(fXmlDummy))
+
+	fDummy, err := os.OpenFile(iniPath, os.O_RDWR, 0)
+	require.NoError(t, err)
+	defer fDummy.Close()
+	assert.Error(t, cfBadConfig.parseIniFile(fDummy))
+	_, _ = fDummy.Seek(0, 0)
+	assert.Error(t, cfBadConfig.parsePropertiesFile(fDummy))
+
+	yamlValidPath := filepath.Join(tmp, "valid_for_err.yaml")
+	require.NoError(t, os.WriteFile(yamlValidPath, []byte("k: v\n"), 0o644))
+	fYamlDummy, err := os.OpenFile(yamlValidPath, os.O_RDWR, 0)
+	require.NoError(t, err)
+	defer fYamlDummy.Close()
+	assert.Error(t, cfBadConfig.parseYamlFile(fYamlDummy))
+
+	// 9. Read errors and rewrite Seek/Write errors via mockParserFile
+	mfReadErr := &mockParserFile{statInfo: st, readErr: errors.New("read failed")}
+	assert.Error(t, (&ConfigurationFile{Parser: Json}).Parse(mfReadErr))
+	assert.Error(t, (&ConfigurationFile{Parser: Yaml}).Parse(mfReadErr))
+	assert.Error(t, (&ConfigurationFile{Parser: Properties}).Parse(mfReadErr))
+	assert.Error(t, (&ConfigurationFile{Parser: File}).Parse(mfReadErr))
+
+	mfSeekErr := &mockParserFile{statInfo: st, seekErr: errors.New("seek failed")}
+	assert.Error(t, rewrite(mfSeekErr, []byte("ok")))
+
+	mfWriteErr := &mockParserFile{statInfo: st, writeErr: errors.New("write failed")}
+	assert.Error(t, rewrite(mfWriteErr, []byte("ok")))
+}

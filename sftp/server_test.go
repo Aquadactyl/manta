@@ -7,11 +7,15 @@ import (
 	"errors"
 	"net"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
 	"golang.org/x/crypto/ssh"
+
+	"github.com/pterodactyl/wings/config"
+	"github.com/pterodactyl/wings/server"
 )
 
 func startTestServer(t *testing.T, limits connectionLimits) string {
@@ -199,3 +203,122 @@ func TestAuthenticatedConnectionsAreLimitedPerUser(t *testing.T) {
 		t.Fatal("expected a connection for another user to stay open")
 	}
 }
+
+func TestSFTPServerRunAndHandleBranches(t *testing.T) {
+	config.Set(&config.Configuration{AuthenticationToken: "test-token"})
+	tmp := t.TempDir()
+	blocker := filepath.Join(tmp, "blocker")
+	if err := os.WriteFile(blocker, []byte("file"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	mgr := server.NewEmptyManager(nil)
+
+	// 1. Run when PrivateKeyPath parent is a file -> os.Stat returns ENOTDIR (err != nil && !IsNotExist)
+	s1 := New(mgr)
+	s1.BasePath = blocker
+	if err := s1.Run(); err == nil {
+		t.Fatal("expected Run to fail when BasePath is a file")
+	}
+
+	// 2. Run when PrivateKeyPath does not exist and generateED25519PrivateKey fails because .sftp is a file
+	s2Dir := filepath.Join(tmp, "s2")
+	if err := os.MkdirAll(s2Dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(s2Dir, ".sftp"), []byte("not-a-dir"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	s2 := New(mgr)
+	s2.BasePath = s2Dir
+	if err := s2.Run(); err == nil {
+		t.Fatal("expected Run to fail when .sftp is a file")
+	}
+
+	// 3. Run when PrivateKeyPath is a directory -> os.Stat succeeds, os.ReadFile fails;
+	// also generateED25519PrivateKey fails on OpenFile when PrivateKeyPath is a directory
+	s3Dir := filepath.Join(tmp, "s3")
+	s3 := New(mgr)
+	s3.BasePath = s3Dir
+	if err := os.MkdirAll(s3.PrivateKeyPath(), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := s3.generateED25519PrivateKey(); err == nil {
+		t.Fatal("expected generateED25519PrivateKey to fail when PrivateKeyPath is a directory")
+	}
+	if err := s3.Run(); err == nil {
+		t.Fatal("expected Run to fail when PrivateKeyPath is a directory")
+	}
+
+	// 4. Run when PrivateKeyPath exists via generateED25519PrivateKey, but Listen address is invalid
+	s4Dir := filepath.Join(tmp, "s4")
+	s4 := New(mgr)
+	s4.BasePath = s4Dir
+	s4.Listen = "invalid:listen:addr:99999"
+	if err := s4.Run(); err == nil {
+		t.Fatal("expected Run to fail on invalid Listen address")
+	}
+
+	// 4b. Run when PrivateKeyPath contains invalid PEM bytes -> ssh.ParsePrivateKey fails
+	if err := os.WriteFile(s4.PrivateKeyPath(), []byte("not-a-private-key"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := s4.Run(); err == nil {
+		t.Fatal("expected Run to fail on invalid private key bytes")
+	}
+
+	// 5. NewHandler and Handle when user extension is missing
+	scNoUser := &ssh.ServerConn{
+		Permissions: &ssh.Permissions{
+			Extensions: map[string]string{},
+		},
+	}
+	if _, err := NewHandler(scNoUser, nil); err == nil {
+		t.Fatal("expected NewHandler to fail without user extension")
+	}
+	if err := s4.Handle(scNoUser, nil, nil); err == nil {
+		t.Fatal("expected Handle to fail without user extension")
+	}
+
+	// 6. serve retry backoff on temporary Accept errors
+	fl := &flakyListener{fails: 2}
+	if err := s4.serve(fl, &ssh.ServerConfig{}); !errors.Is(err, net.ErrClosed) {
+		t.Fatalf("expected net.ErrClosed from flaky listener, got %v", err)
+	}
+
+	// 7. AcceptInbound handshake failure and success
+	c1, c2 := net.Pipe()
+	_ = c1.Close()
+	_ = c2.Close()
+	if err := s4.AcceptInbound(c1, &ssh.ServerConfig{}); err == nil {
+		t.Fatal("expected AcceptInbound to fail on closed pipe")
+	}
+
+	// 8. fxErr.As edge cases
+	if ErrSSHQuotaExceeded.As("not-a-pointer") {
+		t.Fatal("expected As to return false for non-pointer")
+	}
+	var nilPtr *uint32
+	if ErrSSHQuotaExceeded.As(nilPtr) {
+		t.Fatal("expected As to return false for nil pointer")
+	}
+	var wrongType uint32
+	if ErrSSHQuotaExceeded.As(&wrongType) {
+		t.Fatal("expected As to return false for non-sftp.fxerr uint32")
+	}
+}
+
+type flakyListener struct {
+	fails int
+}
+
+func (f *flakyListener) Accept() (net.Conn, error) {
+	if f.fails > 0 {
+		f.fails--
+		return nil, errors.New("temporary accept error")
+	}
+	return nil, net.ErrClosed
+}
+
+func (f *flakyListener) Close() error   { return nil }
+func (f *flakyListener) Addr() net.Addr { return &net.TCPAddr{} }

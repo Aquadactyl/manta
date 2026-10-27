@@ -97,7 +97,7 @@ func (t *Transfer) PushArchiveToTarget(targetURL, token string) ([]byte, error) 
 
 	// Create a new goroutine to write the archive to the pipe used by the
 	// multipart writer.
-	errChan := make(chan error)
+	errChan := make(chan error, 1)
 	go func() {
 		defer close(errChan)
 		defer writer.Close()

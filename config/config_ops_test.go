@@ -544,3 +544,141 @@ func TestConfigureDirectoriesBranches(t *testing.T) {
 	Set(&cfg)
 	assert.Error(t, ConfigurePasswd())
 }
+
+func TestConfigRemainingBranches(t *testing.T) {
+	orig := _config
+	if orig != nil {
+		c := *orig
+		defer Set(&c)
+	} else {
+		orig = &Configuration{AuthenticationToken: "test"}
+		defer Set(orig)
+	}
+
+	tmp := t.TempDir()
+	blocker := filepath.Join(tmp, "blocker_file")
+	require.NoError(t, os.WriteFile(blocker, []byte("file"), 0o644))
+
+	baseCfg := func() Configuration {
+		c := *orig
+		c.System.RootDirectory = filepath.Join(tmp, "root")
+		c.System.Data = filepath.Join(tmp, "data")
+		c.System.TmpDirectory = filepath.Join(tmp, "tmp")
+		c.System.ArchiveDirectory = filepath.Join(tmp, "archive")
+		c.System.BackupDirectory = filepath.Join(tmp, "backup")
+		c.System.Passwd.Enable = true
+		c.System.Passwd.Directory = filepath.Join(tmp, "passwd")
+		c.System.MachineID.Enable = true
+		c.System.MachineID.Directory = filepath.Join(tmp, "machine-id")
+		return c
+	}
+
+	// 1. Each MkdirAll failure in ConfigureDirectories
+	c1 := baseCfg()
+	c1.System.RootDirectory = blocker
+	Set(&c1)
+	assert.Error(t, ConfigureDirectories())
+
+	c2 := baseCfg()
+	c2.System.Data = blocker
+	Set(&c2)
+	assert.Error(t, ConfigureDirectories())
+
+	c3 := baseCfg()
+	c3.System.TmpDirectory = blocker
+	Set(&c3)
+	assert.Error(t, ConfigureDirectories())
+
+	c4 := baseCfg()
+	c4.System.ArchiveDirectory = blocker
+	Set(&c4)
+	assert.Error(t, ConfigureDirectories())
+
+	c5 := baseCfg()
+	c5.System.BackupDirectory = blocker
+	Set(&c5)
+	assert.Error(t, ConfigureDirectories())
+
+	c6 := baseCfg()
+	c6.System.Passwd.Directory = blocker
+	Set(&c6)
+	assert.Error(t, ConfigureDirectories())
+
+	c7 := baseCfg()
+	c7.System.MachineID.Directory = blocker
+	Set(&c7)
+	assert.Error(t, ConfigureDirectories())
+
+	// 2. ConfigurePasswd when group succeeds but passwd is a directory
+	passwdDir := filepath.Join(tmp, "passwd_err_dir")
+	require.NoError(t, os.MkdirAll(filepath.Join(passwdDir, "passwd"), 0o755))
+	cpCfg := baseCfg()
+	cpCfg.System.Passwd.Directory = passwdDir
+	Set(&cpCfg)
+	assert.Error(t, ConfigurePasswd())
+
+	// 3. FromFile when ResolveToken fails
+	badTokenCfgPath := filepath.Join(tmp, "bad_token.yml")
+	require.NoError(t, os.WriteFile(badTokenCfgPath, []byte("token: file:///nonexistent/token/file\n"), 0o644))
+	assert.Error(t, FromFile(badTokenCfgPath))
+
+	// 4. EnableLogRotation branches
+	origLogrotate := logrotateDirectory
+	defer func() { logrotateDirectory = origLogrotate }()
+
+	lrCfg := baseCfg()
+	lrCfg.System.EnableLogRotate = true
+	Set(&lrCfg)
+
+	// Stat error != ErrNotExist
+	logrotateDirectory = filepath.Join(blocker, "sub")
+	assert.Error(t, EnableLogRotation())
+
+	// Not a directory
+	logrotateDirectory = blocker
+	assert.NoError(t, EnableLogRotation())
+
+	// Does not exist
+	logrotateDirectory = filepath.Join(tmp, "does_not_exist_lr")
+	assert.NoError(t, EnableLogRotation())
+
+	// os.Create failure via dangling symlink into nonexistent parent
+	lrValidDir := filepath.Join(tmp, "lr_valid")
+	require.NoError(t, os.MkdirAll(lrValidDir, 0o755))
+	require.NoError(t, os.Symlink(filepath.Join(tmp, "missing_parent", "wings"), filepath.Join(lrValidDir, "wings")))
+	logrotateDirectory = lrValidDir
+	assert.Error(t, EnableLogRotation())
+
+	// 5. EnsurePterodactylUser with non-existent user and fake useradd in PATH
+	binDir := filepath.Join(tmp, "bin")
+	require.NoError(t, os.MkdirAll(binDir, 0o755))
+	t.Setenv("PATH", binDir+":"+os.Getenv("PATH"))
+
+	uCfg := baseCfg()
+	uCfg.System.User.Rootless.Enabled = false
+	uCfg.System.Username = "nonexistent_wings_test_user_999"
+	Set(&uCfg)
+
+	// useradd fails
+	useraddScript := filepath.Join(binDir, "useradd")
+	require.NoError(t, os.WriteFile(useraddScript, []byte("#!/bin/sh\nexit 1\n"), 0o755))
+	assert.Error(t, EnsurePterodactylUser())
+
+	// useradd succeeds (exit 0) but user still doesn't exist on lookup
+	require.NoError(t, os.WriteFile(useraddScript, []byte("#!/bin/sh\nexit 0\n"), 0o755))
+	assert.Error(t, EnsurePterodactylUser())
+
+	// 6. Docker registry helpers edge cases
+	dCfg := DockerConfiguration{}
+	reg, cred := dCfg.RegistryCredentialsForImage(":::invalid_image_ref")
+	assert.Empty(t, reg)
+	assert.Nil(t, cred)
+
+	_, _, ok := parseDockerRegistryReference("example.com/INVALID_UPPERCASE")
+	assert.False(t, ok)
+
+	dom, pth, ok := parseDockerRegistryReference("docker.io/v2")
+	assert.True(t, ok)
+	assert.Equal(t, "docker.io", dom)
+	assert.Equal(t, "library/v2", pth)
+}

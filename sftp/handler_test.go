@@ -348,3 +348,127 @@ func TestHandlerFullLifecycle(t *testing.T) {
 	assert.Contains(t, []error{nil, pkgsftp.ErrSSHFxOk}, h.Filecmd(reqRmdir))
 	assert.NoDirExists(t, filepath.Join(tempDir, "subdir"))
 }
+
+func TestSftpRemainingCoverage(t *testing.T) {
+	cfg := &config.Configuration{AuthenticationToken: "test-auth-token"}
+	cfg.System.RootDirectory = t.TempDir()
+	cfg.System.Data = t.TempDir()
+	cfg.System.DiskCheckInterval = 150
+	config.Set(cfg)
+	func() {
+		defer func() { _ = recover() }()
+		_ = database.Initialize()
+	}()
+
+	srv, err := server.New(nil)
+	require.NoError(t, err)
+
+	tempDir := t.TempDir()
+	fs, err := filesystem.New(tempDir, 1024*1024, []string{"denied.txt"})
+	require.NoError(t, err)
+
+	h := &Handler{
+		server:      srv,
+		fs:          fs,
+		permissions: []string{"*"},
+		events:      &eventHandler{ip: "127.0.0.1", user: "user-1", server: srv.ID()},
+		logger:      log.WithField("test", t.Name()),
+	}
+
+	// 1. readerAt.Close() and quotaWriterAt.Close() when underlying does not implement io.Closer
+	slot1 := h.openFile()
+	ra := readerAt{ReaderAt: nil, slot: slot1}
+	assert.NoError(t, ra.Close())
+
+	slot2 := h.openFile()
+	qwa := quotaWriterAt{
+		WriterAt: writeAtFunc(func(p []byte, off int64) (int, error) {
+			return 0, filesystem.NewBadPathResolution("x", "y")
+		}),
+		server: srv,
+		slot:   slot2,
+	}
+	assert.NoError(t, qwa.Close())
+
+	// quotaWriterAt.WriteAt returning ErrSSHQuotaExceeded on disk space error
+	slot3 := h.openFile()
+	require.NoError(t, fs.Writefile("fill.txt", io.LimitReader(zeroReader{}, 500)))
+	fs.SetDiskLimit(10)
+	fQuota, err := fs.Touch("quota.txt", os.O_RDWR|os.O_CREATE)
+	require.NoError(t, err)
+	qwaDisk := quotaWriterAt{WriterAt: fQuota, server: srv, slot: slot3}
+	_, err = qwaDisk.WriteAt([]byte("exceeding data"), 0)
+	assert.ErrorIs(t, err, ErrSSHQuotaExceeded)
+	_ = qwaDisk.Close()
+
+	// 2. Filewrite when HasSpaceAvailable is false
+	_, err = h.Filewrite(pkgsftp.NewRequest("Write", "/newfile.txt"))
+	assert.ErrorIs(t, err, ErrSSHQuotaExceeded)
+	fs.SetDiskLimit(1024 * 1024)
+
+	// 3. Fileread on path under regular file (non-ErrNotExist error: ENOTDIR)
+	require.NoError(t, fs.CreateDirectory("adir", "/"))
+	_, err = h.Fileread(pkgsftp.NewRequest("Read", "/fill.txt/under"))
+	assert.ErrorIs(t, err, pkgsftp.ErrSSHFxFailure)
+
+	// 4. Filewrite Stat error != ErrNotExist (path under a regular file)
+	_, err = h.Filewrite(pkgsftp.NewRequest("Write", "/fill.txt/underfile"))
+	assert.ErrorIs(t, err, pkgsftp.ErrSSHFxFailure)
+
+	// Filewrite on existing directory fails Touch
+	_, err = h.Filewrite(pkgsftp.NewRequest("Write", "/adir"))
+	assert.ErrorIs(t, err, pkgsftp.ErrSSHFxFailure)
+
+	// Filewrite when openFile slots are exhausted
+	h.open.Store(maxOpenFiles)
+	_, err = h.Filewrite(pkgsftp.NewRequest("Write", "/fill.txt"))
+	assert.ErrorIs(t, err, pkgsftp.ErrSSHFxFailure)
+	h.open.Store(0)
+
+	// 5. Filecmd failure branches (non-ErrNotExist errors)
+	reqSetstat := pkgsftp.NewRequest("Setstat", "/fill.txt/under")
+	reqSetstat.Flags = 4
+	reqSetstat.Attrs = make([]byte, 4)
+	binary.BigEndian.PutUint32(reqSetstat.Attrs, 0o644)
+	assert.ErrorIs(t, h.Filecmd(reqSetstat), pkgsftp.ErrSSHFxFailure)
+
+	reqSetstatMissing := pkgsftp.NewRequest("Setstat", "/missing_file_setstat")
+	reqSetstatMissing.Flags = 4
+	reqSetstatMissing.Attrs = make([]byte, 4)
+	binary.BigEndian.PutUint32(reqSetstatMissing.Attrs, 0o644)
+	assert.ErrorIs(t, h.Filecmd(reqSetstatMissing), pkgsftp.ErrSSHFxNoSuchFile)
+
+	reqRename := pkgsftp.NewRequest("Rename", "/fill.txt")
+	reqRename.Target = "/fill.txt/sub"
+	assert.ErrorIs(t, h.Filecmd(reqRename), pkgsftp.ErrSSHFxFailure)
+
+	reqRenameMissing := pkgsftp.NewRequest("Rename", "/missing_src")
+	reqRenameMissing.Target = "/missing_dst"
+	assert.ErrorIs(t, h.Filecmd(reqRenameMissing), pkgsftp.ErrSSHFxNoSuchFile)
+
+	reqRmdir := pkgsftp.NewRequest("Rmdir", "/fill.txt/sub")
+	assert.ErrorIs(t, h.Filecmd(reqRmdir), pkgsftp.ErrSSHFxFailure)
+
+	reqMkdir := pkgsftp.NewRequest("Mkdir", "/fill.txt/sub")
+	assert.ErrorIs(t, h.Filecmd(reqMkdir), pkgsftp.ErrSSHFxFailure)
+
+	reqSymlink := pkgsftp.NewRequest("Symlink", "/fill.txt")
+	reqSymlink.Target = "/fill.txt" // already exists
+	assert.ErrorIs(t, h.Filecmd(reqSymlink), pkgsftp.ErrSSHFxFailure)
+
+	reqRemoveBad := pkgsftp.NewRequest("Remove", "/fill.txt/sub")
+	assert.ErrorIs(t, h.Filecmd(reqRemoveBad), pkgsftp.ErrSSHFxFailure)
+
+	// 6. Filelist Stat error != ErrNotExist (path under regular file -> ENOTDIR)
+	_, err = h.Filelist(pkgsftp.NewRequest("Stat", "/fill.txt/under"))
+	assert.ErrorIs(t, err, pkgsftp.ErrSSHFxFailure)
+}
+
+type zeroReader struct{}
+
+func (zeroReader) Read(p []byte) (int, error) {
+	for i := range p {
+		p[i] = 'a'
+	}
+	return len(p), nil
+}

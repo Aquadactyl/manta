@@ -18,6 +18,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/pterodactyl/wings/config"
+	"github.com/pterodactyl/wings/environment"
 	"github.com/pterodactyl/wings/remote"
 	"github.com/pterodactyl/wings/router/tokens"
 	"github.com/pterodactyl/wings/server"
@@ -171,6 +172,16 @@ func TestListeners_LogAndInstallAndExpiration(t *testing.T) {
 
 	// Test registerListenerEvents
 	h.registerListenerEvents(ctx)
+	time.Sleep(30 * time.Millisecond)
+
+	// Drain messages from client in background
+	go func() {
+		for {
+			if _, _, err := client.ReadMessage(); err != nil {
+				return
+			}
+		}
+	}()
 
 	// Push log output
 	h.server.Sink(system.LogSink).Push([]byte("test console message"))
@@ -178,15 +189,151 @@ func TestListeners_LogAndInstallAndExpiration(t *testing.T) {
 	// Push install output
 	h.server.Sink(system.InstallSink).Push([]byte("test install message"))
 
-	// Push event message
+	// Push valid event message
 	h.server.Events().Publish(server.StatsEvent, `{"memory": 1024}`)
+	h.server.Events().Publish(server.StatsEvent, 12345) // non-string data triggers decodeEventMessage error
 
-	// Read messages on client
-	_ = client.SetReadDeadline(time.Now().Add(500 * time.Millisecond))
-	var msg Message
-	_ = client.ReadJSON(&msg)
+	time.Sleep(30 * time.Millisecond)
 
 	// Cancel context to stop listeners
 	cancel()
-	time.Sleep(50 * time.Millisecond)
+	time.Sleep(30 * time.Millisecond)
+}
+
+type customWsTestEnv struct {
+	environment.ProcessEnvironment
+	state     string
+	running   bool
+	readLogFn func(int) ([]string, error)
+	sendCmdFn func(string) error
+}
+
+func (e *customWsTestEnv) State() string                           { return e.state }
+func (e *customWsTestEnv) IsRunning(context.Context) (bool, error) { return e.running, nil }
+func (e *customWsTestEnv) Readlog(n int) ([]string, error) {
+	if e.readLogFn != nil {
+		return e.readLogFn(n)
+	}
+	return []string{"log1"}, nil
+}
+func (e *customWsTestEnv) SendCommand(c string) error {
+	if e.sendCmdFn != nil {
+		return e.sendCmdFn(c)
+	}
+	return nil
+}
+func (e *customWsTestEnv) WaitForStop(context.Context, time.Duration, bool) error { return nil }
+
+func TestListeners_ErrorPathsOnClosedConn(t *testing.T) {
+	// 1. LogSink error path via registerListenerEvents
+	h1, _, _ := setupHandlerClient(t)
+	_, token := signToken(t, serverUuid, PermissionConnect, PermissionReceiveInstall)
+	h1.setJwt(token)
+	_ = h1.Connection.Close()
+
+	ctx1, cancel1 := context.WithCancel(context.Background())
+	defer cancel1()
+	h1.registerListenerEvents(ctx1)
+	time.Sleep(25 * time.Millisecond)
+	h1.server.Sink(system.LogSink).Push([]byte("fail log"))
+	time.Sleep(25 * time.Millisecond)
+
+	// 2. InstallSink error path in listenForServerEvents
+	h2, _, _ := setupHandlerClient(t)
+	h2.setJwt(token)
+	_ = h2.Connection.Close()
+	go func() {
+		time.Sleep(20 * time.Millisecond)
+		h2.server.Sink(system.InstallSink).Push([]byte("fail install"))
+	}()
+	err := h2.listenForServerEvents(context.Background())
+	assert.Error(t, err)
+
+	// 3. Events bus error path in listenForServerEvents
+	h3, _, _ := setupHandlerClient(t)
+	h3.setJwt(token)
+	_ = h3.Connection.Close()
+	go func() {
+		time.Sleep(20 * time.Millisecond)
+		h3.server.Events().Publish(server.StatusEvent, "offline")
+	}()
+	err = h3.listenForServerEvents(context.Background())
+	assert.Error(t, err)
+}
+
+func TestHandleInbound_AllRemainingBranches(t *testing.T) {
+	h, _ := setupHandler(t)
+
+	// 1. SendJson when jwt is nil returns nil immediately
+	assert.NoError(t, h.SendJson(Message{Event: server.StatusEvent}))
+
+	// 2. NewTokenPayload with invalid JWT bytes
+	_, err := NewTokenPayload([]byte("not-a-valid-jwt"))
+	assert.Error(t, err)
+
+	// 3. AuthenticationEvent with invalid token
+	err = h.HandleInbound(context.Background(), Message{Event: AuthenticationEvent, Args: []string{"bad-jwt"}})
+	assert.Error(t, err)
+
+	// 4. AuthenticationEvent with onAuthenticated returning error, then nil
+	tokStr, tok := signToken(t, serverUuid, PermissionConnect, PermissionSendCommand, PermissionSendPowerStart)
+	h.onAuthenticated = func() error {
+		return assert.AnError
+	}
+	err = h.HandleInbound(context.Background(), Message{Event: AuthenticationEvent, Args: []string{tokStr}})
+	assert.ErrorIs(t, err, assert.AnError)
+
+	// Set offline environment to cover lines 423-432 during first authentication
+	customEnv := &customWsTestEnv{
+		state:   environment.ProcessOfflineState,
+		running: false,
+	}
+	h.server.Environment = customEnv
+	h.onAuthenticated = func() error {
+		return nil
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	err = h.HandleInbound(ctx, Message{Event: AuthenticationEvent, Args: []string{tokStr}})
+	assert.NoError(t, err)
+
+	// 5. Re-authentication (!newConnection) returns nil early
+	err = h.HandleInbound(ctx, Message{Event: AuthenticationEvent, Args: []string{tokStr}})
+	assert.NoError(t, err)
+
+	// 6. SetStateEvent without permission returns nil
+	_, tokNoPower := signToken(t, serverUuid, PermissionConnect, PermissionSendCommand)
+	h.setJwt(tokNoPower)
+	err = h.HandleInbound(ctx, Message{Event: SetStateEvent, Args: []string{"start"}})
+	assert.NoError(t, err)
+
+	// 7. SetStateEvent with permission when server power lock is busy (ErrLockerLocked)
+	h.setJwt(tok)
+	// Start an action or hold power lock by running HandlePowerAction concurrently on a blocking stop
+	// Or test SendServerLogsEvent when not running (running == false)
+	err = h.HandleInbound(ctx, Message{Event: SendServerLogsEvent})
+	assert.NoError(t, err)
+
+	// 8. SendServerLogsEvent when running == true and Readlog returns error
+	customEnv.running = true
+	customEnv.readLogFn = func(int) ([]string, error) {
+		return nil, assert.AnError
+	}
+	err = h.HandleInbound(ctx, Message{Event: SendServerLogsEvent})
+	assert.ErrorIs(t, err, assert.AnError)
+
+	// 9. SendCommandEvent when ProcessOfflineState returns nil
+	customEnv.state = environment.ProcessOfflineState
+	err = h.HandleInbound(ctx, Message{Event: SendCommandEvent, Args: []string{"say hi"}})
+	assert.NoError(t, err)
+
+	// 10. SendCommandEvent when ProcessRunningState and SendCommand returns nil -> saves activity
+	customEnv.state = environment.ProcessRunningState
+	customEnv.sendCmdFn = func(string) error { return nil }
+	err = h.HandleInbound(ctx, Message{Event: SendCommandEvent, Args: []string{"say hello"}})
+	assert.NoError(t, err)
+
+	// 11. Unknown event falls through to final return nil
+	err = h.HandleInbound(ctx, Message{Event: "completely-unknown-event"})
+	assert.NoError(t, err)
 }

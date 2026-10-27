@@ -263,3 +263,78 @@ func TestIsValidRedirectURL(t *testing.T) {
 		assert.False(t, IsValidRedirectURL(u), "expected %s to be invalid", u)
 	}
 }
+
+func TestPushArchiveToTarget_AdvancedBranches(t *testing.T) {
+	config.Set(&config.Configuration{AuthenticationToken: "test-token"})
+	serverDir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(serverDir, "test.txt"), []byte("transfer data"), 0o644))
+	fsys, err := filesystem.New(serverDir, 0, nil)
+	require.NoError(t, err)
+
+	// 1. Redirect response hits CheckRedirect and returns unexpected status code 302
+	redirectSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = io.Copy(io.Discard, r.Body)
+		http.Redirect(w, r, "http://example.com/other", http.StatusFound)
+	}))
+	defer redirectSrv.Close()
+
+	tr1 := newManagerTestTransfer(t, "transfer-redirect")
+	tr1.archive = &Archive{
+		archive: &filesystem.Archive{
+			Filesystem: fsys,
+			Progress:   progress.NewProgress(100),
+		},
+	}
+	_, err = tr1.PushArchiveToTarget(redirectSrv.URL, "token")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "302")
+
+	// 2. Stream error (BaseDirectory does not exist) while server returns 200 OK -> hits errChan error path
+	okNoReadSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		buf := make([]byte, 512)
+		_, _ = r.Body.Read(buf)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer okNoReadSrv.Close()
+
+	tr2 := newManagerTestTransfer(t, "transfer-stream-err")
+	tr2.archive = &Archive{
+		archive: &filesystem.Archive{
+			Filesystem:    fsys,
+			BaseDirectory: "/nonexistent_base_dir_for_test",
+			Progress:      progress.NewProgress(100),
+		},
+	}
+	_, err = tr2.PushArchiveToTarget(okNoReadSrv.URL, "token")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "multipart error")
+
+	// 3. Truncated response body -> hits io.ReadAll(res.Body) error path
+	truncatedBodySrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = io.Copy(io.Discard, r.Body)
+		w.Header().Set("Content-Length", "5000")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("short"))
+		if fl, ok := w.(http.Flusher); ok {
+			fl.Flush()
+		}
+		if hj, ok := w.(http.Hijacker); ok {
+			conn, _, err := hj.Hijack()
+			if err == nil {
+				_ = conn.Close()
+			}
+		}
+	}))
+	defer truncatedBodySrv.Close()
+
+	tr3 := newManagerTestTransfer(t, "transfer-truncated-body")
+	tr3.archive = &Archive{
+		archive: &filesystem.Archive{
+			Filesystem: fsys,
+			Progress:   progress.NewProgress(100),
+		},
+	}
+	_, err = tr3.PushArchiveToTarget(truncatedBodySrv.URL, "token")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to read response body")
+}
