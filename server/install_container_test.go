@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -35,9 +36,15 @@ type installerCreateRequest struct {
 // path. It records the create body, fails the start call so Execute returns
 // without a real container, and serves a fixed log body.
 type fakeInstallerDocker struct {
-	mu     sync.Mutex
-	create *installerCreateRequest
-	logs   string
+	mu       sync.Mutex
+	create   *installerCreateRequest
+	logs      string
+	startErr  bool
+	failPull  bool
+	createErr bool
+	waitErr   bool
+	logsErr   bool
+	deleteErr bool
 }
 
 func (f *fakeInstallerDocker) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -45,7 +52,25 @@ func (f *fakeInstallerDocker) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	defer f.mu.Unlock()
 
 	switch {
+	case r.Method == http.MethodPost && strings.Contains(r.URL.Path, "/images/create"):
+		if f.failPull {
+			w.WriteHeader(http.StatusInternalServerError)
+			_, _ = w.Write([]byte(`{"message":"pull failed"}`))
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"status":"Downloading"}` + "\n" + `{"status":"Extracting"}` + "\n" + `{"status":"Pull complete"}` + "\n"))
+	case r.Method == http.MethodGet && strings.Contains(r.URL.Path, "/images/json"):
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`[{"RepoTags":["ghcr.io/pterodactyl/installers:debian"]}]`))
 	case r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/containers/create"):
+		if f.createErr {
+			w.WriteHeader(http.StatusInternalServerError)
+			_, _ = w.Write([]byte(`{"message":"create failed"}`))
+			return
+		}
 		var req installerCreateRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
@@ -56,11 +81,35 @@ func (f *fakeInstallerDocker) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		w.WriteHeader(http.StatusCreated)
 		_, _ = w.Write([]byte(`{"Id":"installer-test-id","Warnings":[]}`))
 	case r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/start"):
-		w.WriteHeader(http.StatusInternalServerError)
-		_, _ = w.Write([]byte(`{"message":"stopped by test after container create"}`))
+		if f.startErr {
+			w.WriteHeader(http.StatusInternalServerError)
+			_, _ = w.Write([]byte(`{"message":"stopped by test after container create"}`))
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+	case r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/wait"):
+		if f.waitErr {
+			w.WriteHeader(http.StatusInternalServerError)
+			_, _ = w.Write([]byte(`{"message":"wait failed"}`))
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"StatusCode":0}`))
 	case r.Method == http.MethodGet && strings.HasSuffix(r.URL.Path, "/logs"):
+		if f.logsErr {
+			w.WriteHeader(http.StatusInternalServerError)
+			_, _ = w.Write([]byte(`{"message":"logs failed"}`))
+			return
+		}
+		w.WriteHeader(http.StatusOK)
 		_, _ = io.WriteString(w, f.logs)
 	case r.Method == http.MethodDelete:
+		if f.deleteErr {
+			w.WriteHeader(http.StatusInternalServerError)
+			_, _ = w.Write([]byte(`{"message":"delete failed"}`))
+			return
+		}
 		w.WriteHeader(http.StatusNoContent)
 	default:
 		w.WriteHeader(http.StatusNotFound)
@@ -109,7 +158,7 @@ func newInstallerTestProcess(t *testing.T, fake *fakeInstallerDocker) *Installat
 func captureInstallerCreate(t *testing.T) (*container.HostConfig, *container.Config) {
 	t.Helper()
 
-	fake := &fakeInstallerDocker{}
+	fake := &fakeInstallerDocker{startErr: true}
 	p := newInstallerTestProcess(t, fake)
 
 	_, err := p.Execute()
@@ -157,3 +206,159 @@ func TestInstallLogKeepsEnvironmentValuesVerbatim(t *testing.T) {
 	require.NoError(t, err)
 	assert.Contains(t, string(body), "DB_PASSWORD=p&ss'word<1>")
 }
+
+func TestInstallationProcessFullRun(t *testing.T) {
+	fake := &fakeInstallerDocker{logs: "installed successfully\n"}
+	p := newInstallerTestProcess(t, fake)
+	require.NoError(t, os.MkdirAll(filepath.Join(config.Get().System.LogDirectory, "install"), 0o700))
+
+	err := p.Run()
+	require.NoError(t, err)
+
+	body, err := os.ReadFile(p.GetLogPath())
+	require.NoError(t, err)
+	assert.Contains(t, string(body), "installed successfully")
+}
+
+func TestInstallationProcessAlreadyInstalling(t *testing.T) {
+	fake := &fakeInstallerDocker{}
+	p := newInstallerTestProcess(t, fake)
+	p.Server.installing.Store(true)
+	err := p.Run()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "cannot obtain installation lock")
+}
+
+func TestInstallationProcessWithRegistryAuth(t *testing.T) {
+	cfg := config.Get()
+	if cfg.Docker.Registries == nil {
+		cfg.Docker.Registries = make(map[string]config.RegistryConfiguration)
+	}
+	cfg.Docker.Registries["ghcr.io"] = config.RegistryConfiguration{
+		Username: "testuser",
+		Password: "testpassword",
+	}
+	config.Set(cfg)
+
+	fake := &fakeInstallerDocker{logs: "ok\n"}
+	p := newInstallerTestProcess(t, fake)
+	require.NoError(t, os.MkdirAll(filepath.Join(config.Get().System.LogDirectory, "install"), 0o700))
+	require.NoError(t, p.pullInstallationImage())
+}
+
+func TestInstallationProcessPullFallback(t *testing.T) {
+	fake := &fakeInstallerDocker{failPull: true}
+	p := newInstallerTestProcess(t, fake)
+	require.NoError(t, p.pullInstallationImage())
+}
+
+func TestInstallationProcessRemoveContainer(t *testing.T) {
+	fake := &fakeInstallerDocker{}
+	p := newInstallerTestProcess(t, fake)
+	assert.NoError(t, p.RemoveContainer())
+
+	fake.deleteErr = true
+	assert.Error(t, p.RemoveContainer())
+}
+
+func TestInstallationProcessWriteScriptErrors(t *testing.T) {
+	fake := &fakeInstallerDocker{}
+	p := newInstallerTestProcess(t, fake)
+
+	// OpenFile fails if install.sh is a directory
+	require.NoError(t, os.MkdirAll(filepath.Join(p.tempDir(), "install.sh"), 0755))
+	assert.Error(t, p.writeScriptToDisk())
+	_ = os.RemoveAll(p.tempDir())
+
+	// MkdirAll fails if TmpDirectory is a regular file
+	oldTmp := config.Get().System.TmpDirectory
+	tmpFile := filepath.Join(t.TempDir(), "tmp_file")
+	require.NoError(t, os.WriteFile(tmpFile, []byte("data"), 0644))
+	cfg := config.Get()
+	cfg.System.TmpDirectory = tmpFile
+	config.Set(cfg)
+	assert.Error(t, p.writeScriptToDisk())
+	cfg.System.TmpDirectory = oldTmp
+	config.Set(cfg)
+}
+
+func TestInstallationProcessBeforeExecuteErrors(t *testing.T) {
+	fake := &fakeInstallerDocker{}
+	p := newInstallerTestProcess(t, fake)
+
+	// writeScriptToDisk error
+	require.NoError(t, os.MkdirAll(filepath.Join(p.tempDir(), "install.sh"), 0755))
+	assert.Error(t, p.BeforeExecute())
+	_ = os.RemoveAll(p.tempDir())
+
+	// pullInstallationImage error (fails when images/create fails and images/json has no matching tag)
+	fake.failPull = true
+	p.Script.ContainerImage = "nonexistent.registry.local/image:tag"
+	assert.Error(t, p.BeforeExecute())
+	p.Script.ContainerImage = "ghcr.io/pterodactyl/installers:debian"
+	fake.failPull = false
+
+	// RemoveContainer error
+	fake.deleteErr = true
+	assert.Error(t, p.BeforeExecute())
+}
+
+func TestInstallationProcessAfterExecuteErrors(t *testing.T) {
+	fake := &fakeInstallerDocker{logsErr: true}
+	p := newInstallerTestProcess(t, fake)
+	assert.Error(t, p.AfterExecute("container-123"))
+
+	// RemoveContainer error during defer
+	fake.logsErr = false
+	fake.deleteErr = true
+	require.NoError(t, os.MkdirAll(filepath.Join(config.Get().System.LogDirectory, "install"), 0o700))
+	assert.NoError(t, p.AfterExecute("container-123"))
+}
+
+func TestInstallationProcessExecuteErrors(t *testing.T) {
+	fake := &fakeInstallerDocker{createErr: true}
+	p := newInstallerTestProcess(t, fake)
+	_, err := p.Execute()
+	assert.Error(t, err)
+
+	fake.createErr = false
+	fake.waitErr = true
+	_, err = p.Execute()
+	assert.Error(t, err)
+
+	// EnsureDataDirectoryExists error in Execute
+	fake.waitErr = false
+	testDir := t.TempDir()
+	mkdirFailDir := filepath.Join(testDir, "mkdir_fail_parent", "child")
+	mkdirFailFs, err := filesystem.New(mkdirFailDir, 0, nil)
+	require.NoError(t, err)
+	_ = os.RemoveAll(filepath.Join(testDir, "mkdir_fail_parent"))
+	require.NoError(t, os.WriteFile(filepath.Join(testDir, "mkdir_fail_parent"), []byte("not a dir"), 0644))
+	p.Server.fs = mkdirFailFs
+	_, err = p.Execute()
+	assert.Error(t, err)
+}
+
+func TestInstallationProcessStreamOutput(t *testing.T) {
+	fake := &fakeInstallerDocker{logsErr: true}
+	p := newInstallerTestProcess(t, fake)
+	assert.Error(t, p.StreamOutput(context.Background(), "test-id"))
+
+	fake.logsErr = false
+	fake.logs = "stream line 1\nstream line 2\n"
+	assert.NoError(t, p.StreamOutput(context.Background(), "test-id"))
+}
+
+func TestInstallationProcessRunErrors(t *testing.T) {
+	fake := &fakeInstallerDocker{deleteErr: true}
+	p := newInstallerTestProcess(t, fake)
+	// BeforeExecute fails due to RemoveContainer error
+	assert.Error(t, p.Run())
+
+	// Execute fails
+	fake.deleteErr = false
+	fake.createErr = true
+	assert.Error(t, p.Run())
+}
+
+

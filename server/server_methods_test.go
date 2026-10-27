@@ -1,8 +1,13 @@
 package server
 
 import (
+	"archive/tar"
 	"context"
+	"encoding/json"
 	"errors"
+	"io"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -18,6 +23,7 @@ import (
 	"github.com/pterodactyl/wings/events"
 	"github.com/pterodactyl/wings/internal/database"
 	"github.com/pterodactyl/wings/internal/models"
+	"github.com/pterodactyl/wings/parser"
 	"github.com/pterodactyl/wings/remote"
 	"github.com/pterodactyl/wings/server/backup"
 	"github.com/pterodactyl/wings/server/filesystem"
@@ -270,6 +276,7 @@ type fullMockEnv struct {
 	stopped        bool
 	terminated     bool
 	inSitu         bool
+	inSituErr      error
 	cfg            *environment.Configuration
 	logs           []string
 	bus            *events.Bus
@@ -292,7 +299,10 @@ func (m *fullMockEnv) State() string                                          { 
 func (m *fullMockEnv) SetState(s string)                                      { m.state = s }
 func (m *fullMockEnv) SetLogCallback(func([]byte))                            {}
 func (m *fullMockEnv) Attach(context.Context) error                           { return nil }
-func (m *fullMockEnv) InSituUpdate() error                                    { m.inSitu = true; return nil }
+func (m *fullMockEnv) InSituUpdate() error {
+	m.inSitu = true
+	return m.inSituErr
+}
 func (m *fullMockEnv) Create() error                                          { return nil }
 func (m *fullMockEnv) Destroy() error                                         { return nil }
 func (m *fullMockEnv) SendCommand(string) error                               { return nil }
@@ -313,15 +323,20 @@ func (m *fullMockEnv) Terminate(context.Context, string) error                { 
 
 type fullMockRemoteClient struct {
 	remote.Client
-	installStatusSuccess bool
-	installStatusReinst  bool
-	installStatusErr     error
-	configResponse       remote.ServerConfigurationResponse
-	configErr            error
-	scriptResponse       remote.InstallationScript
-	installScriptErr     error
-	getServersFunc       func(context.Context, int) ([]remote.RawServerData, error)
-	setBackupStatusErr   error
+	installStatusSuccess    bool
+	installStatusReinst     bool
+	installStatusErr        error
+	configResponse          remote.ServerConfigurationResponse
+	configErr               error
+	scriptResponse          remote.InstallationScript
+	installScriptErr        error
+	getServersFunc          func(context.Context, int) ([]remote.RawServerData, error)
+	setBackupStatusErr      error
+	sendRestorationStatusErr error
+}
+
+func (c *fullMockRemoteClient) SendRestorationStatus(_ context.Context, _ string, _ bool) error {
+	return c.sendRestorationStatusErr
 }
 
 func (c *fullMockRemoteClient) SetInstallationStatus(_ context.Context, _ string, req remote.InstallStatusRequest) error {
@@ -1021,6 +1036,410 @@ func TestDiskSpaceLimiter(t *testing.T) {
 	dsl.Reset()
 	dsl.Trigger()
 }
+
+type mockFileInfo struct {
+	name    string
+	size    int64
+	mode    os.FileMode
+	modTime time.Time
+	isDir   bool
+	sys     any
+}
+
+func (m *mockFileInfo) Name() string       { return m.name }
+func (m *mockFileInfo) Size() int64        { return m.size }
+func (m *mockFileInfo) Mode() os.FileMode  { return m.mode }
+func (m *mockFileInfo) ModTime() time.Time { return m.modTime }
+func (m *mockFileInfo) IsDir() bool        { return m.isDir }
+func (m *mockFileInfo) Sys() any          { return m.sys }
+
+func TestServerRemainingCoverage(t *testing.T) {
+	tempDir := t.TempDir()
+	cfg := &config.Configuration{
+		AuthenticationToken: "test-auth-token-12345",
+	}
+	cfg.System.Data = tempDir
+	cfg.System.TmpDirectory = filepath.Join(tempDir, "tmp")
+	cfg.System.RootDirectory = tempDir
+	cfg.System.LogDirectory = filepath.Join(tempDir, "logs")
+	cfg.System.DiskCheckInterval = 150
+	config.Set(cfg)
+
+	func() {
+		defer func() { _ = recover() }()
+		_ = database.Initialize()
+	}()
+
+	remoteCli := &fullMockRemoteClient{
+		configResponse: remote.ServerConfigurationResponse{
+			Settings:             []byte(`{"uuid":"11111111-2222-3333-4444-555555555555","suspended":false}`),
+			ProcessConfiguration: &remote.ProcessConfiguration{},
+		},
+	}
+	s, err := New(remoteCli)
+	require.NoError(t, err)
+
+	envCfg := environment.NewConfiguration(environment.Settings{
+		Limits: environment.Limits{MemoryLimit: 256, CpuLimit: 50},
+	}, []string{})
+	env := &fullMockEnv{
+		cfg:   envCfg,
+		bus:   events.NewBus(),
+		state: environment.ProcessStartingState,
+	}
+	s.Environment = env
+	s.procConfig = &remote.ProcessConfiguration{}
+	s.cfg.Uuid = "11111111-2222-3333-4444-555555555555"
+
+	fs, err := filesystem.New(filepath.Join(tempDir, s.ID()), 1024*1024*1024, nil)
+	require.NoError(t, err)
+	s.fs = fs
+
+	// 1. Activity SaveActivity with canceled context -> triggers tx.Error != nil
+	reqAct := s.NewRequestActivity("usr-1", "127.0.0.1")
+	s.CtxCancel()
+	s.SaveActivity(reqAct, ActivityConsoleCommand, models.ActivityMeta{"cmd": "say hello"})
+	time.Sleep(10 * time.Millisecond)
+
+	// Recreate server context for subsequent tests
+	newCtx, newCancel := context.WithCancel(context.Background())
+	s.ctx = newCtx
+	s.ctxCancel = &newCancel
+
+	// 2. Crash handling with exitErr != nil
+	env.exitErr = errors.New("cannot get exit state")
+	env.state = environment.ProcessOfflineState
+	s.Config().CrashDetectionEnabled = true
+	assert.Error(t, s.handleServerCrash())
+	env.exitErr = nil
+
+	// 3. WebsocketBag nil conns map in TryPush
+	bag := &WebsocketBag{}
+	assert.True(t, bag.TryPush(uuid.New(), nil, func() string { return "user" }, 10))
+
+	// 4. Listeners DockerImagePullStarted and DockerImagePullCompleted
+	s.StartEventListeners()
+	s.Environment.Events().Publish(environment.DockerImagePullStarted, []byte{})
+	s.Environment.Events().Publish(environment.DockerImagePullCompleted, []byte{})
+	time.Sleep(10 * time.Millisecond)
+
+	// 5. Update SyncWithEnvironment InSituUpdate error
+	env.inSituErr = errors.New("cannot update in situ")
+	s.Config().SetSuspended(false)
+	s.SyncWithEnvironment()
+	env.inSituErr = nil
+
+	// Suspended with running process & WaitForStop error
+	s.Config().SetSuspended(true)
+	env.state = environment.ProcessRunningState
+	env.waitForStopErr = errors.New("cannot stop")
+	s.SyncWithEnvironment()
+	time.Sleep(20 * time.Millisecond)
+	env.waitForStopErr = nil
+	s.Config().SetSuspended(false)
+
+	// 6. Config parser panic recovery and file touch error
+	s.procConfig.ConfigurationFiles = []parser.ConfigurationFile{
+		{
+			FileName: "invalid\x00path",
+			Parser:   parser.File,
+		},
+		{
+			FileName: "panic.file",
+			Parser:   "unknown_parser_triggers_panic",
+		},
+	}
+	s.UpdateConfigurationFiles()
+
+	// 7. Mounts resolveMountPath relative path & symlink loop
+	_, err = resolveMountPath("relative/path", 1000)
+	assert.Error(t, err)
+
+	loopPath := filepath.Join(tempDir, "loop_mount")
+	_ = os.Symlink(loopPath, loopPath)
+	_, err = resolveMountPath(loopPath, 1000)
+	assert.Error(t, err)
+
+	// 8. Manager ReadStates with corrupted JSON
+	statesFile := filepath.Join(tempDir, "states.json")
+	require.NoError(t, os.WriteFile(statesFile, []byte("{broken_json"), 0644))
+	mgr := NewEmptyManager(remoteCli)
+	_, err = mgr.ReadStates()
+	assert.Error(t, err)
+
+	// Init with remote.RequestError
+	reqErrClient := &fullMockRemoteClient{
+		getServersFunc: func(ctx context.Context, perPage int) ([]remote.RawServerData, error) {
+			return nil, &remote.RequestError{Detail: "request failed"}
+		},
+	}
+	_, err = NewManager(context.Background(), reqErrClient)
+	assert.Error(t, err)
+
+	// 9. Backup RestoreBackup with reader & truncate
+	oldFs := s.fs
+	fakeReader := io.NopCloser(strings.NewReader("fake backup data"))
+	mockBackup := backup.NewLocal(remoteCli, uuid.New().String(), "")
+
+	// RestoreBackup with WaitForStop error
+	env.state = environment.ProcessRunningState
+	env.waitForStopErr = errors.New("cannot stop")
+	assert.Error(t, s.RestoreBackup(mockBackup, fakeReader, false))
+	env.waitForStopErr = nil
+	env.state = environment.ProcessOfflineState
+
+	_ = s.RestoreBackup(mockBackup, fakeReader, false)
+
+	remoteCli.sendRestorationStatusErr = errors.New("cannot send status")
+	_ = s.RestoreBackup(mockBackup, nil, true)
+	remoteCli.sendRestorationStatusErr = nil
+
+	// restoreEntry branches
+	assert.NoError(t, s.restoreEntry("test_dir", &mockFileInfo{isDir: true, mode: os.ModeDir | 0755}, nil))
+	assert.NoError(t, s.restoreEntry("test_pipe", &mockFileInfo{mode: os.ModeNamedPipe}, nil))
+	assert.NoError(t, s.restoreEntry("test_symlink", &mockFileInfo{
+		mode: os.ModeSymlink,
+		sys:  &tar.Header{Linkname: "target.txt"},
+	}, nil))
+
+	// restoreEntry: directory error
+	blockDir := filepath.Join(s.Filesystem().Path(), "block_dir_file")
+	require.NoError(t, os.WriteFile(blockDir, []byte("x"), 0644))
+	hdrLinkBlocked := &tar.Header{Typeflag: tar.TypeSymlink, Linkname: "target.txt"}
+	fiLinkBlocked := &mockFileInfo{name: "block_dir_file/child/sym", isDir: false, mode: os.ModeSymlink, sys: hdrLinkBlocked}
+	assert.Error(t, s.restoreEntry("block_dir_file/child/sym", fiLinkBlocked, strings.NewReader("")))
+
+	// restoreEntry: symlink creation error
+	hdrLinkNull := &tar.Header{Typeflag: tar.TypeSymlink, Linkname: "target.txt"}
+	fiLinkNull := &mockFileInfo{name: "sym_dir/null\x00sym", isDir: false, mode: os.ModeSymlink, sys: hdrLinkNull}
+	assert.Error(t, s.restoreEntry("sym_dir/null\x00sym", fiLinkNull, strings.NewReader("")))
+
+	// TruncateRootDirectory error in RestoreBackup
+	truncateFsDir := filepath.Join(tempDir, "truncate_fail")
+	truncateFs, err := filesystem.New(truncateFsDir, 0, nil)
+	require.NoError(t, err)
+	_ = os.RemoveAll(truncateFsDir)
+	s.fs = truncateFs
+	assert.Error(t, s.RestoreBackup(mockBackup, nil, true))
+	s.fs = oldFs
+
+	// 10. Power HandlePowerAction timeout, terminate without lock, restart onBeforeStart error, unknown action
+	s.powerLock.Acquire()
+	err = s.HandlePowerAction(PowerActionStart, 1)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "could not acquire lock")
+	s.powerLock.Release()
+
+	s.powerLock.Acquire()
+	assert.NoError(t, s.HandlePowerAction(PowerActionTerminate))
+	s.powerLock.Release()
+
+	remoteCli.configErr = errors.New("cannot sync")
+	env.state = environment.ProcessRunningState
+	assert.Error(t, s.HandlePowerAction(PowerActionRestart))
+	remoteCli.configErr = nil
+
+	// PowerActionRestart with WaitForStop error
+	env.waitForStopErr = errors.New("wait for stop failed")
+	assert.Error(t, s.HandlePowerAction(PowerActionRestart))
+	env.waitForStopErr = nil
+
+	assert.Error(t, s.HandlePowerAction("invalid_action"))
+
+	// onBeforeStart disk space exceeded
+	remoteCli.configResponse.Settings = []byte(`{"uuid":"11111111-2222-3333-4444-555555555555","suspended":false,"build":{"disk_space":1}}`)
+	s.Filesystem().SetDiskLimit(1)
+	require.NoError(t, os.WriteFile(filepath.Join(s.Filesystem().Path(), "oversize.dat"), make([]byte, 2*1024*1024), 0644))
+	assert.Error(t, s.onBeforeStart())
+	remoteCli.configResponse.Settings = []byte(`{"uuid":"11111111-2222-3333-4444-555555555555","suspended":false}`)
+	s.Filesystem().SetDiskLimit(0)
+
+	// onBeforeStart CheckPermissionsOnBoot
+	cfg.System.CheckPermissionsOnBoot = true
+	config.Set(cfg)
+	_ = s.onBeforeStart()
+	chownFailDir := filepath.Join(tempDir, "chown_fail_dir")
+	chownFs, err := filesystem.New(chownFailDir, 0, nil)
+	require.NoError(t, err)
+	_ = os.RemoveAll(chownFailDir)
+	s.fs = chownFs
+	assert.Error(t, s.onBeforeStart())
+	s.fs = oldFs
+	cfg.System.CheckPermissionsOnBoot = false
+	config.Set(cfg)
+
+	// onBeforeStart suspended check
+	remoteCli.configResponse.Settings = []byte(`{"uuid":"11111111-2222-3333-4444-555555555555","suspended":true}`)
+	assert.Equal(t, ErrSuspended, s.onBeforeStart())
+	remoteCli.configResponse.Settings = []byte(`{"uuid":"11111111-2222-3333-4444-555555555555","suspended":false}`)
+	_ = s.Sync()
+
+	// SyncWithConfiguration error
+	remoteCli.configResponse.Settings = []byte(`invalid-json`)
+	assert.Error(t, s.Sync())
+	remoteCli.configResponse.Settings = []byte(`{"uuid":"11111111-2222-3333-4444-555555555555","suspended":false}`)
+
+	// 11. Environment variables override branch
+	s.Config().EnvVars = environment.Variables{
+		"TZ":         "UTC",
+		"CUSTOM_KEY": "CUSTOM_VAL",
+	}
+	envVars := s.GetEnvironmentVariables()
+	assert.Contains(t, envVars, "CUSTOM_KEY=CUSTOM_VAL")
+
+	// install and internalInstall branches
+	s.Config().SkipEggScripts = true
+	remoteCli.installStatusErr = errors.New("cannot sync install state")
+	_ = s.install(false)
+	remoteCli.installStatusErr = nil
+	s.Config().SkipEggScripts = false
+
+	remoteCli.installScriptErr = errors.New("cannot get script")
+	assert.Error(t, s.internalInstall())
+	remoteCli.installScriptErr = nil
+
+	// 12. Sync with 404 remote error
+	ts := httptest.NewServer(http.NotFoundHandler())
+	defer ts.Close()
+	tsClient := remote.New(ts.URL)
+	sWithTs, _ := New(tsClient)
+	sWithTs.cfg.Uuid = s.ID()
+	sWithTs.fs = s.fs
+	err = sWithTs.Sync()
+	assert.Error(t, err)
+	assert.True(t, IsServerDoesNotExistError(err))
+
+	// 13. CreateEnvironment and EnsureDataDirectoryExists
+	machineIdDir := filepath.Join(tempDir, "machine_id")
+	require.NoError(t, os.MkdirAll(machineIdDir, 0755))
+	cfg.System.MachineID.Enable = true
+	cfg.System.MachineID.Directory = machineIdDir
+	config.Set(cfg)
+	assert.NoError(t, s.CreateEnvironment())
+
+	cfg.System.MachineID.Directory = filepath.Join(tempDir, "non_existent_subdir", "sub2")
+	config.Set(cfg)
+	assert.Error(t, s.CreateEnvironment())
+	cfg.System.MachineID.Enable = false
+	config.Set(cfg)
+
+	assert.NoError(t, s.EnsureDataDirectoryExists())
+
+	// EnsureDataDirectoryExists: directory does not exist, recreate successfully
+	testNotExistPath := filepath.Join(tempDir, "new_dir_to_create")
+	testFs, err := filesystem.New(testNotExistPath, 0, nil)
+	require.NoError(t, err)
+	_ = os.RemoveAll(testNotExistPath)
+	s.fs = testFs
+	assert.NoError(t, s.EnsureDataDirectoryExists()) // recreates directory
+
+	// EnsureDataDirectoryExists: MkdirAll error (parent is a regular file)
+	mkdirFailDir := filepath.Join(tempDir, "mkdir_fail_parent", "child")
+	mkdirFailFs, err := filesystem.New(mkdirFailDir, 0, nil)
+	require.NoError(t, err)
+	_ = os.RemoveAll(filepath.Join(tempDir, "mkdir_fail_parent"))
+	require.NoError(t, os.WriteFile(filepath.Join(tempDir, "mkdir_fail_parent"), []byte("not a dir"), 0644))
+	s.fs = mkdirFailFs
+	assert.Error(t, s.EnsureDataDirectoryExists())
+	_ = os.Remove(filepath.Join(tempDir, "mkdir_fail_parent"))
+
+	// EnsureDataDirectoryExists: Lstat error that is not os.ErrNotExist (symlink loop parent)
+	loopParent := filepath.Join(tempDir, "stat_loop_parent")
+	loopFs, err := filesystem.New(filepath.Join(loopParent, "child"), 0, nil)
+	require.NoError(t, err)
+	_ = os.RemoveAll(loopParent)
+	_ = os.Symlink(loopParent, loopParent)
+	s.fs = loopFs
+	assert.Error(t, s.EnsureDataDirectoryExists())
+	_ = os.Remove(loopParent)
+
+	s.fs = oldFs
+
+	// 14. OnStateChange crash detection
+	s.resources.State.Store(environment.ProcessStartingState)
+	env.state = environment.ProcessOfflineState
+	env.exitErr = errors.New("exit error")
+	s.Config().CrashDetectionEnabled = true
+	s.OnStateChange()
+	time.Sleep(50 * time.Millisecond)
+
+	// Too frequent crash
+	s.crasher.SetLastCrash(time.Now())
+	cfg.System.CrashDetection.Timeout = 60
+	config.Set(cfg)
+	s.resources.State.Store(environment.ProcessStartingState)
+	env.exitErr = nil
+	env.exitCode = 1
+	s.OnStateChange()
+	time.Sleep(50 * time.Millisecond)
+	env.exitCode = 0
+
+	// 15. restoreEntry coverage
+	hdrNoLink := &tar.Header{Typeflag: tar.TypeSymlink, Linkname: ""}
+	fiSymlinkNoLink := &mockFileInfo{name: "sym_no_link", isDir: false, mode: os.ModeSymlink, sys: hdrNoLink}
+	assert.NoError(t, s.restoreEntry("sym_no_link", fiSymlinkNoLink, strings.NewReader("")))
+
+	fiSymlinkBadSys := &mockFileInfo{name: "sym_bad_sys", isDir: false, mode: os.ModeSymlink, sys: "not-a-header"}
+	assert.NoError(t, s.restoreEntry("sym_bad_sys", fiSymlinkBadSys, strings.NewReader("")))
+
+	fiNamedPipe := &mockFileInfo{name: "pipe", isDir: false, mode: os.ModeNamedPipe}
+	assert.NoError(t, s.restoreEntry("pipe", fiNamedPipe, strings.NewReader("")))
+
+	fiEscape := &mockFileInfo{name: "../../../escape.txt", isDir: false, mode: 0644, size: 5}
+	assert.Error(t, s.restoreEntry("../../../escape.txt", fiEscape, strings.NewReader("hello")))
+
+	// Backup failed notification
+	failingBackup := backup.NewLocal(remoteCli, "invalid-ident!@#", "")
+	remoteCli.setBackupStatusErr = errors.New("cannot send backup status")
+	assert.Error(t, s.Backup(failingBackup))
+	remoteCli.setBackupStatusErr = nil
+
+	// 16. Config parser panic recovery
+	var cf parser.ConfigurationFile
+	err = json.Unmarshal([]byte(`{"file":"server.properties","parser":"properties","replace":[{"match":"server-port","replace_with":"\\"}]}`), &cf)
+	require.NoError(t, err)
+	s.procConfig.ConfigurationFiles = []parser.ConfigurationFile{cf}
+	require.NoError(t, os.WriteFile(filepath.Join(s.Filesystem().Path(), "server.properties"), []byte("server-port=25565\n"), 0644))
+	s.UpdateConfigurationFiles()
+
+	// 17. Mounts subLoop error
+	subLoop := filepath.Join(loopPath, "child", "grandchild")
+	_, err = resolveMountPath(subLoop, 1000)
+	assert.Error(t, err)
+
+	// 18. Manager PersistStates and ReadStates errors
+	oldRoot := cfg.System.RootDirectory
+	cfg.System.RootDirectory = "/dev/null/invalid"
+	config.Set(cfg)
+	assert.Error(t, mgr.PersistStates())
+	_, err = mgr.ReadStates()
+	assert.Error(t, err)
+	cfg.System.RootDirectory = oldRoot
+	config.Set(cfg)
+
+	// 19. Manager InitServer
+	rawResp := remote.ServerConfigurationResponse{
+		Settings:             []byte(`{"uuid":"` + s.ID() + `","suspended":false}`),
+		ProcessConfiguration: &remote.ProcessConfiguration{},
+	}
+	_, err = mgr.InitServer("22222222-2222-2222-2222-222222222222", rawResp)
+	assert.Error(t, err)
+
+	oldData := cfg.System.Data
+	cfg.System.Data = "/dev/null/cannot_create"
+	config.Set(cfg)
+	_, err = mgr.InitServer(s.ID(), rawResp)
+	assert.Error(t, err)
+	cfg.System.Data = oldData
+	config.Set(cfg)
+
+	sInit, err := mgr.InitServer(s.ID(), rawResp)
+	if err == nil {
+		assert.NotNil(t, sInit)
+		sInit.SyncWithEnvironment()
+	}
+}
+
 
 
 
