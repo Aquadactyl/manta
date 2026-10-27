@@ -3,6 +3,7 @@ package cmd
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -11,6 +12,8 @@ import (
 	"syscall"
 	"testing"
 
+	"github.com/docker/docker/api/types"
+	dockersystem "github.com/docker/docker/api/types/system"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -340,6 +343,146 @@ func TestInitLogging(t *testing.T) {
 	})
 	assert.FileExists(t, filepath.Join(tmpDir, "logs", "wings.log"))
 }
+
+func TestConfigureQuestionsValidation(t *testing.T) {
+	oldArgs := configureArgs
+	defer func() { configureArgs = oldArgs }()
+
+	// All empty so all 3 questions generated
+	configureArgs.PanelURL = ""
+	configureArgs.Token = ""
+	configureArgs.Node = ""
+
+	qs := configureQuestions()
+	require.Len(t, qs, 3)
+
+	// Question 0: PanelURL
+	assert.Equal(t, "PanelURL", qs[0].Name)
+	assert.NoError(t, qs[0].Validate("http://panel.example.com"))
+	assert.Error(t, qs[0].Validate("::not-a-valid-url::"))
+	assert.NoError(t, qs[0].Validate(12345))
+
+	// Question 1: Token
+	assert.Equal(t, "Token", qs[1].Name)
+	assert.NoError(t, qs[1].Validate("valid-token"))
+	assert.Error(t, qs[1].Validate(""))
+	assert.NoError(t, qs[1].Validate(12345))
+
+	// Question 2: Node
+	assert.Equal(t, "Node", qs[2].Name)
+	assert.NoError(t, qs[2].Validate("123"))
+	assert.Error(t, qs[2].Validate("not-a-number"))
+	assert.NoError(t, qs[2].Validate(12345))
+}
+
+func TestBuildDiagnosticsReportComprehensive(t *testing.T) {
+	prevArgs := diagnosticsArgs
+	defer func() { diagnosticsArgs = prevArgs }()
+
+	// Test case 1: With dockerErr != nil, includeLogs = false, includeEndpoints = false
+	diagnosticsArgs.IncludeLogs = false
+	diagnosticsArgs.IncludeEndpoints = false
+	var out strings.Builder
+	buildDiagnosticsReport(&out, types.Version{}, dockersystem.Info{}, errors.New("cannot connect to docker daemon"))
+	assert.Contains(t, out.String(), "cannot connect to docker daemon")
+	assert.Contains(t, out.String(), "Logs redacted.")
+
+	// Test case 2: dockerErr == nil, full info, includeLogs = true
+	diagnosticsArgs.IncludeLogs = true
+	diagnosticsArgs.IncludeEndpoints = true
+	diagnosticsArgs.LogLines = 10
+
+	v := types.Version{Version: "24.0.5"}
+	info := dockersystem.Info{
+		ServerVersion: "24.0.5",
+		Driver:        "overlay2",
+		DriverStatus:  [][2]string{{"Backing Filesystem", "extfs"}},
+		SystemStatus:  [][2]string{{"Plugins", "overlay2"}},
+		LoggingDriver: "json-file",
+		CgroupDriver:  "systemd",
+		Warnings:      []string{"warning 1", "warning 2"},
+	}
+
+	var out2 strings.Builder
+	buildDiagnosticsReport(&out2, v, info, nil)
+	assert.Contains(t, out2.String(), "24.0.5")
+	assert.Contains(t, out2.String(), "overlay2")
+	assert.Contains(t, out2.String(), "Backing Filesystem: extfs")
+	assert.Contains(t, out2.String(), "warning 1")
+}
+
+func TestConfigureCmdRunTargetAndStatPanic(t *testing.T) {
+	cmd := rootCommand
+	_ = cmd.Flags().Set("config", "/some/custom/path/config.yml")
+	defer func() {
+		_ = cmd.Flags().Set("config", "/etc/pterodactyl/config.yml")
+	}()
+
+	// Target points to invalid path where parent is a regular file
+	tmpFile := filepath.Join(t.TempDir(), "a_file")
+	require.NoError(t, os.WriteFile(tmpFile, []byte("x"), 0644))
+	badTarget := filepath.Join(tmpFile, "cannot_be_dir", "config.yml")
+
+	oldArgs := configureArgs
+	defer func() { configureArgs = oldArgs }()
+	configureArgs.ConfigPath = badTarget
+	configureArgs.Override = false
+
+	assert.Panics(t, func() {
+		configureCmdRun(nil, nil)
+	})
+}
+
+func TestInitConfigRelativeAndDebug(t *testing.T) {
+	tmpDir := t.TempDir()
+	cfgFile := filepath.Join(tmpDir, "config.yml")
+	content := []byte(`
+token_id: "test-id"
+token: "test-token"
+system:
+  root_directory: "` + tmpDir + `"
+`)
+	require.NoError(t, os.WriteFile(cfgFile, content, 0600))
+
+	oldConfigPath := configPath
+	oldDebug := debug
+	defer func() {
+		configPath = oldConfigPath
+		debug = oldDebug
+	}()
+
+	cwd, err := os.Getwd()
+	require.NoError(t, err)
+	relPath, err := filepath.Rel(cwd, cfgFile)
+	require.NoError(t, err)
+
+	configPath = relPath
+	debug = true
+
+	assert.NotPanics(t, func() {
+		initConfig()
+	})
+	assert.True(t, filepath.IsAbs(configPath))
+	assert.True(t, config.Get().Debug)
+}
+
+func TestShutdownOnSignalManagerError(t *testing.T) {
+	signals := make(chan os.Signal, 1)
+	signals <- syscall.SIGTERM
+
+	// Manager with invalid root dir so PersistStates fails
+	cfg, err := config.NewAtPath(filepath.Join(t.TempDir(), "config.yml"))
+	require.NoError(t, err)
+	cfg.AuthenticationToken = "test-token"
+	tmpFile := filepath.Join(t.TempDir(), "regular_file")
+	require.NoError(t, os.WriteFile(tmpFile, []byte("x"), 0644))
+	cfg.System.RootDirectory = filepath.Join(tmpFile, "not_dir")
+	config.Set(cfg)
+
+	srv := &http.Server{}
+	shutdownOnSignal(signals, server.NewEmptyManager(nil), srv)
+}
+
 
 
 

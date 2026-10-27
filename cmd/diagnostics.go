@@ -98,6 +98,27 @@ func diagnosticsCmdRun(*cobra.Command, []string) {
 	dockerVersion, dockerInfo, dockerErr := getDockerInfo()
 
 	output := &strings.Builder{}
+	buildDiagnosticsReport(output, dockerVersion, dockerInfo, dockerErr)
+
+	if diagnosticsArgs.ReviewBeforeUpload {
+		fmt.Println("\n---------------  generated report  ---------------")
+		fmt.Println(output.String())
+		fmt.Print("---------------   end of report    ---------------\n\n")
+	}
+
+	// Always ask before uploading, since the report can contain sensitive
+	// information. A failed or interrupted prompt leaves upload false.
+	var upload bool
+	_ = survey.AskOne(&survey.Confirm{Message: "Upload to " + diagnosticsArgs.HastebinURL + "?", Default: false}, &upload)
+	if upload {
+		u, err := uploadToHastebin(diagnosticsArgs.HastebinURL, output.String())
+		if err == nil {
+			fmt.Println("Your report is available here: ", u)
+		}
+	}
+}
+
+func buildDiagnosticsReport(output *strings.Builder, dockerVersion types.Version, dockerInfo dockersystem.Info, dockerErr error) *config.Configuration {
 	fmt.Fprintln(output, "Pterodactyl Wings - Diagnostics Report")
 	printHeader(output, "Versions")
 	fmt.Fprintln(output, "               Wings:", system.Version)
@@ -135,7 +156,7 @@ func diagnosticsCmdRun(*cobra.Command, []string) {
 				fmt.Fprintln(output, w)
 			}
 		}
-	} else {
+	} else if dockerErr != nil {
 		fmt.Fprintln(output, dockerErr.Error())
 	}
 
@@ -174,22 +195,7 @@ func diagnosticsCmdRun(*cobra.Command, []string) {
 		output.WriteString(s)
 	}
 
-	if diagnosticsArgs.ReviewBeforeUpload {
-		fmt.Println("\n---------------  generated report  ---------------")
-		fmt.Println(output.String())
-		fmt.Print("---------------   end of report    ---------------\n\n")
-	}
-
-	// Always ask before uploading, since the report can contain sensitive
-	// information. A failed or interrupted prompt leaves upload false.
-	var upload bool
-	_ = survey.AskOne(&survey.Confirm{Message: "Upload to " + diagnosticsArgs.HastebinURL + "?", Default: false}, &upload)
-	if upload {
-		u, err := uploadToHastebin(diagnosticsArgs.HastebinURL, output.String())
-		if err == nil {
-			fmt.Println("Your report is available here: ", u)
-		}
-	}
+	return cfg
 }
 
 // writeConfiguration writes the relevant parts of the configuration file Wings

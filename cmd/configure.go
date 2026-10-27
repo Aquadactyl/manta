@@ -71,50 +71,7 @@ func configureCmdRun(cmd *cobra.Command, args []string) {
 		panic(err)
 	}
 
-	var questions []*survey.Question
-	if configureArgs.PanelURL == "" {
-		questions = append(questions, &survey.Question{
-			Name:   "PanelURL",
-			Prompt: &survey.Input{Message: "Panel URL: "},
-			Validate: func(ans interface{}) error {
-				if str, ok := ans.(string); ok {
-					_, err := url.ParseRequestURI(str)
-					return err
-				}
-				return nil
-			},
-		})
-	}
-
-	if configureArgs.Token == "" {
-		questions = append(questions, &survey.Question{
-			Name:   "Token",
-			Prompt: &survey.Input{Message: "API Token: "},
-			Validate: func(ans interface{}) error {
-				if str, ok := ans.(string); ok {
-					if len(str) == 0 {
-						return fmt.Errorf("please provide a valid authentication token")
-					}
-				}
-				return nil
-			},
-		})
-	}
-
-	if configureArgs.Node == "" {
-		questions = append(questions, &survey.Question{
-			Name:   "Node",
-			Prompt: &survey.Input{Message: "Node ID: "},
-			Validate: func(ans interface{}) error {
-				if str, ok := ans.(string); ok {
-					if !nodeIdRegex.Match([]byte(str)) {
-						return fmt.Errorf("please provide a valid authentication token")
-					}
-				}
-				return nil
-			},
-		})
-	}
+	questions := configureQuestions()
 
 	if err := survey.Ask(questions, &configureArgs); err != nil {
 		if err == terminal.InterruptErr {
@@ -163,6 +120,55 @@ func configureCmdRun(cmd *cobra.Command, args []string) {
 	}
 
 	fmt.Println("Successfully configured wings.")
+}
+
+func configureQuestions() []*survey.Question {
+	var questions []*survey.Question
+	if configureArgs.PanelURL == "" {
+		questions = append(questions, &survey.Question{
+			Name:   "PanelURL",
+			Prompt: &survey.Input{Message: "Panel URL: "},
+			Validate: func(ans interface{}) error {
+				if str, ok := ans.(string); ok {
+					_, err := url.ParseRequestURI(str)
+					return err
+				}
+				return nil
+			},
+		})
+	}
+
+	if configureArgs.Token == "" {
+		questions = append(questions, &survey.Question{
+			Name:   "Token",
+			Prompt: &survey.Input{Message: "API Token: "},
+			Validate: func(ans interface{}) error {
+				if str, ok := ans.(string); ok {
+					if len(str) == 0 {
+						return fmt.Errorf("please provide a valid authentication token")
+					}
+				}
+				return nil
+			},
+		})
+	}
+
+	if configureArgs.Node == "" {
+		questions = append(questions, &survey.Question{
+			Name:   "Node",
+			Prompt: &survey.Input{Message: "Node ID: "},
+			Validate: func(ans interface{}) error {
+				if str, ok := ans.(string); ok {
+					if !nodeIdRegex.Match([]byte(str)) {
+						return fmt.Errorf("please provide a valid authentication token")
+					}
+				}
+				return nil
+			},
+		})
+	}
+
+	return questions
 }
 
 // maxConfigurationResponseSize is the largest node configuration that is read
