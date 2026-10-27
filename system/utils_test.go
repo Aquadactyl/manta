@@ -2,6 +2,7 @@ package system
 
 import (
 	"encoding/json"
+	"errors"
 	"math/rand"
 	"strings"
 	"sync"
@@ -10,6 +11,12 @@ import (
 
 	. "github.com/franela/goblin"
 )
+
+type errReader struct{}
+
+func (errReader) Read(p []byte) (n int, err error) {
+	return 0, errors.New("read error")
+}
 
 func Test_Utils(t *testing.T) {
 	g := Goblin(t)
@@ -40,6 +47,11 @@ func Test_Utils(t *testing.T) {
 
 			g.Assert(err).IsNil()
 			g.Assert(lines).Equal([]string{"test\rstrin", "another\rli", "hodor\r\r\rhe", "material g"})
+		})
+
+		g.It("should return error when reader errors with non-EOF", func() {
+			err := ScanReader(errReader{}, func(line []byte) {})
+			g.Assert(err).IsNotNil()
 		})
 	})
 

@@ -142,4 +142,27 @@ func TestDockerClientAndConfigure(t *testing.T) {
 
 	err = ConfigureDocker(context.Background())
 	require.NoError(t, err)
+
+	// Configure with host network
+	config.Update(func(c *config.Configuration) {
+		c.Docker.Network.Name = "host"
+	})
+	err = ConfigureDocker(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, "127.0.0.1", config.Get().Docker.Network.Interface)
+
+	// Configure with canceled context returns error immediately
+	ctxCancelled, cancel := context.WithCancel(context.Background())
+	cancel()
+	err = ConfigureDocker(ctxCancelled)
+	assert.Error(t, err)
+
+	// Allocations with invalid port (< 1 or > 65535)
+	allocInvalid := Allocations{
+		Mappings: map[string][]int{
+			"127.0.0.1": {0, 8080, 70000},
+		},
+	}
+	bindings := allocInvalid.Bindings()
+	assert.Len(t, bindings, 2) // only tcp and udp for 8080
 }

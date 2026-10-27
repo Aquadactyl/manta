@@ -254,3 +254,27 @@ func TestGetServers_SinglePage(t *testing.T) {
 	assert.Len(t, srvs, 2)
 }
 
+func TestRemoteClientContextCanceledErrors(t *testing.T) {
+	c := New("http://127.0.0.1:12345")
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	assert.Error(t, c.ResetServersState(ctx))
+	_, err := c.GetServerConfiguration(ctx, "s1")
+	assert.Error(t, err)
+	_, err = c.GetInstallationScript(ctx, "s1")
+	assert.Error(t, err)
+	assert.Error(t, c.SetInstallationStatus(ctx, "s1", InstallStatusRequest{Successful: true}))
+	assert.Error(t, c.SetArchiveStatus(ctx, "s1", true))
+	assert.Error(t, c.SetTransferStatus(ctx, "s1", true))
+	_, err = c.ValidateSftpCredentials(ctx, SftpAuthRequest{})
+	assert.Error(t, err)
+	_, err = c.GetBackupRemoteUploadURLs(ctx, "s1", 100)
+	assert.Error(t, err)
+	assert.Error(t, c.SetBackupStatus(ctx, "s1", BackupRequest{}))
+	assert.Error(t, c.SendRestorationStatus(ctx, "s1", true))
+	assert.Error(t, c.SendActivityLogs(ctx, nil))
+	_, err = c.GetServers(ctx, 10)
+	assert.Error(t, err)
+}
+

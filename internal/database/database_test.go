@@ -1,6 +1,7 @@
 package database
 
 import (
+	"database/sql"
 	"path/filepath"
 	"testing"
 
@@ -61,6 +62,24 @@ func TestDatabase(t *testing.T) {
 		AuthenticationToken: "test-token",
 		System: config.SystemConfiguration{
 			RootDirectory: "/dev/null/impossible-path",
+		},
+	})
+	assert.Error(t, Initialize())
+
+	// Error path: AutoMigrate error due to conflicting view
+	migDir := t.TempDir()
+	dbPath := filepath.Join(migDir, "wings.db")
+	sdb, err := sql.Open("sqlite", dbPath)
+	require.NoError(t, err)
+	_, err = sdb.Exec("CREATE VIEW activities AS SELECT 1;")
+	require.NoError(t, err)
+	_ = sdb.Close()
+
+	o.Store(false)
+	config.Set(&config.Configuration{
+		AuthenticationToken: "test-token",
+		System: config.SystemConfiguration{
+			RootDirectory: migDir,
 		},
 	})
 	assert.Error(t, Initialize())

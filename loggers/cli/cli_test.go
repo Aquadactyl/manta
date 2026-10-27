@@ -2,6 +2,8 @@ package cli
 
 import (
 	"bytes"
+	"fmt"
+	"io"
 	"os"
 	"sync"
 	"testing"
@@ -72,6 +74,29 @@ func TestCliHandler(t *testing.T) {
 	require.NoError(t, h.HandleLog(goexitEntry))
 	assert.Contains(t, buf.String(), "goroutine error")
 	assert.Contains(t, buf.String(), "goroutine stack error")
+
+	// Custom error that formats without runtime.goexit
+	buf.Reset()
+	customEntry := &log.Entry{
+		Level:   log.ErrorLevel,
+		Message: "no goexit",
+		Fields: log.Fields{
+			"error": noGoexitError{},
+		},
+	}
+	require.NoError(t, h.HandleLog(customEntry))
+	assert.Contains(t, buf.String(), "no goexit")
 }
+
+type noGoexitError struct{}
+
+func (noGoexitError) Error() string { return "custom error without goexit" }
+func (noGoexitError) Format(s fmt.State, _ rune) {
+	_, _ = io.WriteString(s, "custom error without goexit")
+}
+func (noGoexitError) StackTrace() errors.StackTrace {
+	return nil
+}
+
 
 

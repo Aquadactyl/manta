@@ -106,6 +106,17 @@ func TestPower(t *testing.T) {
 				g.Assert(len(l.ch)).Equal(1)
 				g.Assert(l.IsLocked()).IsTrue()
 			})
+
+			g.It("should return ErrLockerDestroyed when destroyed while waiting", func() {
+				g.Timeout(time.Second)
+				g.Assert(l.Acquire()).IsNil()
+				go func() {
+					time.Sleep(20 * time.Millisecond)
+					l.Destroy()
+				}()
+				err := l.TryAcquire(context.Background())
+				g.Assert(errors.Is(err, ErrLockerDestroyed)).IsTrue()
+			})
 		})
 
 		g.Describe("PowerLocker#Release", func() {

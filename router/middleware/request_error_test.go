@@ -226,3 +226,74 @@ func TestRequireAuthorization(t *testing.T) {
 	r.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusOK, w.Code)
 }
+
+func TestMiddlewarePanicsAndBranches(t *testing.T) {
+	// 1. Panics when missing from context
+	cEmpty, _ := gin.CreateTestContext(httptest.NewRecorder())
+	assert.Panics(t, func() {
+		ExtractLogger(cEmpty)
+	})
+	assert.Panics(t, func() {
+		ExtractServer(cEmpty)
+	})
+	assert.Panics(t, func() {
+		ExtractApiClient(cEmpty)
+	})
+	assert.Panics(t, func() {
+		ExtractManager(cEmpty)
+	})
+
+	// 2. ServerExists when server param is empty or not found
+	r := gin.New()
+	mgr := &server.Manager{}
+	r.Use(AttachServerManager(mgr))
+	r.Use(ServerExists())
+	r.GET("/servers/:server", func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/servers/nonexistent-uuid", nil)
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusNotFound, w.Code)
+
+	// 3. CaptureErrors with generic error (not RequestError)
+	rGeneric := gin.New()
+	rGeneric.Use(AttachRequestID())
+	rGeneric.Use(CaptureErrors())
+	rGeneric.GET("/generic-err", func(c *gin.Context) {
+		_ = c.Error(errors.New("plain generic error"))
+	})
+	rGeneric.GET("/pre-status", func(c *gin.Context) {
+		c.Status(http.StatusTeapot)
+		_ = c.Error(errors.New("status already set"))
+	})
+	w = httptest.NewRecorder()
+	req, _ = http.NewRequest("GET", "/generic-err", nil)
+	rGeneric.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+
+	w = httptest.NewRecorder()
+	req, _ = http.NewRequest("GET", "/pre-status", nil)
+	rGeneric.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusTeapot, w.Code)
+
+	// 4. RequestError.Abort with server in context, context canceled, and status < 500
+	cAbort, _ := gin.CreateTestContext(httptest.NewRecorder())
+	cAbort.Request, _ = http.NewRequest("GET", "/test-canceled", nil)
+	cAbort.Writer.Header().Set("X-Request-Id", "req-123")
+	s := &server.Server{}
+	cAbort.Set("server", s)
+
+	reCancel := NewError(errors.New("context canceled"))
+	reCancel.Abort(cAbort, http.StatusBadRequest)
+	assert.Equal(t, http.StatusBadRequest, cAbort.Writer.Status())
+
+	// Abort with status < 500 and empty msg
+	cAbort2, _ := gin.CreateTestContext(httptest.NewRecorder())
+	cAbort2.Request, _ = http.NewRequest("GET", "/test-not-found", nil)
+	cAbort2.Writer.Header().Set("X-Request-Id", "req-456")
+	reNotFound := NewError(errors.New("not found"))
+	reNotFound.Abort(cAbort2, http.StatusNotFound)
+	assert.Equal(t, http.StatusNotFound, cAbort2.Writer.Status())
+}

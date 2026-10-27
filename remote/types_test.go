@@ -28,4 +28,8 @@ func TestOutputLineMatcher(t *testing.T) {
 		require.Equal(t, tt.match, m.Matches([]byte(tt.line)), "%q against %q", tt.raw, tt.line)
 		require.Equal(t, tt.raw, m.String())
 	}
+
+	// Invalid JSON should return error
+	var m OutputLineMatcher
+	require.Error(t, json.Unmarshal([]byte(`{"invalid":true}`), &m))
 }

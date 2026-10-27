@@ -18,6 +18,7 @@ import (
 	"github.com/pterodactyl/wings/remote"
 	"github.com/pterodactyl/wings/server"
 	"github.com/pterodactyl/wings/server/filesystem"
+	"github.com/pterodactyl/wings/system"
 )
 
 func newManagerTestTransfer(t *testing.T, uuid string) *Transfer {
@@ -210,6 +211,28 @@ func TestTransferArchiveCreation(t *testing.T) {
 	arch2, err := tr.Archive()
 	require.NoError(t, err)
 	require.Same(t, arch, arch2)
+
+	// PushArchiveToTarget error paths
+	// 1. Invalid URL
+	_, err = tr.PushArchiveToTarget("://invalid-url", "token")
+	assert.Error(t, err)
+
+	// 2. Unreachable host
+	_, err = tr.PushArchiveToTarget("http://127.0.0.1:1", "token")
+	assert.Error(t, err)
+
+	// 3. Cancelled context
+	ctxCancel, cancelFunc := context.WithCancel(context.Background())
+	cancelFunc()
+	trCancel := New(ctxCancel, s)
+	trCancel.archive = arch
+	_, err = trCancel.PushArchiveToTarget("http://127.0.0.1", "token")
+	assert.Error(t, err)
+
+	// 4. Cancel with nil t.cancel
+	trNilCancel := &Transfer{status: system.NewAtomic(StatusPending)}
+	trNilCancel.Cancel()
+	assert.Equal(t, StatusPending, trNilCancel.Status())
 }
 
 

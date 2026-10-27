@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/apex/log"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -116,11 +117,13 @@ func TestPost(t *testing.T) {
 }
 
 func TestDebugLogRequest(t *testing.T) {
+	log.SetLevel(log.DebugLevel)
+
 	req, _ := http.NewRequest(http.MethodGet, "http://127.0.0.1:8080/test", nil)
 	req.Header.Set("Authorization", "Bearer secret-token")
 	req.Header.Set("X-Custom", "custom-value")
 
-	// Call debugLogRequest with current logger
+	// Call debugLogRequest with debug logger
 	assert.NotPanics(t, func() {
 		debugLogRequest(req)
 	})
