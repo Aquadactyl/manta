@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net"
 	"os"
@@ -223,10 +224,16 @@ func TestCompressAndDecompressAdvanced(t *testing.T) {
 
 	require.NoError(t, fs.Writefile("orig.txt", bytes.NewReader([]byte("sample data"))))
 
-	// 1. CompressFiles multiple times creates archive.tar.gz and archive-1.tar.gz
+	// 1. CompressFiles creates timestamped archive, and collision handling creates -1.tar.gz
 	f1, err := fs.CompressFiles("/", []string{"orig.txt"})
 	require.NoError(t, err)
 	assert.Contains(t, f1.Name(), "archive-")
+
+	// Ensure collision by pre-creating base archives across immediate second boundaries
+	for s := 0; s < 3; s++ {
+		collidingName := fmt.Sprintf("archive-%s.tar.gz", strings.ReplaceAll(time.Now().Add(time.Duration(s)*time.Second).Format(time.RFC3339), ":", ""))
+		_ = fs.Writefile(collidingName, bytes.NewReader([]byte("existing")))
+	}
 
 	f2, err := fs.CompressFiles("/", []string{"orig.txt"})
 	require.NoError(t, err)
