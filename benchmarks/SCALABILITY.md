@@ -20,23 +20,23 @@ Linux amd64, Go 1.26.9, four CPU quota cores, five runs per case with 500 ms ben
 
 The routing benchmark exercises the full Gin route, authorization, resource/configuration serialization, and response writing into an in-memory HTTP recorder. It excludes network latency and Docker. The target server is registered last to expose the previous scan's worst case. At scale, the other registrations are in-memory server objects with real configuration locks, not live game containers. The target server retains a real temporary filesystem and a stub environment, matching the original one-server routing benchmark. `BenchmarkServerStatus` is the one-registration case.
 
-| Benchmark | Before | After | Speed-up | Bytes/op before / after | Allocations/op before / after |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| Status route, 1 registration | 4832.00 ns | 4039.00 ns | 1.20x | 4491 / 3529 | 38 / 27 |
-| Status route, 10 registrations | 5156.00 ns | 4136.00 ns | 1.25x | 4491 / 3529 | 38 / 27 |
-| Status route, 100 registrations | 7990.00 ns | 4118.00 ns | 1.94x | 4491 / 3529 | 38 / 27 |
-| Status route, 1,000 registrations | 30882.00 ns | 3806.00 ns | 8.11x | 4485 / 3523 | 38 / 27 |
+| Benchmark                         |      Before |      After | Speed-up | Bytes/op before / after | Allocations/op before / after |
+| --------------------------------- | ----------: | ---------: | -------: | ----------------------: | ----------------------------: |
+| Status route, 1 registration      |  4832.00 ns | 4039.00 ns |    1.20x |             4491 / 3529 |                       38 / 27 |
+| Status route, 10 registrations    |  5156.00 ns | 4136.00 ns |    1.25x |             4491 / 3529 |                       38 / 27 |
+| Status route, 100 registrations   |  7990.00 ns | 4118.00 ns |    1.94x |             4491 / 3529 |                       38 / 27 |
+| Status route, 1,000 registrations | 30882.00 ns | 3806.00 ns |    8.11x |             4485 / 3523 |                       38 / 27 |
 
 The point-lookup benchmark measures the last registered UUID and a missing UUID. Earlier hits in the old scan would be cheaper, so these are worst-case scan comparisons rather than average randomized-client latency. The new index avoids growth in lookup time as registrations increase.
 
-| Benchmark | Before | After | Speed-up | Bytes/op before / after | Allocations/op before / after |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| 1 registration, last UUID | 33.12 ns | 14.07 ns | 2.35x | 0 / 0 | 0 / 0 |
-| 1 registration, missing UUID | 34.60 ns | 14.08 ns | 2.46x | 0 / 0 | 0 / 0 |
-| 100 registrations, last UUID | 2204.00 ns | 13.97 ns | 157.77x | 0 / 0 | 0 / 0 |
-| 100 registrations, missing UUID | 2229.00 ns | 13.20 ns | 168.86x | 0 / 0 | 0 / 0 |
-| 1,000 registrations, last UUID | 21208.00 ns | 13.86 ns | 1530.16x | 0 / 0 | 0 / 0 |
-| 1,000 registrations, missing UUID | 21384.00 ns | 13.05 ns | 1638.62x | 0 / 0 | 0 / 0 |
+| Benchmark                         |      Before |    After | Speed-up | Bytes/op before / after | Allocations/op before / after |
+| --------------------------------- | ----------: | -------: | -------: | ----------------------: | ----------------------------: |
+| 1 registration, last UUID         |    33.12 ns | 14.07 ns |    2.35x |                   0 / 0 |                         0 / 0 |
+| 1 registration, missing UUID      |    34.60 ns | 14.08 ns |    2.46x |                   0 / 0 |                         0 / 0 |
+| 100 registrations, last UUID      |  2204.00 ns | 13.97 ns |  157.77x |                   0 / 0 |                         0 / 0 |
+| 100 registrations, missing UUID   |  2229.00 ns | 13.20 ns |  168.86x |                   0 / 0 |                         0 / 0 |
+| 1,000 registrations, last UUID    | 21208.00 ns | 13.86 ns | 1530.16x |                   0 / 0 |                         0 / 0 |
+| 1,000 registrations, missing UUID | 21384.00 ns | 13.05 ns | 1638.62x |                   0 / 0 |                         0 / 0 |
 
 ## Live validation and deployment
 

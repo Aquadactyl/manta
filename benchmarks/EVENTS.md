@@ -12,12 +12,12 @@ This removes the intermediate object tree and preserves integer counters above 2
 
 Five runs per case, 500 ms each, Go 1.26.9 Linux amd64, four CPU quota cores, on the shared development host. The identical benchmark calls the actual conversion helper and outer message JSON encoder. The baseline helper was extracted from the previous listener without changing its map/string conversion. A representative synthetic stats envelope uses the `Server.Proc` payload shape. The 16/64-viewer cases repeat that conversion sequentially for each viewer; they measure aggregate serialization work, excluding network writes, JWT checks, compression, scheduling, and bus waits.
 
-| Conversion and outer JSON encoding | Before | After | Time change | Bytes/op before / after | Allocations/op before / after |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| Stats, 1 viewer | 4.453 us | 1.832 us | -58.9% | 2600 / 816 | 63 / 13 |
-| Stats, 16 viewers | 71.560 us | 29.612 us | -58.6% | 41616 / 13063 | 1008 / 208 |
-| Stats, 64 viewers | 280.421 us | 118.967 us | -57.6% | 166463 / 52251 | 4032 / 832 |
-| Status string | 0.774 us | 0.832 us | +7.5% | 408 / 392 | 12 / 11 |
+| Conversion and outer JSON encoding |     Before |      After | Time change | Bytes/op before / after | Allocations/op before / after |
+| ---------------------------------- | ---------: | ---------: | ----------: | ----------------------: | ----------------------------: |
+| Stats, 1 viewer                    |   4.453 us |   1.832 us |      -58.9% |              2600 / 816 |                       63 / 13 |
+| Stats, 16 viewers                  |  71.560 us |  29.612 us |      -58.6% |           41616 / 13063 |                    1008 / 208 |
+| Stats, 64 viewers                  | 280.421 us | 118.967 us |      -57.6% |          166463 / 52251 |                    4032 / 832 |
+| Status string                      |   0.774 us |   0.832 us |       +7.5% |               408 / 392 |                       12 / 11 |
 
 The status-string control costs about 58 ns more (+7.5%) while allocating fewer bytes and objects. The change is retained for the larger periodic stats improvement and integer preservation. These isolated results do not establish equal whole-daemon CPU/RAM savings, higher game TPS, or additional player capacity. Results from separate optimization passes must not be added arithmetically.
 

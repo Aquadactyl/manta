@@ -1,32 +1,32 @@
 {
-    "date":  "2026-10-15",
-    "go":  {
-               "command":  "go test -race -json ./...",
-               "passed_cases":  381,
-               "passed_packages":  22,
-               "failed":  0,
-               "skipped_cases":  0,
-               "vet":  "passed",
-               "toolchain":  "Go 1.26.9 Linux amd64"
-           },
-    "lint":  {
-                 "version":  "golangci-lint 2.11.4",
-                 "issues":  0,
-                 "environment":  "Temporary Linux copy normalized with gofmt; unrelated checkout CRLF files not changed"
-             },
-    "panel":  {
-                  "suite":  "tests/Integration/Api/Remote/SftpAuthenticationControllerTest.php",
-                  "passed_tests":  18,
-                  "assertions":  74,
-                  "database":  "isolated test stack, not local Panel database"
-              },
-    "live":  {
-                 "manta_checks_passed":  16,
-                 "manta_checks_total":  16,
-                 "measured_api_requests":  14400,
-                 "api_errors":  0,
-                 "websocket_messages_received":  9600,
-                 "websocket_messages_expected":  9600,
-                 "http_sftp_archive_integrity":  "passed"
-             }
+  "date": "2026-10-15",
+  "go": {
+    "command": "go test -race -json ./...",
+    "passed_cases": 381,
+    "passed_packages": 22,
+    "failed": 0,
+    "skipped_cases": 0,
+    "vet": "passed",
+    "toolchain": "Go 1.26.9 Linux amd64"
+  },
+  "lint": {
+    "version": "golangci-lint 2.11.4",
+    "issues": 0,
+    "environment": "Temporary Linux copy normalized with gofmt; unrelated checkout CRLF files not changed"
+  },
+  "panel": {
+    "suite": "tests/Integration/Api/Remote/SftpAuthenticationControllerTest.php",
+    "passed_tests": 18,
+    "assertions": 74,
+    "database": "isolated test stack, not local Panel database"
+  },
+  "live": {
+    "manta_checks_passed": 16,
+    "manta_checks_total": 16,
+    "measured_api_requests": 14400,
+    "api_errors": 0,
+    "websocket_messages_received": 9600,
+    "websocket_messages_expected": 9600,
+    "http_sftp_archive_integrity": "passed"
+  }
 }

@@ -16,17 +16,17 @@ The implementation stays in Go. Profiles identified repeated allocations, encodi
 
 Five 500 ms runs per case, Go 1.26.9 Linux amd64 and four CPU quota cores. Both versions use identical benchmark code/settings, and final isolated runs do not overlap the live workload or build/test jobs. The host remains shared. Fixtures contain 10 or 1,000 256-byte text files. Full API cases include routing, authentication, containment, filesystem work and JSON encoding with an in-memory response writer. File-read cases stream cached file data to a counting/discarding response writer and exclude network transport; their reported MB/s is not network throughput. The retained legacy Stat-JSON cases isolate filesystem improvements independently of the directory handler's new encoding.
 
-| Isolated path | Before | After | Time change | Bytes/op before / after | Allocations/op before / after |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| Status API (control) | 0.0041 ms | 0.0040 ms | -1.1% | 3,528 / 3,528 | 27 / 27 |
-| Directory API, 10 files | 0.1102 ms | 0.0746 ms | -32.3% | 64,540 / 21,184 | 243 / 214 |
-| Directory API, 1,000 files | 10.8687 ms | 8.3284 ms | -23.4% | 6,238,715 / 1,654,508 | 20096 / 17070 |
-| File read API, 1 MiB | 0.1150 ms | 0.0422 ms | -63.3% | 10,712 / 2,564 | 39 / 37 |
-| File read API, 16 MiB | 2.7184 ms | 1.1384 ms | -58.1% | 10,726 / 2,920 | 39 / 37 |
-| List only, 10 files | 0.0708 ms | 0.0607 ms | -14.3% | 52,937 / 11,981 | 125 / 115 |
-| List + legacy Stat JSON, 10 files | 0.0884 ms | 0.0766 ms | -13.3% | 59,374 / 18,355 | 187 / 177 |
-| List only, 1,000 files | 8.6775 ms | 7.3003 ms | -15.9% | 4,817,522 / 721,418 | 11025 / 10022 |
-| List + legacy Stat JSON, 1,000 files | 10.9816 ms | 8.7787 ms | -20.1% | 5,964,642 / 1,535,023 | 17056 / 16036 |
+| Isolated path                        |     Before |     After | Time change | Bytes/op before / after | Allocations/op before / after |
+| ------------------------------------ | ---------: | --------: | ----------: | ----------------------: | ----------------------------: |
+| Status API (control)                 |  0.0041 ms | 0.0040 ms |       -1.1% |           3,528 / 3,528 |                       27 / 27 |
+| Directory API, 10 files              |  0.1102 ms | 0.0746 ms |      -32.3% |         64,540 / 21,184 |                     243 / 214 |
+| Directory API, 1,000 files           | 10.8687 ms | 8.3284 ms |      -23.4% |   6,238,715 / 1,654,508 |                 20096 / 17070 |
+| File read API, 1 MiB                 |  0.1150 ms | 0.0422 ms |      -63.3% |          10,712 / 2,564 |                       39 / 37 |
+| File read API, 16 MiB                |  2.7184 ms | 1.1384 ms |      -58.1% |          10,726 / 2,920 |                       39 / 37 |
+| List only, 10 files                  |  0.0708 ms | 0.0607 ms |      -14.3% |         52,937 / 11,981 |                     125 / 115 |
+| List + legacy Stat JSON, 10 files    |  0.0884 ms | 0.0766 ms |      -13.3% |         59,374 / 18,355 |                     187 / 177 |
+| List only, 1,000 files               |  8.6775 ms | 7.3003 ms |      -15.9% |     4,817,522 / 721,418 |                 11025 / 10022 |
+| List + legacy Stat JSON, 1,000 files | 10.9816 ms | 8.7787 ms |      -20.1% |   5,964,642 / 1,535,023 |                 17056 / 16036 |
 
 The status route is an unchanged control. CPU/allocation profile text is retained in `cpu-before/after.txt` and `alloc-before/after.txt`. Profiles are sampled and include fixture setup; their total allocated MB should not be compared as per-operation values because iteration counts differ. The table uses benchmark bytes/op instead.
 
@@ -34,18 +34,18 @@ The status route is an unchanged control. CPU/allocation profile text is retaine
 
 Both Manta stages use Go 1.27.2, two CPU quota cores, 1 GiB RAM, and `GOMAXPROCS=2`, with the same benchmark Paper/Bedrock containers. Within the measured stages, stock Wings was unchanged and provided a host/workload control. Each stage runs three alternating Manta/Wings rounds. Each directory/status concurrency case contains 400 requests per round; 16 MiB reads contain five verified samples per round. Values below are medians of the three per-round p50/p95 values. Final live stages did not overlap our builds, profiles, isolated benchmarks, or regression tests. The optimized stage was measured first, followed by a fresh baseline-daemon run, then the optimized deployment was restored. An earlier exploratory baseline overlapped profiling and is retained as `exploratory-performance.json`; it is excluded from the table.
 
-| Live operation | Daemon | Concurrency | Before p50 | After p50 | p50 change | Before / after p95 |
-| --- | --- | ---: | ---: | ---: | ---: | ---: |
-| List 1,000 files | manta | 1 | 10.454 ms | 7.362 ms | -29.6% | 12.907 / 8.990 ms |
-| List 1,000 files | wings | 1 | 12.366 ms | 11.746 ms | -5.0% | 15.221 / 13.796 ms |
-| List 1,000 files | manta | 16 | 96.209 ms | 54.069 ms | -43.8% | 221.559 / 136.868 ms |
-| List 1,000 files | wings | 16 | 96.404 ms | 89.944 ms | -6.7% | 249.644 / 245.830 ms |
-| List 1,000 files | manta | 32 | 176.897 ms | 108.946 ms | -38.4% | 453.271 / 276.008 ms |
-| List 1,000 files | wings | 32 | 191.563 ms | 186.062 ms | -2.9% | 530.656 / 469.038 ms |
-| Read 16 MiB | manta | 1 | 38.879 ms | 13.270 ms | -65.9% | 40.595 / 15.905 ms |
-| Read 16 MiB | wings | 1 | 33.754 ms | 33.362 ms | -1.2% | 34.353 / 34.077 ms |
-| Status control | manta | 1 | 0.239 ms | 0.185 ms | -22.6% | 0.364 / 0.309 ms |
-| Status control | wings | 1 | 0.255 ms | 0.185 ms | -27.5% | 0.367 / 0.310 ms |
+| Live operation   | Daemon | Concurrency | Before p50 |  After p50 | p50 change |   Before / after p95 |
+| ---------------- | ------ | ----------: | ---------: | ---------: | ---------: | -------------------: |
+| List 1,000 files | manta  |           1 |  10.454 ms |   7.362 ms |     -29.6% |    12.907 / 8.990 ms |
+| List 1,000 files | wings  |           1 |  12.366 ms |  11.746 ms |      -5.0% |   15.221 / 13.796 ms |
+| List 1,000 files | manta  |          16 |  96.209 ms |  54.069 ms |     -43.8% | 221.559 / 136.868 ms |
+| List 1,000 files | wings  |          16 |  96.404 ms |  89.944 ms |      -6.7% | 249.644 / 245.830 ms |
+| List 1,000 files | manta  |          32 | 176.897 ms | 108.946 ms |     -38.4% | 453.271 / 276.008 ms |
+| List 1,000 files | wings  |          32 | 191.563 ms | 186.062 ms |      -2.9% | 530.656 / 469.038 ms |
+| Read 16 MiB      | manta  |           1 |  38.879 ms |  13.270 ms |     -65.9% |   40.595 / 15.905 ms |
+| Read 16 MiB      | wings  |           1 |  33.754 ms |  33.362 ms |      -1.2% |   34.353 / 34.077 ms |
+| Status control   | manta  |           1 |   0.239 ms |   0.185 ms |     -22.6% |     0.364 / 0.309 ms |
+| Status control   | wings  |           1 |   0.255 ms |   0.185 ms |     -27.5% |     0.367 / 0.310 ms |
 
 Shared-host scheduling, page cache, and daemon heap history can affect these timings. Stock-control changes must be considered when interpreting Manta changes. These results measure file operations rather than overall game speed; no player-capacity, TPS, startup-time, or whole-daemon CPU/RAM gain is established here.
 

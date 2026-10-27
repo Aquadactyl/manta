@@ -1,222 +1,222 @@
 {
-    "passed": true,
-    "servers_checked": 4,
-    "samples": [
-        {
-            "round": 0,
-            "server_id": 7,
-            "name": "Benchmark Manta Paper",
-            "node": "Local Manta",
-            "utilization": {
-                "memory_bytes": 843812864,
-                "memory_limit_bytes": 1852203008,
-                "cpu_absolute": 2.129,
-                "network": {
-                    "rx_bytes": 155987,
-                    "tx_bytes": 14636
-                },
-                "uptime": 330865,
-                "state": "running",
-                "disk_bytes": 278936078
-            }
+  "passed": true,
+  "servers_checked": 4,
+  "samples": [
+    {
+      "round": 0,
+      "server_id": 7,
+      "name": "Benchmark Manta Paper",
+      "node": "Local Manta",
+      "utilization": {
+        "memory_bytes": 843812864,
+        "memory_limit_bytes": 1852203008,
+        "cpu_absolute": 2.129,
+        "network": {
+          "rx_bytes": 155987,
+          "tx_bytes": 14636
         },
-        {
-            "round": 0,
-            "server_id": 8,
-            "name": "Benchmark Manta Bedrock",
-            "node": "Local Manta",
-            "utilization": {
-                "memory_bytes": 200699904,
-                "memory_limit_bytes": 617398272,
-                "cpu_absolute": 2.113,
-                "network": {
-                    "rx_bytes": 58375,
-                    "tx_bytes": 12949
-                },
-                "uptime": 330692,
-                "state": "running",
-                "disk_bytes": 322215227
-            }
+        "uptime": 330865,
+        "state": "running",
+        "disk_bytes": 278936078
+      }
+    },
+    {
+      "round": 0,
+      "server_id": 8,
+      "name": "Benchmark Manta Bedrock",
+      "node": "Local Manta",
+      "utilization": {
+        "memory_bytes": 200699904,
+        "memory_limit_bytes": 617398272,
+        "cpu_absolute": 2.113,
+        "network": {
+          "rx_bytes": 58375,
+          "tx_bytes": 12949
         },
-        {
-            "round": 0,
-            "server_id": 9,
-            "name": "Benchmark Wings Paper",
-            "node": "Benchmark Wings",
-            "utilization": {
-                "memory_bytes": 903196672,
-                "memory_limit_bytes": 1852203008,
-                "cpu_absolute": 1.209,
-                "network": {
-                    "rx_bytes": 123998,
-                    "tx_bytes": 12929
-                },
-                "uptime": 333316,
-                "state": "running",
-                "disk_bytes": 278934374
-            }
+        "uptime": 330692,
+        "state": "running",
+        "disk_bytes": 322215227
+      }
+    },
+    {
+      "round": 0,
+      "server_id": 9,
+      "name": "Benchmark Wings Paper",
+      "node": "Benchmark Wings",
+      "utilization": {
+        "memory_bytes": 903196672,
+        "memory_limit_bytes": 1852203008,
+        "cpu_absolute": 1.209,
+        "network": {
+          "rx_bytes": 123998,
+          "tx_bytes": 12929
         },
-        {
-            "round": 0,
-            "server_id": 10,
-            "name": "Benchmark Wings Bedrock",
-            "node": "Benchmark Wings",
-            "utilization": {
-                "memory_bytes": 208130048,
-                "memory_limit_bytes": 617398272,
-                "cpu_absolute": 1.984,
-                "network": {
-                    "rx_bytes": 62625,
-                    "tx_bytes": 11347
-                },
-                "uptime": 333292,
-                "state": "running",
-                "disk_bytes": 322220014
-            }
+        "uptime": 333316,
+        "state": "running",
+        "disk_bytes": 278934374
+      }
+    },
+    {
+      "round": 0,
+      "server_id": 10,
+      "name": "Benchmark Wings Bedrock",
+      "node": "Benchmark Wings",
+      "utilization": {
+        "memory_bytes": 208130048,
+        "memory_limit_bytes": 617398272,
+        "cpu_absolute": 1.984,
+        "network": {
+          "rx_bytes": 62625,
+          "tx_bytes": 11347
         },
-        {
-            "round": 1,
-            "server_id": 7,
-            "name": "Benchmark Manta Paper",
-            "node": "Local Manta",
-            "utilization": {
-                "memory_bytes": 843808768,
-                "memory_limit_bytes": 1852203008,
-                "cpu_absolute": 1.033,
-                "network": {
-                    "rx_bytes": 155987,
-                    "tx_bytes": 14636
-                },
-                "uptime": 332886,
-                "state": "running",
-                "disk_bytes": 278936078
-            }
+        "uptime": 333292,
+        "state": "running",
+        "disk_bytes": 322220014
+      }
+    },
+    {
+      "round": 1,
+      "server_id": 7,
+      "name": "Benchmark Manta Paper",
+      "node": "Local Manta",
+      "utilization": {
+        "memory_bytes": 843808768,
+        "memory_limit_bytes": 1852203008,
+        "cpu_absolute": 1.033,
+        "network": {
+          "rx_bytes": 155987,
+          "tx_bytes": 14636
         },
-        {
-            "round": 1,
-            "server_id": 8,
-            "name": "Benchmark Manta Bedrock",
-            "node": "Local Manta",
-            "utilization": {
-                "memory_bytes": 200699904,
-                "memory_limit_bytes": 617398272,
-                "cpu_absolute": 1.631,
-                "network": {
-                    "rx_bytes": 58375,
-                    "tx_bytes": 12949
-                },
-                "uptime": 332712,
-                "state": "running",
-                "disk_bytes": 322215227
-            }
+        "uptime": 332886,
+        "state": "running",
+        "disk_bytes": 278936078
+      }
+    },
+    {
+      "round": 1,
+      "server_id": 8,
+      "name": "Benchmark Manta Bedrock",
+      "node": "Local Manta",
+      "utilization": {
+        "memory_bytes": 200699904,
+        "memory_limit_bytes": 617398272,
+        "cpu_absolute": 1.631,
+        "network": {
+          "rx_bytes": 58375,
+          "tx_bytes": 12949
         },
-        {
-            "round": 1,
-            "server_id": 9,
-            "name": "Benchmark Wings Paper",
-            "node": "Benchmark Wings",
-            "utilization": {
-                "memory_bytes": 903450624,
-                "memory_limit_bytes": 1852203008,
-                "cpu_absolute": 1.043,
-                "network": {
-                    "rx_bytes": 123998,
-                    "tx_bytes": 12929
-                },
-                "uptime": 335336,
-                "state": "running",
-                "disk_bytes": 278934374
-            }
+        "uptime": 332712,
+        "state": "running",
+        "disk_bytes": 322215227
+      }
+    },
+    {
+      "round": 1,
+      "server_id": 9,
+      "name": "Benchmark Wings Paper",
+      "node": "Benchmark Wings",
+      "utilization": {
+        "memory_bytes": 903450624,
+        "memory_limit_bytes": 1852203008,
+        "cpu_absolute": 1.043,
+        "network": {
+          "rx_bytes": 123998,
+          "tx_bytes": 12929
         },
-        {
-            "round": 1,
-            "server_id": 10,
-            "name": "Benchmark Wings Bedrock",
-            "node": "Benchmark Wings",
-            "utilization": {
-                "memory_bytes": 208130048,
-                "memory_limit_bytes": 617398272,
-                "cpu_absolute": 1.494,
-                "network": {
-                    "rx_bytes": 62625,
-                    "tx_bytes": 11347
-                },
-                "uptime": 335312,
-                "state": "running",
-                "disk_bytes": 322220014
-            }
+        "uptime": 335336,
+        "state": "running",
+        "disk_bytes": 278934374
+      }
+    },
+    {
+      "round": 1,
+      "server_id": 10,
+      "name": "Benchmark Wings Bedrock",
+      "node": "Benchmark Wings",
+      "utilization": {
+        "memory_bytes": 208130048,
+        "memory_limit_bytes": 617398272,
+        "cpu_absolute": 1.494,
+        "network": {
+          "rx_bytes": 62625,
+          "tx_bytes": 11347
         },
-        {
-            "round": 2,
-            "server_id": 7,
-            "name": "Benchmark Manta Paper",
-            "node": "Local Manta",
-            "utilization": {
-                "memory_bytes": 843796480,
-                "memory_limit_bytes": 1852203008,
-                "cpu_absolute": 1.014,
-                "network": {
-                    "rx_bytes": 155987,
-                    "tx_bytes": 14636
-                },
-                "uptime": 334897,
-                "state": "running",
-                "disk_bytes": 278936078
-            }
+        "uptime": 335312,
+        "state": "running",
+        "disk_bytes": 322220014
+      }
+    },
+    {
+      "round": 2,
+      "server_id": 7,
+      "name": "Benchmark Manta Paper",
+      "node": "Local Manta",
+      "utilization": {
+        "memory_bytes": 843796480,
+        "memory_limit_bytes": 1852203008,
+        "cpu_absolute": 1.014,
+        "network": {
+          "rx_bytes": 155987,
+          "tx_bytes": 14636
         },
-        {
-            "round": 2,
-            "server_id": 8,
-            "name": "Benchmark Manta Bedrock",
-            "node": "Local Manta",
-            "utilization": {
-                "memory_bytes": 200699904,
-                "memory_limit_bytes": 617398272,
-                "cpu_absolute": 1.594,
-                "network": {
-                    "rx_bytes": 58375,
-                    "tx_bytes": 12949
-                },
-                "uptime": 334730,
-                "state": "running",
-                "disk_bytes": 322215227
-            }
+        "uptime": 334897,
+        "state": "running",
+        "disk_bytes": 278936078
+      }
+    },
+    {
+      "round": 2,
+      "server_id": 8,
+      "name": "Benchmark Manta Bedrock",
+      "node": "Local Manta",
+      "utilization": {
+        "memory_bytes": 200699904,
+        "memory_limit_bytes": 617398272,
+        "cpu_absolute": 1.594,
+        "network": {
+          "rx_bytes": 58375,
+          "tx_bytes": 12949
         },
-        {
-            "round": 2,
-            "server_id": 9,
-            "name": "Benchmark Wings Paper",
-            "node": "Benchmark Wings",
-            "utilization": {
-                "memory_bytes": 903704576,
-                "memory_limit_bytes": 1852203008,
-                "cpu_absolute": 1.053,
-                "network": {
-                    "rx_bytes": 123998,
-                    "tx_bytes": 12929
-                },
-                "uptime": 337346,
-                "state": "running",
-                "disk_bytes": 278934374
-            }
+        "uptime": 334730,
+        "state": "running",
+        "disk_bytes": 322215227
+      }
+    },
+    {
+      "round": 2,
+      "server_id": 9,
+      "name": "Benchmark Wings Paper",
+      "node": "Benchmark Wings",
+      "utilization": {
+        "memory_bytes": 903704576,
+        "memory_limit_bytes": 1852203008,
+        "cpu_absolute": 1.053,
+        "network": {
+          "rx_bytes": 123998,
+          "tx_bytes": 12929
         },
-        {
-            "round": 2,
-            "server_id": 10,
-            "name": "Benchmark Wings Bedrock",
-            "node": "Benchmark Wings",
-            "utilization": {
-                "memory_bytes": 208130048,
-                "memory_limit_bytes": 617398272,
-                "cpu_absolute": 1.528,
-                "network": {
-                    "rx_bytes": 62625,
-                    "tx_bytes": 11347
-                },
-                "uptime": 337330,
-                "state": "running",
-                "disk_bytes": 322220014
-            }
-        }
-    ]
+        "uptime": 337346,
+        "state": "running",
+        "disk_bytes": 278934374
+      }
+    },
+    {
+      "round": 2,
+      "server_id": 10,
+      "name": "Benchmark Wings Bedrock",
+      "node": "Benchmark Wings",
+      "utilization": {
+        "memory_bytes": 208130048,
+        "memory_limit_bytes": 617398272,
+        "cpu_absolute": 1.528,
+        "network": {
+          "rx_bytes": 62625,
+          "tx_bytes": 11347
+        },
+        "uptime": 337330,
+        "state": "running",
+        "disk_bytes": 322220014
+      }
+    }
+  ]
 }

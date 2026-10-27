@@ -10,14 +10,14 @@ The latest [stats and console pass](TELEMETRY.md) reduces periodic resource-deco
 
 The existing benchmark stack contains two dedicated nodes, four game servers, matching cached game binaries, and local installer eggs. It leaves the original user servers outside the measured requests. All provisioned servers are owned by the existing `repgraphics` administrator.
 
-| Component | Docker name |
-| --- | --- |
-| Manta | manta-test |
-| Stock Wings | wings-benchmark |
-| Internal cached game assets | manta-benchmark-assets |
-| Stock config/data volumes | manta-benchmark-wings_config, manta-benchmark-wings_data |
-| Stock game network | manta-benchmark-wings_servers |
-| Cached binaries volume | manta-benchmark_assets |
+| Component                   | Docker name                                              |
+| --------------------------- | -------------------------------------------------------- |
+| Manta                       | manta-test                                               |
+| Stock Wings                 | wings-benchmark                                          |
+| Internal cached game assets | manta-benchmark-assets                                   |
+| Stock config/data volumes   | manta-benchmark-wings_config, manta-benchmark-wings_data |
+| Stock game network          | manta-benchmark-wings_servers                            |
+| Cached binaries volume      | manta-benchmark_assets                                   |
 
 ## Repeating the measurements
 
@@ -30,7 +30,7 @@ docker compose -f benchmarks/compose.yaml up -d --wait
 python benchmarks/summarize.py
 ```
 
-Use `-Phases performance,security` to repeat selected phases. The runner can start/stop only servers whose benchmark manifest has the expected node keys, two servers per node, and `Benchmark ` name prefix. `provision.php` additionally selects only servers with `manta-benchmark-` external IDs and refuses non-local Panels. Runtime credentials are held in a temporary file and removed in a `finally` block. Do not log that manifest.
+Use `-Phases performance,security` to repeat selected phases. The runner can start/stop only servers whose benchmark manifest has the expected node keys, two servers per node, and `Benchmark` name prefix. `provision.php` additionally selects only servers with `manta-benchmark-` external IDs and refuses non-local Panels. Runtime credentials are held in a temporary file and removed in a `finally` block. Do not log that manifest.
 
 Use `-OutputDirectory benchmarks/results/my-run` to preserve earlier measurements. The default output directory remains `benchmarks/results`.
 

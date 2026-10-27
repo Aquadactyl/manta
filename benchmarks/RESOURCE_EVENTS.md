@@ -16,12 +16,12 @@ Event goroutine scheduling, sink backpressure/drop behavior, WebSocket authentic
 
 Five 500 ms runs per case, Go 1.26.9 Linux amd64 with four CPU quota cores. Both versions use the same synthetic resource frame and handler benchmark. The baseline handler was extracted from the preceding listener without changing its work; the goroutine dispatch remains in the listener. The measured function performs envelope/payload decoding, resource update, a cached disk check, and optional stats publication. Disk scans are disabled in the benchmark; enforcement is covered separately by regression tests. Buffered/drained channels model ready observers. Results exclude Docker HTTP transport, goroutine scheduling, WebSocket conversion/compression, and network writes. Isolated runs did not overlap our live workloads, builds, or regression jobs.
 
-| Handler path | Before | After | Time change | Bytes/op before / after | Allocations/op before / after |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| Resource event, 0 observers | 4.863 us | 2.629 us | -45.9% | 2025 / 800 | 48 / 16 |
-| Resource event, 1 observer | 4.865 us | 3.623 us | -25.5% | 2025 / 1168 | 48 / 21 |
-| Resource event, 16 observers | 5.390 us | 4.183 us | -22.4% | 2025 / 1168 | 48 / 21 |
-| State event (control) | 0.634 us | 0.580 us | -8.5% | 304 / 296 | 9 / 7 |
+| Handler path                 |   Before |    After | Time change | Bytes/op before / after | Allocations/op before / after |
+| ---------------------------- | -------: | -------: | ----------: | ----------------------: | ----------------------------: |
+| Resource event, 0 observers  | 4.863 us | 2.629 us |      -45.9% |              2025 / 800 |                       48 / 16 |
+| Resource event, 1 observer   | 4.865 us | 3.623 us |      -25.5% |             2025 / 1168 |                       48 / 21 |
+| Resource event, 16 observers | 5.390 us | 4.183 us |      -22.4% |             2025 / 1168 |                       48 / 21 |
+| State event (control)        | 0.634 us | 0.580 us |       -8.5% |               304 / 296 |                         9 / 7 |
 
 These savings apply to each internal resource event and reduce background allocation work. They do not establish equal whole-daemon CPU/RAM savings, faster game ticks, or additional player capacity. No whole-daemon resource comparison or player-load benchmark was run in this pass. Separate optimization percentages should not be added together.
 

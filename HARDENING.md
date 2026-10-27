@@ -4,18 +4,18 @@ Reviewed on 14 October 2026. This change retains the Wings API and configuration
 
 ## Changes
 
-| Area | Result |
-| --- | --- |
-| JSON control requests | At most 4 MiB, including chunked bodies and trailing whitespace; rejects multiple JSON documents and preserves field validation. |
-| Batch filesystem work | At most eight workers per rename, delete, or chmod request; stops scheduling after an error or request cancellation. |
-| Startup pagination | At most four concurrent Panel requests; stops scheduling after a failure. |
-| Panel response parsing | At most 16 MiB after decompression; closes the original body and propagates read failures. |
-| HTTP retries | Reuses serialized bytes while giving each attempt a fresh reader. |
-| Panel redirects | Refuses a change of scheme, host, or port before credentials or authentication bodies can be forwarded. |
-| Temporary credentials | Strict expiry boundary; validates issuance and not-before with 30 seconds of clock tolerance. |
-| One-time tokens | Rejects missing identifiers and expired tokens; retains consumed identifiers until their signed expiry. |
-| Remote downloads | Synchronizes cancellation and path access, honors cancellation before execution, and removes empty tracking entries. |
-| URL log fields | Removes user information, query strings, and fragments from access logs, request error logs, remote download start logs, and Panel request logs. |
+| Area                   | Result                                                                                                                                           |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| JSON control requests  | At most 4 MiB, including chunked bodies and trailing whitespace; rejects multiple JSON documents and preserves field validation.                 |
+| Batch filesystem work  | At most eight workers per rename, delete, or chmod request; stops scheduling after an error or request cancellation.                             |
+| Startup pagination     | At most four concurrent Panel requests; stops scheduling after a failure.                                                                        |
+| Panel response parsing | At most 16 MiB after decompression; closes the original body and propagates read failures.                                                       |
+| HTTP retries           | Reuses serialized bytes while giving each attempt a fresh reader.                                                                                |
+| Panel redirects        | Refuses a change of scheme, host, or port before credentials or authentication bodies can be forwarded.                                          |
+| Temporary credentials  | Strict expiry boundary; validates issuance and not-before with 30 seconds of clock tolerance.                                                    |
+| One-time tokens        | Rejects missing identifiers and expired tokens; retains consumed identifiers until their signed expiry.                                          |
+| Remote downloads       | Synchronizes cancellation and path access, honors cancellation before execution, and removes empty tracking entries.                             |
+| URL log fields         | Removes user information, query strings, and fragments from access logs, request error logs, remote download start logs, and Panel request logs. |
 
 File uploads, raw file writes, backup streams, and transfers keep their existing streaming paths. The new JSON and Panel response limits do not apply to those streams. Concurrency limits are per request, not global admission limits.
 
@@ -23,11 +23,11 @@ File uploads, raw file writes, backup streams, and transfers keep their existing
 
 `BenchmarkRequestBody` exercises the real Panel request method with an already serialized 1 MiB body and an in-memory HTTP transport. Three runs compared the original `remote/http.go` at commit `5d9e2c3` with this implementation, using Go 1.26.9 on Linux amd64 with four CPUs available.
 
-| Metric | Original, median | Updated, median |
-| --- | ---: | ---: |
-| Allocated bytes per request | 1,050,809 | 2,080 |
-| Allocations per request | 28 | 26 |
-| Time per request | 214,558 ns | 1,736 ns |
+| Metric                      | Original, median | Updated, median |
+| --------------------------- | ---------------: | --------------: |
+| Allocated bytes per request |        1,050,809 |           2,080 |
+| Allocations per request     |               28 |              26 |
+| Time per request            |       214,558 ns |        1,736 ns |
 
 The request method allocates about 99.8% fewer bytes in this benchmark. It isolates request handling and body-copy cost; it excludes JSON serialization, network latency, Panel processing, and game server workloads. It is not an end-to-end throughput measurement.
 

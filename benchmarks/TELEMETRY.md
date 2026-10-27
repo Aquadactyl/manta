@@ -12,11 +12,11 @@ Console inspection now exits once the environment is outside the starting state.
 
 Five runs per case, 500 ms each, Go 1.26.9 on Linux amd64 with four CPU quota cores. The stats benchmark uses a persistent `json.Decoder` over the same captured Docker wire frame, followed by resource conversion; it excludes Docker HTTP transport, event fanout, and Panel work. Baseline sampling used the full SDK type behind the same extracted stream helper. Only the container ID/name were replaced in the fixture; numeric tokens were preserved without reserialization. The console benchmark measures inspection of a 156-byte line, excluding throttling, log fanout, and WebSocket transport. Both versions use identical benchmark code/settings.
 
-| Isolated benchmark | Before | After | Time change | Bytes/op before / after | Allocations/op before / after |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| Docker stats decode + conversion | 17.926 us | 11.255 us | -37.2% | 6472 / 660 | 84 / 6 |
-| Console inspection, running | 73.600 ns | 10.110 ns | -86.3% | 160 / 0 | 1 / 0 |
-| Console inspection, starting | 62.390 ns | 62.860 ns | +0.8% | 160 / 160 | 1 / 1 |
+| Isolated benchmark               |    Before |     After | Time change | Bytes/op before / after | Allocations/op before / after |
+| -------------------------------- | --------: | --------: | ----------: | ----------------------: | ----------------------------: |
+| Docker stats decode + conversion | 17.926 us | 11.255 us |      -37.2% |              6472 / 660 |                        84 / 6 |
+| Console inspection, running      | 73.600 ns | 10.110 ns |      -86.3% |                 160 / 0 |                         1 / 0 |
+| Console inspection, starting     | 62.390 ns | 62.860 ns |       +0.8% |               160 / 160 |                         1 / 1 |
 
 The starting-state row is a control: its retained copy and checks show essentially unchanged cost. The large allocation reductions apply to the measured sample/inspection paths. They do not establish equal whole-daemon CPU/RAM reductions, higher game TPS, or additional player capacity. Only two games per daemon run on this shared development host.
 
@@ -32,18 +32,18 @@ Fixture SHA-256: `2ccf7851c5639088a6c4ec192df34be3ef8b10710e3b83c8a39691f88d5578
 - All 16 optimized Manta live hardening/compatibility checks passed. The existing games remained running during the daemon update. Game binaries, limits, and startup settings were unchanged.
 
 | Post-update window | Daemon | CPU (% of one core) | Mean working memory |
-| --- | --- | ---: | ---: |
-| idle | manta | 0.365% | 10.976 MiB |
-| idle | wings | 0.372% | 51.556 MiB |
-| command_load | manta | 1.612% | 11.721 MiB |
-| command_load | wings | 1.617% | 52.462 MiB |
+| ------------------ | ------ | ------------------: | ------------------: |
+| idle               | manta  |              0.365% |          10.976 MiB |
+| idle               | wings  |              0.372% |          51.556 MiB |
+| command_load       | manta  |              1.612% |          11.721 MiB |
+| command_load       | wings  |              1.617% |          52.462 MiB |
 
 | Post-update window | Paper daemon | TPS, one minute |
-| --- | --- | ---: |
-| idle | wings | 20.0 |
-| idle | manta | 20.0 |
-| command_load | manta | 20.0 |
-| command_load | wings | 20.0 |
+| ------------------ | ------------ | --------------: |
+| idle               | wings        |            20.0 |
+| idle               | manta        |            20.0 |
+| command_load       | manta        |            20.0 |
+| command_load       | wings        |            20.0 |
 
 ## Deployment and reproduction
 

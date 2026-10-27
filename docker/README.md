@@ -10,19 +10,19 @@ From the Manta workspace in PowerShell:
 
 The script builds this checkout, creates or reuses the **Local Manta** node and its credentials, saves configuration directly into a Docker volume, starts the daemon, and verifies an authenticated request from the Panel. It requires the existing Aquadactyl test stack and its `aquadactyl-test_default` Docker network. The local-only guard refuses to register against a production Panel.
 
-| Item | Address or name |
-| --- | --- |
-| Panel | http://localhost:8081 |
-| Node administration | http://localhost:8081/admin/nodes/view/2 on this installation |
-| Node name | Local Manta |
-| API | http://manta.localhost:8083 |
-| SFTP | localhost:2023 |
-| Game allocations | localhost:27015-27019 |
-| Container | manta-test |
-| Runtime image | manta:local |
-| Configuration volume | manta-test_config |
-| Data volume | manta-test_data |
-| Game network | manta-test_servers |
+| Item                 | Address or name                                                 |
+| -------------------- | --------------------------------------------------------------- |
+| Panel                | <http://localhost:8081>                                         |
+| Node administration  | <http://localhost:8081/admin/nodes/view/2> on this installation |
+| Node name            | Local Manta                                                     |
+| API                  | <http://manta.localhost:8083>                                   |
+| SFTP                 | localhost:2023                                                  |
+| Game allocations     | localhost:27015-27019                                           |
+| Container            | manta-test                                                      |
+| Runtime image        | manta:local                                                     |
+| Configuration volume | manta-test_config                                               |
+| Data volume          | manta-test_data                                                 |
+| Game network         | manta-test_servers                                              |
 
 API, SFTP, and game allocations bind to host loopback. Node capacity is 4 GiB memory and 16 GiB disk, with no overallocation. It is a private node for deliberate local testing; select it manually when creating a server as an administrator. No sample game server is created automatically.
 

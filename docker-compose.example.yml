@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 services:
   wings:
@@ -23,9 +23,7 @@ services:
       - "/var/log/pterodactyl/:/var/log/pterodactyl/"
       - "/tmp/pterodactyl/:/tmp/pterodactyl/"
       - "/etc/ssl/certs:/etc/ssl/certs:ro"
-	  - "/run/wings:/run/wings"
-      # you may need /srv/daemon-data if you are upgrading from an old daemon
-      #- "/srv/daemon-data/:/srv/daemon-data/"
+      - "/run/wings:/run/wings"
       # Required for ssl if you use let's encrypt. uncomment to use.
       #- "/etc/letsencrypt/:/etc/letsencrypt/"
 
