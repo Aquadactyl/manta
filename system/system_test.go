@@ -12,6 +12,12 @@ func TestGetDockerInfo(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotEmpty(t, ver.Version)
 	assert.NotEmpty(t, info.Driver)
+
+	// Test with canceled context
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	_, _, err = GetDockerInfo(ctx)
+	assert.Error(t, err)
 }
 
 func TestGetSystemInformation(t *testing.T) {

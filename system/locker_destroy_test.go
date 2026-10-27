@@ -39,19 +39,24 @@ func TestLockerWaitersAreReleasedOnDestroy(t *testing.T) {
 	l := NewLocker()
 	require.NoError(t, l.Acquire())
 
-	errs := make(chan error, 1)
-	go func() {
-		errs <- l.TryAcquire(context.Background())
-	}()
+	const waiters = 8
+	errs := make(chan error, waiters)
+	for i := 0; i < waiters; i++ {
+		go func() {
+			errs <- l.TryAcquire(context.Background())
+		}()
+	}
 
 	time.Sleep(50 * time.Millisecond)
 	l.Destroy()
 
-	select {
-	case err := <-errs:
-		require.True(t, errors.Is(err, ErrLockerDestroyed), "got %v", err)
-	case <-time.After(time.Second):
-		t.Fatal("expected the waiting caller to return once the locker was destroyed")
+	for i := 0; i < waiters; i++ {
+		select {
+		case err := <-errs:
+			require.True(t, errors.Is(err, ErrLockerDestroyed), "got %v", err)
+		case <-time.After(time.Second):
+			t.Fatal("expected waiting callers to return once the locker was destroyed")
+		}
 	}
 	require.False(t, l.IsLocked())
 }
