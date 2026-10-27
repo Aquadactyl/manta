@@ -488,3 +488,97 @@ func TestIgnoreCertificateErrorsFlag(t *testing.T) {
 	require.NotNil(t, flag)
 	assert.NotEmpty(t, flag.Deprecated)
 }
+
+func TestInitLoggingDebugAndInfo(t *testing.T) {
+	tmpDir := t.TempDir()
+	cfg := &config.Configuration{
+		AuthenticationToken: "test-auth-token-12345",
+	}
+	cfg.System.LogDirectory = tmpDir
+	cfg.Debug = true
+	config.Set(cfg)
+
+	assert.NotPanics(t, func() {
+		initLogging()
+	})
+
+	cfg.Debug = false
+	config.Set(cfg)
+	assert.NotPanics(t, func() {
+		initLogging()
+	})
+}
+
+func TestDiagnosticsRedactAllEndpoints(t *testing.T) {
+	tmpDir := t.TempDir()
+	cfgFile := filepath.Join(tmpDir, "config.yml")
+	content := []byte(`
+token_id: "test-id"
+token: "test-token"
+remote: "https://remote.panel.example"
+api:
+  host: "10.0.0.1"
+  ssl:
+    cert: "/etc/ssl/mycert.pem"
+    key: "/etc/ssl/mykey.pem"
+system:
+  root_directory: "` + tmpDir + `"
+  sftp:
+    address: "10.0.0.2"
+`)
+	require.NoError(t, os.WriteFile(cfgFile, content, 0600))
+	oldConfigPath := configPath
+	defer func() { configPath = oldConfigPath }()
+	configPath = cfgFile
+	initConfig()
+
+	oldEndpoints := diagnosticsArgs.IncludeEndpoints
+	oldLogs := diagnosticsArgs.IncludeLogs
+	defer func() {
+		diagnosticsArgs.IncludeEndpoints = oldEndpoints
+		diagnosticsArgs.IncludeLogs = oldLogs
+	}()
+	diagnosticsArgs.IncludeEndpoints = false
+	diagnosticsArgs.IncludeLogs = false
+
+	var out strings.Builder
+	buildDiagnosticsReport(&out, types.Version{}, dockersystem.Info{}, errors.New("docker down"))
+	report := out.String()
+	assert.NotContains(t, report, "https://remote.panel.example")
+	assert.NotContains(t, report, "10.0.0.1")
+	assert.NotContains(t, report, "/etc/ssl/mycert.pem")
+	assert.NotContains(t, report, "/etc/ssl/mykey.pem")
+	assert.NotContains(t, report, "10.0.0.2")
+	assert.Contains(t, report, "{redacted}")
+}
+
+func TestWritePanelConfigurationVariations(t *testing.T) {
+	tmpDir := t.TempDir()
+	cfgPath := filepath.Join(tmpDir, "config.yml")
+
+	// Invalid JSON
+	assert.Error(t, writePanelConfiguration(cfgPath, "https://panel.example", []byte("invalid-json")))
+
+	// Existing config file load
+	require.NoError(t, os.WriteFile(cfgPath, []byte("token_id: old-id\n"), 0600))
+	validBody := []byte(`{"token_id":"new-id","token":"new-token","debug":true}`)
+	assert.NoError(t, writePanelConfiguration(cfgPath, "https://panel.example", validBody))
+
+	require.NoError(t, config.FromFile(cfgPath))
+	loaded := config.Get()
+	assert.Equal(t, "https://panel.example", loaded.PanelLocation)
+}
+
+func TestGetRequestDetails(t *testing.T) {
+	oldArgs := configureArgs
+	defer func() { configureArgs = oldArgs }()
+
+	configureArgs.PanelURL = "https://panel.example.com"
+	configureArgs.Node = "node-uuid-1234"
+	configureArgs.Token = "node-token-xyz"
+
+	req, err := getRequest()
+	require.NoError(t, err)
+	assert.Equal(t, "https://panel.example.com/api/application/nodes/node-uuid-1234/configuration", req.URL.String())
+	assert.Equal(t, "Bearer node-token-xyz", req.Header.Get("Authorization"))
+}

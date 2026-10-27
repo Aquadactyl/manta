@@ -73,24 +73,6 @@ func TestScheduler(t *testing.T) {
 	config.Set(cfg)
 }
 
-type failingCronRemoteClient struct {
-	remote.Client
-	calls int
-	err   error
-}
-
-func (f *failingCronRemoteClient) SendActivityLogs(ctx context.Context, activity []models.Activity) error {
-	f.calls++
-	if f.calls == 1 && f.err == nil {
-		// First call returns 422 refused to force batch split, second call returns non-refused error
-		return &remote.RequestError{}
-	}
-	if f.err != nil {
-		return f.err
-	}
-	return errors.New("network failure")
-}
-
 func TestCronEdgeCasesAndDeliveryErrors(t *testing.T) {
 	setupDatabase(t)
 	defer o.Store(false)

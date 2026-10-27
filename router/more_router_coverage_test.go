@@ -320,6 +320,17 @@ func TestRouterRemainingCoverage(t *testing.T) {
 	h.router.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/download/file?token="+string(signedDirFile), nil))
 	assert.Equal(t, http.StatusNotFound, w.Code)
 
+	// Valid getDownloadFile serving an existing file
+	require.NoError(t, os.WriteFile(filepath.Join(s.Filesystem().Path(), "downloadable.txt"), []byte("file-content"), 0o644))
+	validFileTok := dirFileTok
+	validFileTok.FilePath = "/downloadable.txt"
+	validFileTok.UniqueId = uuid.New().String()
+	signedValidFile, err := jwt.Sign(&validFileTok, config.GetJwtAlgorithm())
+	require.NoError(t, err)
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/download/file?token="+string(signedValidFile), nil))
+	assert.Equal(t, http.StatusOK, w.Code)
+
 	// 7. deleteServerBackup when backup exists on disk
 	backupUUID := uuid.New().String()
 	backupDir := filepath.Join(config.Get().System.BackupDirectory, s.ID())
@@ -330,9 +341,100 @@ func TestRouterRemainingCoverage(t *testing.T) {
 	flatBackupFile := filepath.Join(config.Get().System.BackupDirectory, backupUUID+".tar.gz")
 	require.NoError(t, os.WriteFile(flatBackupFile, []byte("backup-bytes"), 0o644))
 
+	// Valid getDownloadBackup serving existing backup
+	validBackupTok := missingBackupTok
+	validBackupTok.BackupUuid = backupUUID
+	validBackupTok.UniqueId = uuid.New().String()
+	signedValidBackup, err := jwt.Sign(&validBackupTok, config.GetJwtAlgorithm())
+	require.NoError(t, err)
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/download/backup?token="+string(signedValidBackup), nil))
+	assert.Equal(t, http.StatusOK, w.Code)
+
 	w = httptest.NewRecorder()
 	h.router.ServeHTTP(w, authReq(http.MethodDelete, "/api/servers/"+s.ID()+"/backup/"+backupUUID, ""))
 	assert.Equal(t, http.StatusNoContent, w.Code)
+
+	// 7b. postTransfers error branches
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, httptest.NewRequest(http.MethodPost, "/api/transfers", nil))
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+
+	w = httptest.NewRecorder()
+	reqBadTr := httptest.NewRequest(http.MethodPost, "/api/transfers", nil)
+	reqBadTr.Header.Set("Authorization", "Bearer invalid.jwt.token")
+	h.router.ServeHTTP(w, reqBadTr)
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+
+	noScopeTok := tokens.TransferPayload{
+		Payload: jwt.Payload{
+			IssuedAt:       jwt.NumericDate(now),
+			NotBefore:      jwt.NumericDate(now.Add(-5 * time.Second)),
+			ExpirationTime: jwt.NumericDate(now.Add(10 * time.Minute)),
+			Subject:        uuid.New().String(),
+		},
+		Scoped: tokens.Scoped{Scope: "not-transfer"},
+	}
+	signedNoScope, err := jwt.Sign(&noScopeTok, config.GetJwtAlgorithm())
+	require.NoError(t, err)
+	w = httptest.NewRecorder()
+	reqNoScope := httptest.NewRequest(http.MethodPost, "/api/transfers", nil)
+	reqNoScope.Header.Set("Authorization", "Bearer "+string(signedNoScope))
+	h.router.ServeHTTP(w, reqNoScope)
+	assert.Equal(t, http.StatusForbidden, w.Code)
+
+	badSubjTok := tokens.TransferPayload{
+		Payload: jwt.Payload{
+			IssuedAt:       jwt.NumericDate(now),
+			NotBefore:      jwt.NumericDate(now.Add(-5 * time.Second)),
+			ExpirationTime: jwt.NumericDate(now.Add(10 * time.Minute)),
+			Subject:        "not-a-uuid",
+		},
+		Scoped: tokens.Scoped{Scope: string(tokens.ServerTransfer)},
+	}
+	signedBadSubj, err := jwt.Sign(&badSubjTok, config.GetJwtAlgorithm())
+	require.NoError(t, err)
+	w = httptest.NewRecorder()
+	reqBadSubj := httptest.NewRequest(http.MethodPost, "/api/transfers", nil)
+	reqBadSubj.Header.Set("Authorization", "Bearer "+string(signedBadSubj))
+	h.router.ServeHTTP(w, reqBadSubj)
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+
+	conflictSubjTok := tokens.TransferPayload{
+		Payload: jwt.Payload{
+			IssuedAt:       jwt.NumericDate(now),
+			NotBefore:      jwt.NumericDate(now.Add(-5 * time.Second)),
+			ExpirationTime: jwt.NumericDate(now.Add(10 * time.Minute)),
+			Subject:        s.ID(),
+		},
+		Scoped: tokens.Scoped{Scope: string(tokens.ServerTransfer)},
+	}
+	signedConflictSubj, err := jwt.Sign(&conflictSubjTok, config.GetJwtAlgorithm())
+	require.NoError(t, err)
+	w = httptest.NewRecorder()
+	reqConflictSubj := httptest.NewRequest(http.MethodPost, "/api/transfers", nil)
+	reqConflictSubj.Header.Set("Authorization", "Bearer "+string(signedConflictSubj))
+	h.router.ServeHTTP(w, reqConflictSubj)
+	assert.Equal(t, http.StatusConflict, w.Code)
+
+	newTransferUUID := uuid.New().String()
+	validTrTok := tokens.TransferPayload{
+		Payload: jwt.Payload{
+			IssuedAt:       jwt.NumericDate(now),
+			NotBefore:      jwt.NumericDate(now.Add(-5 * time.Second)),
+			ExpirationTime: jwt.NumericDate(now.Add(10 * time.Minute)),
+			Subject:        newTransferUUID,
+		},
+		Scoped: tokens.Scoped{Scope: string(tokens.ServerTransfer)},
+	}
+	signedValidTr, err := jwt.Sign(&validTrTok, config.GetJwtAlgorithm())
+	require.NoError(t, err)
+	w = httptest.NewRecorder()
+	reqNonMultipart := httptest.NewRequest(http.MethodPost, "/api/transfers", strings.NewReader(`{}`))
+	reqNonMultipart.Header.Set("Authorization", "Bearer "+string(signedValidTr))
+	reqNonMultipart.Header.Set("Content-Type", "application/json")
+	h.router.ServeHTTP(w, reqNonMultipart)
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
 
 	// 8. validateBackupDownloadUrl & backupRestoreHttpClient
 	assert.Error(t, validateBackupDownloadUrl("http:///no-host"))
@@ -420,4 +522,70 @@ func TestRouterRemainingCoverage(t *testing.T) {
 	h.router.ServeHTTP(w, authReq(http.MethodDelete, "/api/servers/"+s.ID(), ""))
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
 	cenv.destroyErr = nil
+
+	// 11. postServerDecompressFiles
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, authReq(http.MethodPost, "/api/servers/"+s.ID()+"/files/decompress", "{invalid"))
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, authReq(http.MethodPost, "/api/servers/"+s.ID()+"/files/decompress", `{"root":"/","file":"test.xyz"}`))
+	assert.True(t, w.Code == http.StatusBadRequest || w.Code == http.StatusInternalServerError)
+
+	// 12. postServerWriteFile
+	reqWriteNoLen := authReq(http.MethodPost, "/api/servers/"+s.ID()+"/files/write?file=hello.txt", "hello world")
+	reqWriteNoLen.ContentLength = -1
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, reqWriteNoLen)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+
+	reqWriteValid := authReq(http.MethodPost, "/api/servers/"+s.ID()+"/files/write?file=hello.txt", "hello world")
+	reqWriteValid.ContentLength = int64(len("hello world"))
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, reqWriteValid)
+	assert.Equal(t, http.StatusNoContent, w.Code)
+
+	// 13. postServerPower
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, authReq(http.MethodPost, "/api/servers/"+s.ID()+"/power", `{"action":"bad_action"}`))
+	assert.Equal(t, http.StatusUnprocessableEntity, w.Code)
+
+	s.Config().SetSuspended(true)
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, authReq(http.MethodPost, "/api/servers/"+s.ID()+"/power", `{"action":"start"}`))
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	s.Config().SetSuspended(false)
+
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, authReq(http.MethodPost, "/api/servers/"+s.ID()+"/power", `{"action":"kill","wait_seconds":10}`))
+	assert.Equal(t, http.StatusAccepted, w.Code)
+
+	// 14. deleteServerBackup
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, authReq(http.MethodDelete, "/api/servers/"+s.ID()+"/backup/not-a-uuid", ""))
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, authReq(http.MethodDelete, "/api/servers/"+s.ID()+"/backup/"+uuid.New().String(), ""))
+	assert.Equal(t, http.StatusNotFound, w.Code)
+
+	// 15. getSystemInformation v2
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, authReq(http.MethodGet, "/api/system?v=2", ""))
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	// 16. postUpdateConfiguration
+	cfg := config.Get()
+	cfg.IgnorePanelConfigUpdates = true
+	config.Set(cfg)
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, authReq(http.MethodPost, "/api/update", `{"debug":true}`))
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Contains(t, w.Body.String(), `"applied":false`)
+	cfg.IgnorePanelConfigUpdates = false
+	config.Set(cfg)
+
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, authReq(http.MethodPost, "/api/update", `{invalid`))
+	assert.Equal(t, http.StatusBadRequest, w.Code)
 }

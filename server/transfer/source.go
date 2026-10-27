@@ -129,6 +129,11 @@ func (t *Transfer) PushArchiveToTarget(targetURL, token string) ([]byte, error) 
 		}()
 
 		if err := a.Stream(ctx, pw); err != nil {
+			_ = pw.CloseWithError(err)
+			_ = src.CloseWithError(err)
+			if copyErr := <-ch; copyErr != nil {
+				t.Log().WithError(copyErr).Debug("copy ended with error during stream abort")
+			}
 			errChan <- errors.New("failed to stream archive to pipe")
 			return
 		}
