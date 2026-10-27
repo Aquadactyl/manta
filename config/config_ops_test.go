@@ -213,11 +213,18 @@ func TestConfigMoreOperations(t *testing.T) {
 	cfg, err := NewAtPath(cfgPath)
 	require.NoError(t, err)
 	cfg.AuthenticationToken = "token-12345"
-	cfg.System.RootDirectory = tmp
+	cfg.System.RootDirectory = filepath.Join(tmp, "root")
+	cfg.System.Data = filepath.Join(tmp, "data")
+	cfg.System.LogDirectory = filepath.Join(tmp, "logs")
+	cfg.System.TmpDirectory = filepath.Join(tmp, "tmp")
+	cfg.System.ArchiveDirectory = filepath.Join(tmp, "archive")
+	cfg.System.BackupDirectory = filepath.Join(tmp, "backup")
+	cfg.System.Passwd.Enable = false
+	cfg.System.MachineID.Enable = false
 	Set(cfg)
 
 	// 1. GetStatesPath
-	assert.Equal(t, filepath.Join(tmp, "states.json"), cfg.System.GetStatesPath())
+	assert.Equal(t, filepath.Join(tmp, "root", "states.json"), cfg.System.GetStatesPath())
 
 	// 2. Load and FromFile
 	require.NoError(t, WriteToDisk(cfg))
