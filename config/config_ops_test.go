@@ -462,13 +462,14 @@ func TestSetDebugViaFlagAndWriteToDisk(t *testing.T) {
 	if orig != nil {
 		defer Set(orig)
 	} else {
-		orig = &Configuration{}
+		orig = &Configuration{AuthenticationToken: "test-token"}
 		defer Set(orig)
 	}
 
 	tmp := t.TempDir()
 	cfgPath := filepath.Join(tmp, "config.yml")
 	cfg := *orig
+	cfg.AuthenticationToken = "test-token"
 	cfg.path = cfgPath
 	cfg.Debug = true
 	Set(&cfg)
