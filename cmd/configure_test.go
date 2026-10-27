@@ -115,3 +115,24 @@ docker:
 	require.Equal(t, []string{"/srv/shared"}, cfg.AllowedMounts)
 	require.Contains(t, cfg.Docker.Registries, "registry.example.com")
 }
+
+func TestConfigureGetRequestAndMore(t *testing.T) {
+	prevArgs := configureArgs
+	defer func() { configureArgs = prevArgs }()
+
+	configureArgs.PanelURL = "http://panel.example.com"
+	configureArgs.Node = "123"
+	configureArgs.Token = "test-token"
+	req, err := getRequest()
+	require.NoError(t, err)
+	require.Equal(t, "http://panel.example.com/api/application/nodes/123/configuration", req.URL.String())
+	require.Equal(t, "Bearer test-token", req.Header.Get("Authorization"))
+
+	// writePanelConfiguration with invalid json
+	tmp := t.TempDir()
+	require.Error(t, writePanelConfiguration(filepath.Join(tmp, "conf.yml"), "http://panel.test", []byte("invalid-json")))
+
+	// writePanelConfiguration with unwritable path
+	require.Error(t, writePanelConfiguration("/unwritable-dir-xyz/conf.yml", "http://panel.test", []byte(`{"token_id":"id","token":"tok"}`)))
+}
+

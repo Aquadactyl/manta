@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bytes"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -276,6 +277,70 @@ api:
 		cmd.PreRun(cmd, []string{})
 	})
 }
+
+func TestConfigureCmdRun(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"uuid":     "test-uuid-1234",
+			"token_id": "test-id-1234",
+			"token":    "test-token-1234",
+			"api": map[string]interface{}{
+				"host": "0.0.0.0",
+				"port": 8080,
+			},
+			"system": map[string]interface{}{
+				"data": "/var/lib/pterodactyl/volumes",
+				"sftp": map[string]interface{}{
+					"bind_port": 2022,
+				},
+			},
+		})
+	}))
+	defer ts.Close()
+
+	tmpDir := t.TempDir()
+	cfgTarget := filepath.Join(tmpDir, "config.yml")
+
+	oldArgs := configureArgs
+	defer func() { configureArgs = oldArgs }()
+
+	configureArgs.PanelURL = ts.URL
+	configureArgs.Token = "ptla_valid_token_12345"
+	configureArgs.Node = "1"
+	configureArgs.Override = true
+	configureArgs.ConfigPath = cfgTarget
+	configureArgs.AllowInsecure = true
+
+	assert.NotPanics(t, func() {
+		configureCmdRun(nil, nil)
+	})
+	assert.FileExists(t, cfgTarget)
+
+	// writePanelConfiguration with existing config
+	err := writePanelConfiguration(cfgTarget, ts.URL, []byte(`{"token_id":"new-id","token":"new-token"}`))
+	assert.NoError(t, err)
+
+	// writePanelConfiguration with invalid json
+	err = writePanelConfiguration(cfgTarget, ts.URL, []byte(`{broken`))
+	assert.Error(t, err)
+}
+
+func TestInitLogging(t *testing.T) {
+	tmpDir := t.TempDir()
+	config.Set(&config.Configuration{
+		AuthenticationToken: "test",
+		System: config.SystemConfiguration{
+			LogDirectory: filepath.Join(tmpDir, "logs"),
+		},
+	})
+	assert.NotPanics(t, func() {
+		initLogging()
+	})
+	assert.FileExists(t, filepath.Join(tmpDir, "logs", "wings.log"))
+}
+
 
 
 

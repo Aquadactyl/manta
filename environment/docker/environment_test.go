@@ -466,6 +466,28 @@ func TestDockerPowerAndImageHelpers(t *testing.T) {
 		Header:     http.Header{"Content-Type": []string{"application/json"}},
 	}
 	assert.Error(t, parseErrorFromResponse(resBadJson, []byte("{broken-json")))
+
+	// 7. convertMounts
+	env.Configuration = environment.NewConfiguration(environment.Settings{
+		Mounts: []environment.Mount{
+			{Source: "/tmp/host", Target: "/tmp/container", ReadOnly: true},
+		},
+	}, []string{})
+	mnts := env.convertMounts()
+	require.Len(t, mnts, 1)
+	assert.Equal(t, "/tmp/host", mnts[0].Source)
+	assert.Equal(t, "/tmp/container", mnts[0].Target)
+	assert.True(t, mnts[0].ReadOnly)
+
+	// 8. Fast ContainerInspect
+	origFast := fastEnabled
+	defer func() {
+		fastEnabled = origFast
+	}()
+	fastEnabled = true
+
+	_, err = env.ContainerInspect(context.Background())
+	assert.Error(t, err)
 }
 
 func TestDockerStartFailure(t *testing.T) {

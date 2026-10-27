@@ -114,3 +114,15 @@ func TestPost(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, r)
 }
+
+func TestDebugLogRequest(t *testing.T) {
+	req, _ := http.NewRequest(http.MethodGet, "http://127.0.0.1:8080/test", nil)
+	req.Header.Set("Authorization", "Bearer secret-token")
+	req.Header.Set("X-Custom", "custom-value")
+
+	// Call debugLogRequest with current logger
+	assert.NotPanics(t, func() {
+		debugLogRequest(req)
+	})
+}
+

@@ -14,6 +14,7 @@ import (
 
 	"github.com/apex/log"
 	pkgsftp "github.com/pkg/sftp"
+	"golang.org/x/crypto/ssh"
 
 	"github.com/pterodactyl/wings/config"
 	"github.com/pterodactyl/wings/internal/database"
@@ -393,6 +394,39 @@ func TestEventMustLog(t *testing.T) {
 	eh.MustLog("test_event", FileAction{Entity: "/file.txt"})
 	eh.MustLog("test_event", FileAction{Entity: "/from.txt", Target: "/to.txt"})
 }
+
+func TestSFTPAdditionalCoverage(t *testing.T) {
+	// 1. sessionKey with permissions
+	sconn := &ssh.ServerConn{
+		Permissions: &ssh.Permissions{
+			Extensions: map[string]string{
+				"user": "alice",
+				"uuid": "server-1",
+			},
+		},
+	}
+	assert.Equal(t, "alice:server-1", sessionKey(sconn))
+
+	// 2. connectionKey with non-IP hostname
+	assert.Equal(t, "example.com", connectionKey(stringAddr("example.com:2022")))
+
+	// 3. SFTPServer.Run error when listen address invalid
+	tmp := t.TempDir()
+	srv := &SFTPServer{
+		BasePath: tmp,
+		Listen:   "256.256.256.256:2022",
+	}
+	err := srv.Run()
+	assert.Error(t, err)
+
+	// SFTPServer.Run with invalid private key content
+	tmp2 := t.TempDir()
+	srv2 := &SFTPServer{BasePath: tmp2}
+	require.NoError(t, os.MkdirAll(filepath.Dir(srv2.PrivateKeyPath()), 0755))
+	require.NoError(t, os.WriteFile(srv2.PrivateKeyPath(), []byte("invalid-key-data"), 0600))
+	assert.Error(t, srv2.Run())
+}
+
 
 
 

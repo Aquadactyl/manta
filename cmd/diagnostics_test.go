@@ -80,3 +80,59 @@ func TestDiagnosticsUploadReturnsDocumentURL(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, srv.URL+"/abc123", u)
 }
+
+func TestDiagnosticsHelpersAndEdgeCases(t *testing.T) {
+	// 1. Redact
+	prev := diagnosticsArgs.IncludeEndpoints
+	defer func() { diagnosticsArgs.IncludeEndpoints = prev }()
+
+	diagnosticsArgs.IncludeEndpoints = false
+	require.Equal(t, "{redacted}", redact("sensitive-endpoint"))
+	diagnosticsArgs.IncludeEndpoints = true
+	require.Equal(t, "sensitive-endpoint", redact("sensitive-endpoint"))
+
+	// 2. printHeader
+	var b strings.Builder
+	printHeader(&b, "Test Section")
+	require.Contains(t, b.String(), "Test Section")
+
+	// 3. newDiagnosticsCommand
+	cmd := newDiagnosticsCommand()
+	require.NotNil(t, cmd)
+	require.Equal(t, "diagnostics", cmd.Use)
+
+	// 4. uploadToHastebin edge cases
+	_, err := uploadToHastebin("://bad-url", "test")
+	require.Error(t, err)
+
+	badStatusSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer badStatusSrv.Close()
+	_, err = uploadToHastebin(badStatusSrv.URL, "test")
+	require.Error(t, err)
+
+	notJsonSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("not-json"))
+	}))
+	defer notJsonSrv.Close()
+	_, err = uploadToHastebin(notJsonSrv.URL, "test")
+	require.Error(t, err)
+
+	noKeySrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"other":"val"}`))
+	}))
+	defer noKeySrv.Close()
+	_, err = uploadToHastebin(noKeySrv.URL, "test")
+	require.Error(t, err)
+
+	// 5. getDockerInfo
+	v, info, err := getDockerInfo()
+	if err == nil {
+		require.NotEmpty(t, v.Version)
+		_ = info
+	}
+}
+

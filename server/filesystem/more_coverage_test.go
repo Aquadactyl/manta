@@ -1,12 +1,16 @@
 package filesystem
 
 import (
+	"archive/tar"
 	"bytes"
+	"compress/gzip"
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -189,3 +193,72 @@ func TestFilesystemMoreOps(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotZero(t, st.CTime())
 }
+
+func TestCompressAndDecompressAdvanced(t *testing.T) {
+	config.Set(&config.Configuration{AuthenticationToken: "test"})
+	dir := t.TempDir()
+	fs, err := New(dir, 1024*1024*1024, []string{"denied.txt"})
+	require.NoError(t, err)
+
+	require.NoError(t, fs.Writefile("orig.txt", bytes.NewReader([]byte("sample data"))))
+
+	// 1. CompressFiles multiple times creates archive.tar.gz and archive-1.tar.gz
+	f1, err := fs.CompressFiles("/", []string{"orig.txt"})
+	require.NoError(t, err)
+	assert.Contains(t, f1.Name(), "archive-")
+
+	f2, err := fs.CompressFiles("/", []string{"orig.txt"})
+	require.NoError(t, err)
+	assert.Contains(t, f2.Name(), "-1.tar.gz")
+
+	// 2. DecompressFile with directory, symlink, and ignored file
+	var buf bytes.Buffer
+	gw := gzip.NewWriter(&buf)
+	tw := tar.NewWriter(gw)
+
+	// Directory entry
+	require.NoError(t, tw.WriteHeader(&tar.Header{Name: "subfolder/", Mode: 0755, Typeflag: tar.TypeDir}))
+	// Regular file
+	require.NoError(t, tw.WriteHeader(&tar.Header{Name: "subfolder/hello.txt", Mode: 0644, Size: 5, Typeflag: tar.TypeReg}))
+	_, err = tw.Write([]byte("world"))
+	require.NoError(t, err)
+	// Symlink
+	require.NoError(t, tw.WriteHeader(&tar.Header{Name: "subfolder/sym.txt", Linkname: "hello.txt", Mode: 0777, Typeflag: tar.TypeSymlink}))
+	// Symlink with empty target (skipped)
+	require.NoError(t, tw.WriteHeader(&tar.Header{Name: "subfolder/emptylink", Linkname: "", Mode: 0777, Typeflag: tar.TypeSymlink}))
+	// Denylisted file (skipped)
+	require.NoError(t, tw.WriteHeader(&tar.Header{Name: "denied.txt", Mode: 0644, Size: 4, Typeflag: tar.TypeReg}))
+	_, err = tw.Write([]byte("skip"))
+	require.NoError(t, err)
+
+	require.NoError(t, tw.Close())
+	require.NoError(t, gw.Close())
+
+	require.NoError(t, fs.Writefile("complex.tar.gz", bytes.NewReader(buf.Bytes())))
+
+	// SpaceAvailableForDecompression
+	require.NoError(t, fs.SpaceAvailableForDecompression(context.Background(), "/", "complex.tar.gz"))
+
+	// DecompressFile
+	require.NoError(t, fs.DecompressFile(context.Background(), "/", "complex.tar.gz"))
+	assert.FileExists(t, filepath.Join(dir, "subfolder", "hello.txt"))
+	assert.FileExists(t, filepath.Join(dir, "subfolder", "sym.txt"))
+	assert.NoFileExists(t, filepath.Join(dir, "denied.txt"))
+
+	// 3. SpaceAvailableForDecompression with long entry name (> 4096 chars)
+	var longBuf bytes.Buffer
+	gwLong := gzip.NewWriter(&longBuf)
+	twLong := tar.NewWriter(gwLong)
+	longName := strings.Repeat("a", 4100)
+	require.NoError(t, twLong.WriteHeader(&tar.Header{Name: longName, Mode: 0644, Size: 0, Typeflag: tar.TypeReg}))
+	require.NoError(t, twLong.Close())
+	require.NoError(t, gwLong.Close())
+
+	require.NoError(t, fs.Writefile("longname.tar.gz", bytes.NewReader(longBuf.Bytes())))
+	err = fs.SpaceAvailableForDecompression(context.Background(), "/", "longname.tar.gz")
+	assert.Error(t, err)
+	if err != nil {
+		assert.Contains(t, err.Error(), "too long")
+	}
+}
+

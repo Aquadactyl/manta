@@ -932,6 +932,21 @@ func TestInstallationProcessDetails(t *testing.T) {
 	config.Set(cfg)
 	resZero := ip.resourceLimits()
 	assert.Equal(t, int64(0), resZero.CPUQuota)
+
+	// 5. NewInstallationProcess and methods
+	cfg.System.LogDirectory = tmpDir
+	require.NoError(t, os.MkdirAll(filepath.Join(tmpDir, "install"), 0755))
+
+	proc, err := NewInstallationProcess(s, &remote.InstallationScript{
+		ContainerImage: "ghcr.io/invalid/nonexistent-image:invalid",
+		Entrypoint:     "/bin/sh",
+		Script:         "echo 1",
+	})
+	if err == nil {
+		assert.Equal(t, filepath.Join(tmpDir, "install", s.ID()+".log"), proc.GetLogPath())
+		assert.NoError(t, proc.RemoveContainer())
+		assert.Error(t, proc.BeforeExecute())
+	}
 }
 
 func TestManagerInitBranches(t *testing.T) {

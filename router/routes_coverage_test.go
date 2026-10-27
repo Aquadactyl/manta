@@ -1,7 +1,10 @@
 package router
 
 import (
+	"archive/tar"
 	"bytes"
+	"compress/gzip"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -22,6 +25,7 @@ import (
 	"github.com/pterodactyl/wings/internal/database"
 	"github.com/pterodactyl/wings/router/tokens"
 	"github.com/pterodactyl/wings/server/transfer"
+	"github.com/pterodactyl/wings/system"
 	"mime/multipart"
 	"net"
 	"net/netip"
@@ -1463,6 +1467,465 @@ func TestRouterServerMoreOperations(t *testing.T) {
 	h.router.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusNoContent, w.Code)
 }
+
+func TestMoreBackupAndSystemOperations(t *testing.T) {
+	h := newTransferHarness(t, &transferTestPanel{})
+	s := h.seedServer()
+
+	// Ensure backup directory exists
+	require.NoError(t, os.MkdirAll(config.Get().System.BackupDirectory, 0755))
+
+	// 1. deleteServerBackup invalid UUID (400)
+	req := httptest.NewRequest(http.MethodDelete, "/api/servers/"+s.ID()+"/backup/not-a-uuid", nil)
+	req.Header.Set("Authorization", "Bearer test-token")
+	w := httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+
+	// 2. deleteServerBackup not found (404)
+	missingUUID := uuid.New().String()
+	req = httptest.NewRequest(http.MethodDelete, "/api/servers/"+s.ID()+"/backup/"+missingUUID, nil)
+	req.Header.Set("Authorization", "Bearer test-token")
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusNotFound, w.Code)
+
+	// 3. deleteServerBackup exists (204)
+	existingUUID := uuid.New().String()
+	backupPath := filepath.Join(config.Get().System.BackupDirectory, existingUUID+".tar.gz")
+	require.NoError(t, os.WriteFile(backupPath, []byte("tar-content"), 0644))
+	req = httptest.NewRequest(http.MethodDelete, "/api/servers/"+s.ID()+"/backup/"+existingUUID, nil)
+	req.Header.Set("Authorization", "Bearer test-token")
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusNoContent, w.Code)
+
+	// 4. postServerRestoreBackup with local adapter and existing tar.gz
+	localUUID := uuid.New().String()
+	localBackupFile := filepath.Join(config.Get().System.BackupDirectory, localUUID+".tar.gz")
+	require.NoError(t, os.WriteFile(localBackupFile, []byte("fake-tar"), 0644))
+	req = httptest.NewRequest(http.MethodPost, "/api/servers/"+s.ID()+"/backup/"+localUUID+"/restore", strings.NewReader(`{"adapter":"wings","truncate_directory":false}`))
+	req.Header.Set("Authorization", "Bearer test-token")
+	req.Header.Set("Content-Type", "application/json")
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusAccepted, w.Code)
+	time.Sleep(10 * time.Millisecond)
+	s.SetRestoring(false)
+
+	// 5. postServerRestoreBackup with S3 adapter and unsupported content type
+	origin := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/bad-content-type" {
+			w.Header().Set("Content-Type", "text/plain")
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte("not gzip"))
+			return
+		}
+		if r.URL.Path == "/bad-status" {
+			w.WriteHeader(http.StatusBadGateway)
+			return
+		}
+	}))
+	defer origin.Close()
+
+	cfg := *config.Get()
+	cfg.System.Backups.RestoreHostAllowlist = []string{"127.0.0.1", "localhost"}
+	config.Set(&cfg)
+
+	// Unsupported content type
+	s3UUID := uuid.New().String()
+	req = httptest.NewRequest(http.MethodPost, "/api/servers/"+s.ID()+"/backup/"+s3UUID+"/restore", strings.NewReader(`{"adapter":"s3","download_url":"`+origin.URL+`/bad-content-type"}`))
+	req.Header.Set("Authorization", "Bearer test-token")
+	req.Header.Set("Content-Type", "application/json")
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Contains(t, w.Body.String(), "not a supported content type")
+	s.SetRestoring(false)
+
+	// Bad response status
+	req = httptest.NewRequest(http.MethodPost, "/api/servers/"+s.ID()+"/backup/"+s3UUID+"/restore", strings.NewReader(`{"adapter":"s3","download_url":"`+origin.URL+`/bad-status"}`))
+	req.Header.Set("Authorization", "Bearer test-token")
+	req.Header.Set("Content-Type", "application/json")
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Contains(t, w.Body.String(), "invalid response status")
+	s.SetRestoring(false)
+
+	// 6. Direct CheckRedirect tests on backupRestoreHttpClient
+	client := backupRestoreHttpClient()
+	reqRedirect, _ := http.NewRequest(http.MethodGet, "http://127.0.0.1", nil)
+	via := make([]*http.Request, 10)
+	assert.Error(t, client.CheckRedirect(reqRedirect, via))
+
+	// 7. getServer and getServerLogs
+	req = httptest.NewRequest(http.MethodGet, "/api/servers/"+s.ID(), nil)
+	req.Header.Set("Authorization", "Bearer test-token")
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	req = httptest.NewRequest(http.MethodGet, "/api/servers/"+s.ID()+"/logs?size=50", nil)
+	req.Header.Set("Authorization", "Bearer test-token")
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	req = httptest.NewRequest(http.MethodGet, "/api/servers/"+s.ID()+"/logs?size=-1", nil)
+	req.Header.Set("Authorization", "Bearer test-token")
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	req = httptest.NewRequest(http.MethodGet, "/api/servers/"+s.ID()+"/logs?size=200", nil)
+	req.Header.Set("Authorization", "Bearer test-token")
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	// 8. postDeauthorizeUser
+	req = httptest.NewRequest(http.MethodPost, "/api/deauthorize-user", strings.NewReader(`{"user":"test-user","servers":["`+s.ID()+`"]}`))
+	req.Header.Set("Authorization", "Bearer test-token")
+	req.Header.Set("Content-Type", "application/json")
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusNoContent, w.Code)
+
+	req = httptest.NewRequest(http.MethodPost, "/api/deauthorize-user", strings.NewReader(`{"user":"test-user","servers":[]}`))
+	req.Header.Set("Authorization", "Bearer test-token")
+	req.Header.Set("Content-Type", "application/json")
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusNoContent, w.Code)
+
+	// 9. postCreateServer invalid payload
+	req = httptest.NewRequest(http.MethodPost, "/api/servers", strings.NewReader(`{"uuid":""}`))
+	req.Header.Set("Authorization", "Bearer test-token")
+	req.Header.Set("Content-Type", "application/json")
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	assert.Contains(t, []int{http.StatusUnprocessableEntity, http.StatusBadRequest}, w.Code)
+
+	// postCreateServer duplicate UUID
+	req = httptest.NewRequest(http.MethodPost, "/api/servers", strings.NewReader(`{"uuid":"`+s.ID()+`"}`))
+	req.Header.Set("Authorization", "Bearer test-token")
+	req.Header.Set("Content-Type", "application/json")
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusConflict, w.Code)
+}
+
+func TestFilesEndpointsAdvancedCoverage(t *testing.T) {
+	h := newTransferHarness(t, &transferTestPanel{})
+	s := h.seedServer()
+	require.NoError(t, os.MkdirAll(s.Filesystem().Path(), 0755))
+
+	// 1. deleteServerPullRemoteFile
+	req := httptest.NewRequest(http.MethodDelete, "/api/servers/"+s.ID()+"/files/pull/some-id", nil)
+	req.Header.Set("Authorization", "Bearer test-token")
+	w := httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusNoContent, w.Code)
+
+	// 2. postServerChmodFile with empty files list (422)
+	req = httptest.NewRequest(http.MethodPost, "/api/servers/"+s.ID()+"/files/chmod", strings.NewReader(`{"root":"/","files":[]}`))
+	req.Header.Set("Authorization", "Bearer test-token")
+	req.Header.Set("Content-Type", "application/json")
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusUnprocessableEntity, w.Code)
+
+	// 3. postServerChmodFile with invalid octal mode
+	req = httptest.NewRequest(http.MethodPost, "/api/servers/"+s.ID()+"/files/chmod", strings.NewReader(`{"root":"/","files":[{"file":"test.txt","mode":"999"}]}`))
+	req.Header.Set("Authorization", "Bearer test-token")
+	req.Header.Set("Content-Type", "application/json")
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	assert.Contains(t, []int{http.StatusBadRequest, http.StatusInternalServerError}, w.Code)
+
+	// 4. postServerChmodFile with missing file (tolerated, 204)
+	req = httptest.NewRequest(http.MethodPost, "/api/servers/"+s.ID()+"/files/chmod", strings.NewReader(`{"root":"/","files":[{"file":"missing.txt","mode":"0644"}]}`))
+	req.Header.Set("Authorization", "Bearer test-token")
+	req.Header.Set("Content-Type", "application/json")
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusNoContent, w.Code)
+
+	// 5. postServerDecompressFiles with non-archive file
+	txtFile := filepath.Join(s.Filesystem().Path(), "not-archive.txt")
+	require.NoError(t, os.WriteFile(txtFile, []byte("plain text content"), 0644))
+	req = httptest.NewRequest(http.MethodPost, "/api/servers/"+s.ID()+"/files/decompress", strings.NewReader(`{"root":"/","file":"not-archive.txt"}`))
+	req.Header.Set("Authorization", "Bearer test-token")
+	req.Header.Set("Content-Type", "application/json")
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	assert.Contains(t, []int{http.StatusBadRequest, http.StatusInternalServerError}, w.Code)
+
+	// 6. postServerDecompressFiles with valid tar.gz file (204)
+	tarFile := filepath.Join(s.Filesystem().Path(), "archive.tar.gz")
+	f, err := os.Create(tarFile)
+	require.NoError(t, err)
+	gw := gzip.NewWriter(f)
+	tw := tar.NewWriter(gw)
+	require.NoError(t, tw.Close())
+	require.NoError(t, gw.Close())
+	require.NoError(t, f.Close())
+
+	req = httptest.NewRequest(http.MethodPost, "/api/servers/"+s.ID()+"/files/decompress", strings.NewReader(`{"root":"/","file":"archive.tar.gz"}`))
+	req.Header.Set("Authorization", "Bearer test-token")
+	req.Header.Set("Content-Type", "application/json")
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusNoContent, w.Code)
+
+	// 7. Binding errors on various file endpoints (400)
+	for _, ep := range []string{
+		"/api/servers/" + s.ID() + "/files/rename",
+		"/api/servers/" + s.ID() + "/files/copy",
+		"/api/servers/" + s.ID() + "/files/delete",
+		"/api/servers/" + s.ID() + "/files/pull",
+		"/api/servers/" + s.ID() + "/files/create-directory",
+		"/api/servers/" + s.ID() + "/files/compress",
+		"/api/servers/" + s.ID() + "/files/decompress",
+		"/api/servers/" + s.ID() + "/files/chmod",
+	} {
+		req = httptest.NewRequest(http.MethodPost, ep, strings.NewReader(`{broken-json`))
+		if strings.Contains(ep, "rename") {
+			req.Method = http.MethodPut
+		}
+		req.Header.Set("Authorization", "Bearer test-token")
+		req.Header.Set("Content-Type", "application/json")
+		w = httptest.NewRecorder()
+		h.router.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	}
+	// 8. postServerPullRemoteFile synchronous foreground download
+	dlServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Disposition", "attachment; filename=\"pulled.txt\"")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("pulled content"))
+	}))
+	defer dlServer.Close()
+
+	cfg := *config.Get()
+	cfg.Api.RemoteDownloadAllowlist = []string{"127.0.0.1", "localhost"}
+	config.Set(&cfg)
+
+	req = httptest.NewRequest(http.MethodPost, "/api/servers/"+s.ID()+"/files/pull", strings.NewReader(`{
+		"url": "`+dlServer.URL+`/file.txt",
+		"root": "/",
+		"file_name": "pulled.txt",
+		"use_header": true,
+		"foreground": true
+	}`))
+	req.Header.Set("Authorization", "Bearer test-token")
+	req.Header.Set("Content-Type", "application/json")
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	assert.Contains(t, []int{http.StatusOK, http.StatusBadRequest}, w.Code)
+}
+
+func TestServerTransferAndLifecycleBranches(t *testing.T) {
+	h := newTransferHarness(t, &transferTestPanel{})
+	s := h.seedServer()
+
+	// 1. postServerPower with negative wait_seconds and kill action
+	req := httptest.NewRequest(http.MethodPost, "/api/servers/"+s.ID()+"/power", strings.NewReader(`{"action":"kill","wait_seconds":-10}`))
+	req.Header.Set("Authorization", "Bearer test-token")
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusAccepted, w.Code)
+
+	// 2. postServerCommands with running server
+	s.Environment = transferTestEnvironment{st: system.NewAtomicString(environment.ProcessRunningState)}
+
+	// Invalid json
+	req = httptest.NewRequest(http.MethodPost, "/api/servers/"+s.ID()+"/commands", strings.NewReader(`{broken`))
+	req.Header.Set("Authorization", "Bearer test-token")
+	req.Header.Set("Content-Type", "application/json")
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+
+	// Valid commands
+	req = httptest.NewRequest(http.MethodPost, "/api/servers/"+s.ID()+"/commands", strings.NewReader(`{"commands":["say hi","list"]}`))
+	req.Header.Set("Authorization", "Bearer test-token")
+	req.Header.Set("Content-Type", "application/json")
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusNoContent, w.Code)
+
+	s.Environment = transferTestEnvironment{st: system.NewAtomicString(environment.ProcessOfflineState)}
+
+	// 3. postServerDenyWSTokens invalid json
+	req = httptest.NewRequest(http.MethodPost, "/api/servers/"+s.ID()+"/ws/deny", strings.NewReader(`{broken`))
+	req.Header.Set("Authorization", "Bearer test-token")
+	req.Header.Set("Content-Type", "application/json")
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+
+	// 4. postServerReinstall
+	req = httptest.NewRequest(http.MethodPost, "/api/servers/"+s.ID()+"/reinstall", nil)
+	req.Header.Set("Authorization", "Bearer test-token")
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	assert.Contains(t, []int{http.StatusAccepted, http.StatusConflict}, w.Code)
+
+	// 5. deleteServerTransfer when server is transferring but no outgoing transfer object
+	s.SetTransferring(true)
+	req = httptest.NewRequest(http.MethodDelete, "/api/servers/"+s.ID()+"/transfer", nil)
+	req.Header.Set("Authorization", "Bearer test-token")
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusConflict, w.Code)
+
+	// deleteServerTransfer when outgoing transfer object exists
+	tr := transfer.New(context.Background(), s)
+	transfer.Outgoing().Add(tr)
+	req = httptest.NewRequest(http.MethodDelete, "/api/servers/"+s.ID()+"/transfer", nil)
+	req.Header.Set("Authorization", "Bearer test-token")
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusAccepted, w.Code)
+	transfer.Outgoing().Remove(tr)
+	s.SetTransferring(false)
+
+	// 6. postServerTransfer invalid json
+	req = httptest.NewRequest(http.MethodPost, "/api/servers/"+s.ID()+"/transfer", strings.NewReader(`{broken`))
+	req.Header.Set("Authorization", "Bearer test-token")
+	req.Header.Set("Content-Type", "application/json")
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+
+	// postServerTransfer successful initiation
+	req = httptest.NewRequest(http.MethodPost, "/api/servers/"+s.ID()+"/transfer", strings.NewReader(`{"url":"http://127.0.0.1:9999","token":"test-token"}`))
+	req.Header.Set("Authorization", "Bearer test-token")
+	req.Header.Set("Content-Type", "application/json")
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusAccepted, w.Code)
+	time.Sleep(10 * time.Millisecond)
+	s.SetTransferring(false)
+
+	// 7. deleteTransfer (/api/transfers/:server)
+	// Transfer not found -> 409
+	req = httptest.NewRequest(http.MethodDelete, "/api/transfers/nonexistent-server", nil)
+	req.Header.Set("Authorization", "Bearer test-token")
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusConflict, w.Code)
+
+	// Incoming transfer found -> 202
+	inTr := transfer.New(context.Background(), s)
+	transfer.Incoming().Add(inTr)
+	req = httptest.NewRequest(http.MethodDelete, "/api/transfers/"+s.ID(), nil)
+	req.Header.Set("Authorization", "Bearer test-token")
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusAccepted, w.Code)
+	transfer.Incoming().Remove(inTr)
+}
+
+func TestFileOperationsComprehensiveCoverage(t *testing.T) {
+	h := newTransferHarness(t, &transferTestPanel{})
+	s := h.seedServer()
+	require.NoError(t, os.MkdirAll(s.Filesystem().Path(), 0755))
+
+	// Write a test file
+	testFile := filepath.Join(s.Filesystem().Path(), "sample.txt")
+	require.NoError(t, os.WriteFile(testFile, []byte("hello world"), 0644))
+
+	// Create a test directory
+	testDir := filepath.Join(s.Filesystem().Path(), "somedir")
+	require.NoError(t, os.MkdirAll(testDir, 0755))
+
+	// 1. getServerFileContents with download=true
+	req := httptest.NewRequest(http.MethodGet, "/api/servers/"+s.ID()+"/files/contents?file=sample.txt&download=true", nil)
+	req.Header.Set("Authorization", "Bearer test-token")
+	w := httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Contains(t, w.Header().Get("Content-Disposition"), "attachment; filename=\"sample.txt\"")
+
+	// 2. postServerCopyFile
+	req = httptest.NewRequest(http.MethodPost, "/api/servers/"+s.ID()+"/files/copy", strings.NewReader(`{"location":"sample.txt"}`))
+	req.Header.Set("Authorization", "Bearer test-token")
+	req.Header.Set("Content-Type", "application/json")
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusNoContent, w.Code)
+
+	// 3. putServerRenameFiles empty files list (422)
+	req = httptest.NewRequest(http.MethodPut, "/api/servers/"+s.ID()+"/files/rename", strings.NewReader(`{"root":"/","files":[]}`))
+	req.Header.Set("Authorization", "Bearer test-token")
+	req.Header.Set("Content-Type", "application/json")
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusUnprocessableEntity, w.Code)
+
+	// putServerRenameFiles valid rename
+	req = httptest.NewRequest(http.MethodPut, "/api/servers/"+s.ID()+"/files/rename", strings.NewReader(`{"root":"/","files":[{"from":"sample.txt","to":"renamed.txt"}]}`))
+	req.Header.Set("Authorization", "Bearer test-token")
+	req.Header.Set("Content-Type", "application/json")
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusNoContent, w.Code)
+
+	// 4. postServerDeleteFiles empty files list (422)
+	req = httptest.NewRequest(http.MethodPost, "/api/servers/"+s.ID()+"/files/delete", strings.NewReader(`{"root":"/","files":[]}`))
+	req.Header.Set("Authorization", "Bearer test-token")
+	req.Header.Set("Content-Type", "application/json")
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusUnprocessableEntity, w.Code)
+
+	// postServerDeleteFiles valid delete
+	req = httptest.NewRequest(http.MethodPost, "/api/servers/"+s.ID()+"/files/delete", strings.NewReader(`{"root":"/","files":["renamed.txt"]}`))
+	req.Header.Set("Authorization", "Bearer test-token")
+	req.Header.Set("Content-Type", "application/json")
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusNoContent, w.Code)
+
+	// 5. postServerCompressFiles empty files list (422)
+	req = httptest.NewRequest(http.MethodPost, "/api/servers/"+s.ID()+"/files/compress", strings.NewReader(`{"root":"/","files":[]}`))
+	req.Header.Set("Authorization", "Bearer test-token")
+	req.Header.Set("Content-Type", "application/json")
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusUnprocessableEntity, w.Code)
+
+	// 6. postServerWriteFile with ContentLength == -1
+	req = httptest.NewRequest(http.MethodPost, "/api/servers/"+s.ID()+"/files/write?file=new.txt", strings.NewReader("content"))
+	req.Header.Set("Authorization", "Bearer test-token")
+	req.ContentLength = -1
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+
+	// postServerWriteFile targeting existing directory
+	req = httptest.NewRequest(http.MethodPost, "/api/servers/"+s.ID()+"/files/write?file=somedir", strings.NewReader("content"))
+	req.Header.Set("Authorization", "Bearer test-token")
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+
+	// 7. getServerPullingFiles
+	req = httptest.NewRequest(http.MethodGet, "/api/servers/"+s.ID()+"/files/pull", nil)
+	req.Header.Set("Authorization", "Bearer test-token")
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusOK, w.Code)
+}
+
+
+
+
+
 
 
 
