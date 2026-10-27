@@ -24,12 +24,14 @@ import (
 	"github.com/pterodactyl/wings/config"
 	"github.com/pterodactyl/wings/environment"
 	"github.com/pterodactyl/wings/internal/database"
+	"github.com/pterodactyl/wings/router/downloader"
 	"github.com/pterodactyl/wings/router/tokens"
 	"github.com/pterodactyl/wings/server/transfer"
 	"github.com/pterodactyl/wings/system"
 	"mime/multipart"
 	"net"
 	"net/netip"
+	"net/url"
 )
 
 func TestSystemInformationRoutes(t *testing.T) {
@@ -1040,6 +1042,26 @@ func TestPostCreateServer(t *testing.T) {
 	w = httptest.NewRecorder()
 	h.router.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusAccepted, w.Code)
+	time.Sleep(30 * time.Millisecond)
+
+	// 4. Accepted with start_on_completion: true and skip_egg_scripts: true
+	newUUID2 := "00000000-0000-4000-8000-000000000098"
+	h.panel.config.Settings, _ = json.Marshal(map[string]any{
+		"uuid":             newUUID2,
+		"skip_egg_scripts": true,
+	})
+	validBody2 := map[string]any{
+		"uuid":                newUUID2,
+		"start_on_completion": true,
+	}
+	bodyBytes2, _ := json.Marshal(validBody2)
+	req = httptest.NewRequest(http.MethodPost, "/api/servers", bytes.NewReader(bodyBytes2))
+	req.Header.Set("Authorization", "Bearer test-token")
+	req.Header.Set("Content-Type", "application/json")
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusAccepted, w.Code)
+	time.Sleep(50 * time.Millisecond)
 }
 
 func TestPostServerCopyFileAndFileContents(t *testing.T) {
@@ -2083,6 +2105,55 @@ func TestFileOperationsComprehensiveCoverage(t *testing.T) {
 	w = httptest.NewRecorder()
 	h.router.ServeHTTP(w, req)
 	assert.Contains(t, []int{http.StatusBadRequest, http.StatusInternalServerError}, w.Code)
+
+	// 16. Named pipe rejected in getServerFileContents
+	namedPipePath := filepath.Join(s.Filesystem().Path(), "testpipe")
+	_ = syscall.Mknod(namedPipePath, syscall.S_IFIFO|0666, 0)
+	req = httptest.NewRequest(http.MethodGet, "/api/servers/"+s.ID()+"/files/contents?file=testpipe", nil)
+	req.Header.Set("Authorization", "Bearer test-token")
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	assert.Contains(t, []int{http.StatusBadRequest, http.StatusInternalServerError}, w.Code)
+
+	// 17. Download query parameter in getServerFileContents
+	req = httptest.NewRequest(http.MethodGet, "/api/servers/"+s.ID()+"/files/contents?file=not-archive.txt&download=1", nil)
+	req.Header.Set("Authorization", "Bearer test-token")
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Contains(t, w.Header().Get("Content-Disposition"), "attachment")
+
+	// 18. Deprecated directory parameter in getServerListDirectory
+	req = httptest.NewRequest(http.MethodGet, "/api/servers/"+s.ID()+"/files/list-directory?directory=/", nil)
+	req.Header.Set("Authorization", "Bearer test-token")
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	// 19. postServerCreateDirectory when parent is a regular file
+	req = httptest.NewRequest(http.MethodPost, "/api/servers/"+s.ID()+"/files/create-directory", strings.NewReader(`{"name":"subdir","path":"not-archive.txt"}`))
+	req.Header.Set("Authorization", "Bearer test-token")
+	req.Header.Set("Content-Type", "application/json")
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	assert.Contains(t, []int{http.StatusBadRequest, http.StatusInternalServerError}, w.Code)
+
+	// 20. postServerPullRemoteFile limit of 3 simultaneous downloads
+	u, _ := url.Parse("https://example.com/file.txt")
+	dl1 := downloader.New(s, downloader.DownloadRequest{Directory: "/", URL: u, FileName: "f1.txt"})
+	dl2 := downloader.New(s, downloader.DownloadRequest{Directory: "/", URL: u, FileName: "f2.txt"})
+	dl3 := downloader.New(s, downloader.DownloadRequest{Directory: "/", URL: u, FileName: "f3.txt"})
+	defer dl1.Cancel()
+	defer dl2.Cancel()
+	defer dl3.Cancel()
+
+	req = httptest.NewRequest(http.MethodPost, "/api/servers/"+s.ID()+"/files/pull", strings.NewReader(`{"root":"/","url":"https://example.com/file4.txt"}`))
+	req.Header.Set("Authorization", "Bearer test-token")
+	req.Header.Set("Content-Type", "application/json")
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Contains(t, w.Body.String(), "has reached its limit of 3 simultaneous remote file downloads")
 }
 
 

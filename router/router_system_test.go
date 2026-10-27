@@ -184,3 +184,64 @@ func TestPostUpdateConfigurationOnlyAppliesPanelValues(t *testing.T) {
 		t.Fatalf("unexpected configuration written to disk:\n%s", onDisk)
 	}
 }
+
+func TestPostUpdateConfigurationIgnored(t *testing.T) {
+	cfg := config.Get()
+	cfg.IgnorePanelConfigUpdates = true
+	config.Set(cfg)
+	defer func() {
+		cfg.IgnorePanelConfigUpdates = false
+		config.Set(cfg)
+	}()
+
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	postUpdateConfiguration(c)
+	if recorder.Code != 200 {
+		t.Fatalf("expected 200, got %d", recorder.Code)
+	}
+	var res postUpdateConfigurationResponse
+	_ = json.Unmarshal(recorder.Body.Bytes(), &res)
+	if res.Applied != false {
+		t.Fatalf("expected Applied: false, got true")
+	}
+}
+
+func TestPostCreateServerAlreadyExists(t *testing.T) {
+	client := backupTestRemoteClient{credentials: make(chan [2]string, 1)}
+	mgr := server.NewEmptyManager(client)
+	s, err := server.New(client)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s.Config().Uuid = "44444444-4444-4444-4444-444444444444"
+	mgr.Add(s)
+
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	c.Set("manager", mgr)
+	c.Request = httptest.NewRequest("POST", "/api/servers", strings.NewReader(`{"uuid":"44444444-4444-4444-4444-444444444444"}`))
+	c.Request.Header.Set("Content-Type", "application/json")
+
+	postCreateServer(c)
+	if recorder.Code != http.StatusConflict {
+		t.Fatalf("expected 409 Conflict, got %d", recorder.Code)
+	}
+}
+
+func TestPostCreateServerValidationError(t *testing.T) {
+	client := backupTestRemoteClient{credentials: make(chan [2]string, 1)}
+	mgr := server.NewEmptyManager(client)
+
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	c.Set("manager", mgr)
+	c.Request = httptest.NewRequest("POST", "/api/servers", strings.NewReader(`{"uuid":"not-a-valid-uuid"}`))
+	c.Request.Header.Set("Content-Type", "application/json")
+
+	postCreateServer(c)
+	if recorder.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("expected 422 Unprocessable Entity, got %d", recorder.Code)
+	}
+}
+

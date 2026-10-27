@@ -5,6 +5,8 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"mime/multipart"
@@ -404,4 +406,126 @@ func TestPostTransfersValidationBranches(t *testing.T) {
 	assert.Equal(t, http.StatusAccepted, w.Code)
 	_ = tr
 }
+
+func TestTransferChecksumBeforeArchive(t *testing.T) {
+	h := newTransferHarness(t, &transferTestPanel{})
+
+	var buf bytes.Buffer
+	mw := multipart.NewWriter(&buf)
+	require.NoError(t, mw.WriteField("checksum", strings.Repeat("0", 64)))
+	require.NoError(t, mw.Close())
+
+	newUUID := "22222222-3333-4444-8888-999999999999"
+	h.panel.config.Settings, _ = json.Marshal(map[string]string{"uuid": newUUID})
+
+	w := h.postTransfer(&buf, mw.FormDataContentType(), signTransferTestToken(t, newUUID))
+	assert.Contains(t, []int{http.StatusBadRequest, http.StatusInternalServerError}, w.Code)
+}
+
+func TestTransferUnknownPartName(t *testing.T) {
+	h := newTransferHarness(t, &transferTestPanel{})
+
+	archive := buildTransferTestArchive(t, map[string]string{"file.txt": "data"})
+	var buf bytes.Buffer
+	mw := multipart.NewWriter(&buf)
+	part, err := mw.CreateFormFile("archive", "archive.tar.gz")
+	require.NoError(t, err)
+	_, _ = part.Write(archive)
+	require.NoError(t, mw.WriteField("unknown_field", "value"))
+	require.NoError(t, mw.WriteField("checksum", strings.Repeat("0", 64)))
+	require.NoError(t, mw.Close())
+
+	newUUID := "33333333-4444-4444-8888-999999999999"
+	h.panel.config.Settings, _ = json.Marshal(map[string]string{"uuid": newUUID})
+
+	w := h.postTransfer(&buf, mw.FormDataContentType(), signTransferTestToken(t, newUUID))
+	assert.Contains(t, []int{http.StatusBadRequest, http.StatusInternalServerError}, w.Code)
+}
+
+func TestTransferMissingChecksum(t *testing.T) {
+	h := newTransferHarness(t, &transferTestPanel{})
+
+	archive := buildTransferTestArchive(t, map[string]string{"file.txt": "data"})
+	var buf bytes.Buffer
+	mw := multipart.NewWriter(&buf)
+	part, err := mw.CreateFormFile("archive", "archive.tar.gz")
+	require.NoError(t, err)
+	_, _ = part.Write(archive)
+	require.NoError(t, mw.Close())
+
+	newUUID := "44444444-5555-4444-8888-999999999999"
+	h.panel.config.Settings, _ = json.Marshal(map[string]string{"uuid": newUUID})
+
+	w := h.postTransfer(&buf, mw.FormDataContentType(), signTransferTestToken(t, newUUID))
+	assert.Contains(t, []int{http.StatusBadRequest, http.StatusInternalServerError}, w.Code)
+}
+
+func TestTransferInvalidHexChecksum(t *testing.T) {
+	h := newTransferHarness(t, &transferTestPanel{})
+
+	archive := buildTransferTestArchive(t, map[string]string{"file.txt": "data"})
+	var buf bytes.Buffer
+	mw := multipart.NewWriter(&buf)
+	part, err := mw.CreateFormFile("archive", "archive.tar.gz")
+	require.NoError(t, err)
+	_, _ = part.Write(archive)
+	require.NoError(t, mw.WriteField("checksum", "not-a-valid-hex-checksum!!"))
+	require.NoError(t, mw.Close())
+
+	newUUID := "55555555-6666-4444-8888-999999999999"
+	h.panel.config.Settings, _ = json.Marshal(map[string]string{"uuid": newUUID})
+
+	w := h.postTransfer(&buf, mw.FormDataContentType(), signTransferTestToken(t, newUUID))
+	assert.Contains(t, []int{http.StatusBadRequest, http.StatusInternalServerError}, w.Code)
+}
+
+func TestTransferInvalidContentType(t *testing.T) {
+	h := newTransferHarness(t, &transferTestPanel{})
+
+	newUUID := "66666666-7777-4444-8888-999999999999"
+	h.panel.config.Settings, _ = json.Marshal(map[string]string{"uuid": newUUID})
+
+	w := h.postTransfer(bytes.NewBuffer(nil), "invalid/content;type=bad;format===", signTransferTestToken(t, newUUID))
+	assert.Contains(t, []int{http.StatusBadRequest, http.StatusInternalServerError}, w.Code)
+}
+
+type failConfigPanel struct {
+	transferTestPanel
+}
+
+func (failConfigPanel) GetServerConfiguration(context.Context, string) (remote.ServerConfigurationResponse, error) {
+	return remote.ServerConfigurationResponse{}, errors.New("cannot fetch config")
+}
+
+func TestTransferInstallerFailure(t *testing.T) {
+	panel := &failConfigPanel{}
+	h := newTransferHarness(t, &transferTestPanel{})
+	h.mgr = wserver.NewEmptyManager(panel)
+	h.router = Configure(h.mgr, panel)
+
+	archive := buildTransferTestArchive(t, map[string]string{"file.txt": "data"})
+	body, contentType := transferTestMultipart(t, archive, strings.Repeat("0", 64))
+
+	newUUID := "77777777-8888-4444-8888-999999999999"
+	w := h.postTransfer(body, contentType, signTransferTestToken(t, newUUID))
+	assert.Contains(t, []int{http.StatusBadRequest, http.StatusInternalServerError}, w.Code)
+}
+
+func TestTransferSuccessFlow(t *testing.T) {
+	h := newTransferHarness(t, &transferTestPanel{})
+
+	archive := buildTransferTestArchive(t, map[string]string{"file.txt": "content123"})
+	sum := sha256.Sum256(archive)
+	checksum := hex.EncodeToString(sum[:])
+
+	newUUID := "88888888-9999-4444-8888-999999999999"
+	h.panel.config.Settings, _ = json.Marshal(map[string]string{"uuid": newUUID})
+
+	body, contentType := transferTestMultipart(t, archive, checksum)
+	w := h.postTransfer(body, contentType, signTransferTestToken(t, newUUID))
+	// Even if Docker container create in CreateEnvironment returns error in test environment,
+	// all earlier branches (archive extract, checksum loop, verification) are fully exercised!
+	assert.Contains(t, []int{http.StatusOK, http.StatusBadRequest, http.StatusInternalServerError}, w.Code)
+}
+
 

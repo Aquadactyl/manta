@@ -6,12 +6,15 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/apex/log"
 	"github.com/gin-gonic/gin"
+	"github.com/stretchr/testify/require"
 
 	"github.com/pterodactyl/wings/config"
 	"github.com/pterodactyl/wings/environment"
@@ -360,3 +363,81 @@ func setBackupRestoreAllowlist(t *testing.T, entries []string) {
 	next.System.Backups.RestoreHostAllowlist = entries
 	config.Set(&next)
 }
+
+func TestPostServerRestoreBackupMore(t *testing.T) {
+	setBackupRestoreAllowlist(t, []string{"127.0.0.1"})
+
+	// 1. S3 adapter without download_url
+	client := backupTestRemoteClient{restoreStatus: make(chan string, 1)}
+	backupID := "22222222-2222-2222-2222-222222222222"
+	c, _, s := newBackupRestoreContext(t, client, backupID, `{"adapter":"s3"}`)
+	defer s.CtxCancel()
+
+	postServerRestoreBackup(c)
+	if c.Writer.Status() != http.StatusBadRequest {
+		t.Fatalf("expected 400 for s3 adapter missing download_url, got %d", c.Writer.Status())
+	}
+
+	// 2. S3 adapter with valid 200 response and gzip content type
+	remote := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/x-gzip")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte{0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00})
+	}))
+	defer remote.Close()
+
+	c, w, s := newBackupRestoreContext(t, client, backupID, fmt.Sprintf(`{"adapter":"s3","download_url":%q}`, remote.URL))
+	defer s.CtxCancel()
+
+	postServerRestoreBackup(c)
+	if c.Writer.Status() != http.StatusAccepted {
+		t.Fatalf("expected 202 Accepted for s3 restore, got %d body %s", c.Writer.Status(), w.Body.String())
+	}
+}
+
+func TestDeleteServerBackupFlow(t *testing.T) {
+	client := backupTestRemoteClient{restoreStatus: make(chan string, 1)}
+
+	// 1. Invalid UUID
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodDelete, "/api/servers/server/backup/not-a-uuid", nil)
+	c.Params = gin.Params{
+		{Key: "server", Value: "server"},
+		{Key: "backup", Value: "not-a-uuid"},
+	}
+	s, err := wserver.New(client)
+	if err != nil {
+		t.Fatal(err)
+	}
+	c.Set("server", s)
+	c.Set("api_client", client)
+	deleteServerBackup(c)
+	if c.Writer.Status() != http.StatusBadRequest {
+		t.Fatalf("expected 400 for bad backup uuid, got %d", c.Writer.Status())
+	}
+
+	// 2. Existing backup file
+	backupID := "33333333-3333-3333-3333-333333333333"
+	backupDir := t.TempDir()
+	cfg := *config.Get()
+	cfg.System.BackupDirectory = backupDir
+	config.Set(&cfg)
+
+	require.NoError(t, os.WriteFile(filepath.Join(backupDir, backupID+".tar.gz"), []byte("backup-data"), 0644))
+
+	w = httptest.NewRecorder()
+	c, _ = gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodDelete, "/api/servers/server/backup/"+backupID, nil)
+	c.Params = gin.Params{
+		{Key: "server", Value: "server"},
+		{Key: "backup", Value: backupID},
+	}
+	c.Set("server", s)
+	c.Set("api_client", client)
+	deleteServerBackup(c)
+	if c.Writer.Status() != http.StatusNoContent {
+		t.Fatalf("expected 204 NoContent for deleting existing backup, got %d", c.Writer.Status())
+	}
+}
+
