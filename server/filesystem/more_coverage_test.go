@@ -811,4 +811,28 @@ func TestMoreCompressAndQuotaFileEdges(t *testing.T) {
 	_ = f.Close()
 	_, err = qf.Write([]byte("test"))
 	assert.Error(t, err)
+
+	// SetTest
+	fs.SetTest(true)
+	assert.True(t, fs.isTest)
+	fs.SetTest(false)
+	assert.False(t, fs.isTest)
+
+	// Stat on directory
+	require.NoError(t, fs.unixFS.Mkdir("testdir", 0755))
+	st, err := fs.Stat("testdir")
+	require.NoError(t, err)
+	assert.Equal(t, "inode/directory", st.Mimetype)
+
+	// HasSpaceAvailable with MaxDisk == 0
+	fs.SetDiskLimit(0)
+	assert.True(t, fs.HasSpaceAvailable(true))
+
+	// releaseDisk with reserved < 0 and with walking == true
+	fs.releaseDisk(-50, 0)
+	fs.walking = true
+	fs.walkReserved = 100
+	fs.releaseDisk(50, 50)
+	assert.Equal(t, int64(50), fs.walkReserved)
+	fs.walking = false
 }

@@ -730,4 +730,43 @@ func TestHarnessMoreBranches(t *testing.T) {
 	s2 := server{UUID: "srv-stop"}
 	dur := h2.power(n2, s2, "stop")
 	assert.True(t, dur >= 0)
+
+	// 4. dk non-200 panics
+	hDocker := &harness{
+		docker: ts.Client(),
+	}
+	assert.Panics(t, func() {
+		hDocker.dk("/notfound")
+	})
+
+	// 5. sftpSuffix with invalid BENCHMARK_SFTP_HOSTKEY returns error
+	t.Setenv("BENCHMARK_SFTP_HOSTKEY", "invalid-key-data")
+	_, _, err = h.sftpSuffix(node{Base: "http://127.0.0.1:8080"}, "test")
+	assert.Error(t, err)
+}
+
+func TestJavaPingBadPacketLength(t *testing.T) {
+	l, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	defer l.Close()
+
+	host, portStr, _ := net.SplitHostPort(l.Addr().String())
+	var port int
+	_, _ = fmt.Sscanf(portStr, "%d", &port)
+
+	go func() {
+		conn, err := l.Accept()
+		if err != nil {
+			return
+		}
+		defer conn.Close()
+		buf := make([]byte, 1024)
+		_, _ = conn.Read(buf)
+		// send length 1 (n < 2)
+		_, _ = conn.Write([]byte{0x01})
+	}()
+
+	_, err = javaPing(host, port)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "bad packet length")
 }

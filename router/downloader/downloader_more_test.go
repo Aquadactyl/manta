@@ -201,3 +201,4 @@ func TestDownloaderCacheAndLifecycle(t *testing.T) {
 	instance.remove(dl.Identifier)
 	assert.Nil(t, ByID(dl.Identifier))
 }
+
