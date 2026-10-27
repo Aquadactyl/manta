@@ -150,8 +150,7 @@ func (fs *Filesystem) openForWrite(p string, flag int, mode ufs.FileMode) (ufs.F
 // checkNotDirectory returns an error if p is a directory.
 func (fs *Filesystem) checkNotDirectory(p string) error {
 	if st, err := fs.unixFS.Lstat(p); err == nil && st.IsDir() {
-		// TODO: resolved
-		return errors.WithStack(&Error{code: ErrCodeIsDirectory, resolved: ""})
+		return errors.WithStack(&Error{code: ErrCodeIsDirectory, path: p, resolved: p})
 	}
 	return nil
 }
@@ -558,19 +557,19 @@ func (fs *Filesystem) ListDirectory(p string) ([]Stat, error) {
 		}
 		var m *mimetype.MIME
 		if e.Type().IsRegular() {
-			// TODO: I should probably find a better way to do this.
-			eO := e.(interface {
+			if eO, ok := e.(interface {
 				Open() (ufs.File, error)
-			})
-			f, err := eO.Open()
-			if err != nil {
-				return Stat{}, err
+			}); ok {
+				f, err := eO.Open()
+				if err != nil {
+					return Stat{}, err
+				}
+				m, err = detectFileMIME(f)
+				if err != nil {
+					log.Error(err.Error())
+				}
+				_ = f.Close()
 			}
-			m, err = detectFileMIME(f)
-			if err != nil {
-				log.Error(err.Error())
-			}
-			_ = f.Close()
 		}
 
 		st := Stat{FileInfo: info, Mimetype: d}

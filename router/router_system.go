@@ -204,7 +204,7 @@ func postDeauthorizeUser(c *gin.Context) {
 		return
 	}
 
-	// todo: disconnect websockets more gracefully
+	// Cancel user websocket and SFTP sessions across the requested servers.
 	m := middleware.ExtractManager(c)
 	if len(data.Servers) > 0 {
 		for _, uuid := range data.Servers {

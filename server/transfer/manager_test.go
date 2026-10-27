@@ -62,6 +62,9 @@ func TestTransferMethodsAndStatus(t *testing.T) {
 	// Status change
 	tr.SetStatus(StatusProcessing)
 	require.Equal(t, StatusProcessing, tr.Status())
+	tr.SetStatus(StatusCancelling)
+	tr.SetStatus(StatusProcessing)
+	require.Equal(t, StatusCancelling, tr.Status())
 
 	// SendMessage & Error & Log
 	tr.SendMessage("test transfer message")

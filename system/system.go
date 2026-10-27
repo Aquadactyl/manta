@@ -124,8 +124,8 @@ func GetSystemInformation() (*Information, error) {
 	}, nil
 }
 
+// GetDockerInfo returns the version and system info from the host Docker daemon.
 func GetDockerInfo(ctx context.Context) (types.Version, system.Info, error) {
-	// TODO: find a way to re-use the client from the docker environment.
 	c, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
 		return types.Version{}, system.Info{}, err

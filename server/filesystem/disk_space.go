@@ -1,11 +1,11 @@
 package filesystem
 
 import (
-	"golang.org/x/sys/unix"
 	"slices"
-	"sync"
 	"sync/atomic"
 	"time"
+
+	"golang.org/x/sys/unix"
 
 	"emperror.dev/errors"
 	"github.com/apex/log"
@@ -17,25 +17,21 @@ type SpaceCheckingOpts struct {
 	AllowStaleResponse bool
 }
 
-// TODO: can this be replaced with some sort of atomic? Like atomic.Pointer?
 type usageLookupTime struct {
-	sync.RWMutex
-	value time.Time
+	value atomic.Pointer[time.Time]
 }
 
 // Set sets the last time that a disk space lookup was performed.
 func (ult *usageLookupTime) Set(t time.Time) {
-	ult.Lock()
-	ult.value = t
-	ult.Unlock()
+	ult.value.Store(&t)
 }
 
 // Get the last time that we performed a disk space usage lookup.
 func (ult *usageLookupTime) Get() time.Time {
-	ult.RLock()
-	defer ult.RUnlock()
-
-	return ult.value
+	if pt := ult.value.Load(); pt != nil {
+		return *pt
+	}
+	return time.Time{}
 }
 
 // MaxDisk returns the maximum amount of disk space that this Filesystem

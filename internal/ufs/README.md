@@ -1,8 +1,8 @@
 # Filesystem
 
-Coming Soon&trade;
-
-> TODO
+The `ufs` package provides a secure, sandboxed Unix filesystem implementation. It enforces
+directory boundaries using Linux `openat2` resolution flags (`RESOLVE_BENEATH` and `RESOLVE_NO_SYMLINKS`),
+preventing symlink attacks and directory traversal while providing per-server disk quota enforcement.
 
 ## Licensing
 

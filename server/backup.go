@@ -192,9 +192,7 @@ func (s *Server) restoreEntry(file string, info fs.FileInfo, r io.Reader) error 
 		return nil
 	}
 
-	// TODO: since this will be called a lot, it may be worth adding an optimized
-	// Write with Chtimes method to the UnixFS that is able to re-use the
-	// same dirfd and file name.
+	// Restore regular file contents and preserve the original archive modification time.
 	if err := s.Filesystem().Write(file, r, info.Size(), info.Mode()); err != nil {
 		return err
 	}

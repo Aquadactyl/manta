@@ -12,7 +12,6 @@ import (
 	iofs "io/fs"
 	"os"
 	"path"
-	"reflect"
 	"unsafe"
 
 	"golang.org/x/sys/unix"
@@ -95,8 +94,8 @@ func (fs *UnixFS) walkDir(b []byte, parentfd int, name, relative string, d DirEn
 	return nil
 }
 
-// ReadDirMap .
-// TODO: document
+// ReadDirMap reads directory entries from the specified path and applies the transformation
+// function fn to each entry, returning a slice of transformed results of type T.
 func ReadDirMap[T any](fs *UnixFS, path string, fn func(DirEntry) (T, error)) ([]T, error) {
 	dirfd, name, closeFd, err := fs.safePath(path)
 	defer closeFd()
@@ -131,38 +130,24 @@ func ReadDirMap[T any](fs *UnixFS, path string, fn func(DirEntry) (T, error)) ([
 // nameOffset is a compile time constant
 const nameOffset = int(unsafe.Offsetof(unix.Dirent{}.Name))
 
-func nameFromDirent(de *unix.Dirent) (name []byte) {
+func nameFromDirent(de *unix.Dirent) []byte {
 	// Because this GOOS' syscall.Dirent does not provide a field that specifies
 	// the name length, this function must first calculate the max possible name
 	// length, and then search for the NULL byte.
 	ml := int(de.Reclen) - nameOffset
 
-	// Convert syscall.Dirent.Name, which is array of int8, to []byte, by
-	// overwriting Cap, Len, and Data slice header fields to the max possible
-	// name length computed above, and finding the terminating NULL byte.
-	//
-	// TODO: is there an alternative to the deprecated SliceHeader?
-	// SliceHeader was mainly deprecated due to it being misused for avoiding
-	// allocations when converting a byte slice to a string, ref;
-	// https://go.dev/issue/53003
-	sh := (*reflect.SliceHeader)(unsafe.Pointer(&name)) //nolint:gosec,staticcheck // audited, deprecation tracked by the TODO above
-	sh.Cap = ml
-	sh.Len = ml
-	sh.Data = uintptr(unsafe.Pointer(&de.Name[0])) //nolint:gosec // audited, see above
+	// Convert syscall.Dirent.Name to []byte using unsafe.Slice with max possible
+	// name length computed above, and locate the terminating NULL byte.
+	name := unsafe.Slice((*byte)(unsafe.Pointer(&de.Name[0])), ml) //nolint:gosec // audited, dirent name slice conversion
 
 	if index := bytes.IndexByte(name, 0); index >= 0 {
-		// Found NULL byte; set slice's cap and len accordingly.
-		sh.Cap = index
-		sh.Len = index
-		return
+		return name[:index:index]
 	}
 
 	// NOTE: This branch is not expected, but included for defensive
 	// programming, and provides a hard stop on the name based on the structure
 	// field array size.
-	sh.Cap = len(de.Name)
-	sh.Len = sh.Cap
-	return
+	return name[:len(de.Name):len(de.Name)]
 }
 
 // modeTypeFromDirent converts a syscall defined constant, which is in purview

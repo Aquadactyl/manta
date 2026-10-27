@@ -12,12 +12,6 @@ import (
 // is returned, otherwise nil is returned.
 func (fs *Filesystem) IsIgnored(paths ...string) error {
 	for _, p := range paths {
-		//sp, err := fs.SafePath(p)
-		//if err != nil {
-		//	return err
-		//}
-		// TODO: update logic to use unixFS
-		//
 		// Match against the cleaned path the filesystem will use. A trailing slash is
 		// kept so that it still matches patterns for directories.
 		cleaned := path.Clean("/" + filepath.ToSlash(p))

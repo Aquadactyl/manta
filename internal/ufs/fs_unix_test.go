@@ -253,7 +253,22 @@ func TestUnixFS_Chmod(t *testing.T) {
 	}
 	defer fs.Cleanup()
 
-	// TODO: implement
+	f, err := fs.Create("file.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = f.Close()
+
+	if err := fs.Chmod("file.txt", 0o600); err != nil {
+		t.Fatal(err)
+	}
+	st, err := fs.Stat("file.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if st.Mode().Perm() != 0o600 {
+		t.Fatalf("expected mode 0600, got %o", st.Mode().Perm())
+	}
 }
 
 func TestUnixFS_Chown(t *testing.T) {
@@ -265,7 +280,15 @@ func TestUnixFS_Chown(t *testing.T) {
 	}
 	defer fs.Cleanup()
 
-	// TODO: implement
+	f, err := fs.Create("file.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = f.Close()
+
+	if err := fs.Chown("file.txt", os.Getuid(), os.Getgid()); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestUnixFS_Lchown(t *testing.T) {
@@ -277,7 +300,19 @@ func TestUnixFS_Lchown(t *testing.T) {
 	}
 	defer fs.Cleanup()
 
-	// TODO: implement
+	f, err := fs.Create("target.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = f.Close()
+
+	if err := fs.Symlink("target.txt", "link.txt"); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := fs.Lchown("link.txt", os.Getuid(), os.Getgid()); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestUnixFS_Chtimes(t *testing.T) {
@@ -342,7 +377,22 @@ func TestUnixFS_Create(t *testing.T) {
 	}
 	defer fs.Cleanup()
 
-	// TODO: implement
+	f, err := fs.Create("created.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.Write([]byte("hello")); err != nil {
+		t.Fatal(err)
+	}
+	_ = f.Close()
+
+	st, err := fs.Stat("created.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if st.Size() != 5 {
+		t.Fatalf("expected size 5, got %d", st.Size())
+	}
 }
 
 func TestUnixFS_Mkdir(t *testing.T) {
@@ -354,7 +404,16 @@ func TestUnixFS_Mkdir(t *testing.T) {
 	}
 	defer fs.Cleanup()
 
-	// TODO: implement
+	if err := fs.Mkdir("newdir", 0o755); err != nil {
+		t.Fatal(err)
+	}
+	st, err := fs.Stat("newdir")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !st.IsDir() {
+		t.Fatal("expected is directory to be true")
+	}
 }
 
 func TestUnixFS_MkdirAll(t *testing.T) {
@@ -430,7 +489,17 @@ func TestUnixFS_Open(t *testing.T) {
 	}
 	defer fs.Cleanup()
 
-	// TODO: implement
+	f, err := fs.Create("file.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = f.Close()
+
+	opened, err := fs.Open("file.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = opened.Close()
 }
 
 func TestUnixFS_OpenFile(t *testing.T) {
@@ -442,7 +511,15 @@ func TestUnixFS_OpenFile(t *testing.T) {
 	}
 	defer fs.Cleanup()
 
-	// TODO: implement
+	opened, err := fs.OpenFile("opened.txt", ufs.O_CREATE|ufs.O_RDWR, 0o644)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = opened.Write([]byte("written"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = opened.Close()
 }
 
 func TestUnixFS_ReadDir(t *testing.T) {
@@ -454,7 +531,19 @@ func TestUnixFS_ReadDir(t *testing.T) {
 	}
 	defer fs.Cleanup()
 
-	// TODO: implement
+	f, err := fs.Create("entry1.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = f.Close()
+
+	entries, err := fs.ReadDir("/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 1 || entries[0].Name() != "entry1.txt" {
+		t.Fatalf("unexpected entries: %+v", entries)
+	}
 }
 
 func TestUnixFS_Remove(t *testing.T) {
@@ -593,7 +682,19 @@ func TestUnixFS_Stat(t *testing.T) {
 	}
 	defer fs.Cleanup()
 
-	// TODO: implement
+	f, err := fs.Create("file.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = f.Close()
+
+	st, err := fs.Stat("file.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if st.Name() != "file.txt" {
+		t.Fatalf("expected name file.txt, got %s", st.Name())
+	}
 }
 
 func TestUnixFS_Lstat(t *testing.T) {
@@ -605,7 +706,23 @@ func TestUnixFS_Lstat(t *testing.T) {
 	}
 	defer fs.Cleanup()
 
-	// TODO: implement
+	f, err := fs.Create("target.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = f.Close()
+
+	if err := fs.Symlink("target.txt", "link.txt"); err != nil {
+		t.Fatal(err)
+	}
+
+	lst, err := fs.Lstat("link.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if lst.Mode()&os.ModeSymlink == 0 {
+		t.Fatal("expected symlink mode from Lstat")
+	}
 }
 
 func TestUnixFS_Symlink(t *testing.T) {
@@ -617,7 +734,16 @@ func TestUnixFS_Symlink(t *testing.T) {
 	}
 	defer fs.Cleanup()
 
-	// TODO: implement
+	if err := fs.Symlink("nonexistent.txt", "brokenlink.txt"); err != nil {
+		t.Fatal(err)
+	}
+	lst, err := fs.Lstat("brokenlink.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if lst.Mode()&os.ModeSymlink == 0 {
+		t.Fatal("expected symlink mode")
+	}
 }
 
 func TestUnixFS_Touch(t *testing.T) {
@@ -803,8 +929,7 @@ func TestUnixFS_WalkDirat(t *testing.T) {
 			return
 		}
 		expect := []Path{
-			// TODO: what should relative actually be here?
-			// The behaviour differs from walking the directory root vs a sub
+			// Note: The behaviour differs from walking the directory root vs a sub
 			// directory. When walking from the root, dirfd is the directory we
 			// are walking from and both name and relative are `.`. However,
 			// when walking from a subdirectory, fd is the parent of the

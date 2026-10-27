@@ -50,7 +50,7 @@ func (w *CountedWriter) Write(p []byte) (int, error) {
 	w.counter.Add(int64(n))
 	w.err = err
 
-	// TODO: is this how we actually want to handle errors with this?
+	// Return EOF directly to signal end of stream while retaining any other error on the writer.
 	if err == io.EOF {
 		return n, io.EOF
 	}
@@ -107,7 +107,7 @@ func (r *CountedReader) Read(p []byte) (int, error) {
 	r.counter.Add(int64(n))
 	r.err = err
 
-	// TODO: is this how we actually want to handle errors with this?
+	// Return EOF directly to signal end of stream while retaining any other error on the writer.
 	if err == io.EOF {
 		return n, io.EOF
 	}

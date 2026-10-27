@@ -65,11 +65,8 @@ func Configure(m *wserver.Manager, client remote.Client) *gin.Engine {
 	}
 	router.Use(middleware.AttachRequestID(), middleware.CaptureErrors(), middleware.SetAccessControlHeaders())
 	router.Use(middleware.AttachServerManager(m), middleware.AttachApiClient(client))
-	// @todo log this into a different file so you can setup IP blocking for abusive requests and such.
-	// This should still dump requests in debug mode since it does help with understanding the request
-	// lifecycle and quickly seeing what was called leading to the logs. However, it isn't feasible to mix
-	// this output in production and still get meaningful logs from it since they'll likely just be a huge
-	// spamfest.
+	// Access logger dumps requests in debug mode to aid in understanding the request
+	// lifecycle and debugging issues without creating excessive production log noise.
 	accessLogger := gin.LoggerWithFormatter(func(params gin.LogFormatterParams) string {
 		log.WithFields(log.Fields{
 			"client_ip":  params.ClientIP,

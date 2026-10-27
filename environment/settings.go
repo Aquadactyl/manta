@@ -184,12 +184,12 @@ func (v Variables) Get(key string) string {
 		return fmt.Sprintf("%f", val)
 	case bool:
 		return strconv.FormatBool(val)
+	case nil:
+		return ""
 	case string:
 		return val
 	}
 
-	// TODO: I think we can add a check for val == nil and return an empty string for those
-	//  and this warning should theoretically never happen?
 	log.Warn(fmt.Sprintf("failed to marshal environment variable \"%s\" of type %+v into string", key, val))
 
 	return ""

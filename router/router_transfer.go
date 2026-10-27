@@ -78,8 +78,7 @@ func postTransfers(c *gin.Context) {
 			return
 		}
 
-		// TODO: should this use the request context?
-		trnsfr = transfer.New(c, nil)
+		trnsfr = transfer.New(c.Request.Context(), nil)
 
 		ctx, cancel = context.WithCancel(trnsfr.Context())
 		defer cancel()

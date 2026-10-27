@@ -51,13 +51,6 @@ func handleServerWebsocket(c *gin.Context, maxConnections int, authTimeout time.
 	// Limit the total number of authenticated websockets that can be open at any one
 	// time for a server instance. This applies across all users connected to the server,
 	// and is not applied on a per-user basis.
-	//
-	// todo: it would be great to make this per-user instead, but we need to modify
-	//  how we even request this endpoint in order for that to be possible. Some type
-	//  of signed identifier in the URL that is verified on this end and set by the
-	//  panel using a shared secret is likely the easiest option. The benefit of that
-	//  is that we can both scope things to the user before authentication, and also
-	//  verify that the JWT provided by the panel is assigned to the same user.
 	if s.Websockets().Len() >= maxConnections {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
 			"error": "Too many open websocket connections.",
