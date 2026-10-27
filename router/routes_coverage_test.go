@@ -201,7 +201,8 @@ func TestMoreRouterRoutes(t *testing.T) {
 	assert.Equal(t, http.StatusAccepted, w.Code)
 
 	// 9. POST /api/servers/:server/reinstall
-	req = httptest.NewRequest(http.MethodPost, "/api/servers/"+s.ID()+"/reinstall", nil)
+	sReinstall := h.seedServerWithUUID("00000000-0000-4000-8000-000000000088")
+	req = httptest.NewRequest(http.MethodPost, "/api/servers/"+sReinstall.ID()+"/reinstall", nil)
 	req.Header.Set("Authorization", "Bearer test-token")
 	w = httptest.NewRecorder()
 	h.router.ServeHTTP(w, req)
@@ -348,12 +349,9 @@ func TestMoreRouterRoutes(t *testing.T) {
 	h.router.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusAccepted, w.Code)
 
-	for i := 0; i < 50 && s.ExecutingPowerAction(); i++ {
-		time.Sleep(10 * time.Millisecond)
-	}
-
 	// 24. POST /api/servers/:server/reinstall
-	req = httptest.NewRequest(http.MethodPost, "/api/servers/"+s.ID()+"/reinstall", nil)
+	sReinstall2 := h.seedServerWithUUID("00000000-0000-4000-8000-000000000087")
+	req = httptest.NewRequest(http.MethodPost, "/api/servers/"+sReinstall2.ID()+"/reinstall", nil)
 	req.Header.Set("Authorization", "Bearer test-token")
 	w = httptest.NewRecorder()
 	h.router.ServeHTTP(w, req)
@@ -1469,7 +1467,8 @@ func TestRouterServerMoreOperations(t *testing.T) {
 	assert.Equal(t, http.StatusAccepted, w.Code)
 
 	// 7. postServerReinstall (202)
-	req = httptest.NewRequest(http.MethodPost, "/api/servers/"+s.ID()+"/reinstall", nil)
+	sReinstall3 := h.seedServerWithUUID("00000000-0000-4000-8000-000000000086")
+	req = httptest.NewRequest(http.MethodPost, "/api/servers/"+sReinstall3.ID()+"/reinstall", nil)
 	req.Header.Set("Authorization", "Bearer test-token")
 	w = httptest.NewRecorder()
 	h.router.ServeHTTP(w, req)
@@ -1796,7 +1795,8 @@ func TestServerTransferAndLifecycleBranches(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 
 	// 4. postServerReinstall
-	req = httptest.NewRequest(http.MethodPost, "/api/servers/"+s.ID()+"/reinstall", nil)
+	sReinstall4 := h.seedServerWithUUID("00000000-0000-4000-8000-000000000085")
+	req = httptest.NewRequest(http.MethodPost, "/api/servers/"+sReinstall4.ID()+"/reinstall", nil)
 	req.Header.Set("Authorization", "Bearer test-token")
 	w = httptest.NewRecorder()
 	h.router.ServeHTTP(w, req)

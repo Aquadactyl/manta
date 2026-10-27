@@ -308,6 +308,13 @@ func TestConfigMoreOperations(t *testing.T) {
 	assert.Equal(t, filepath.Join(cfg.System.RootDirectory, "states.json"), cfg.System.GetStatesPath())
 	cfg.System.EnableLogRotate = true
 	Set(cfg)
+	logrotateDir := t.TempDir()
+	origLogrotate := logrotateDirectory
+	logrotateDirectory = logrotateDir
+	defer func() { logrotateDirectory = origLogrotate }()
+	assert.NoError(t, EnableLogRotation())
+	assert.FileExists(t, filepath.Join(logrotateDir, "wings"))
+	// Second run returns nil when file already exists
 	assert.NoError(t, EnableLogRotation())
 
 	// 12. UseOpenat2 modes

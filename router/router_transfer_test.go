@@ -173,9 +173,18 @@ func newTransferHarness(t *testing.T, panel *transferTestPanel) *transferHarness
 // seedServer registers the test server on the manager, as an earlier receive
 // would have, and replaces its Docker environment.
 func (h *transferHarness) seedServer() *wserver.Server {
+	return h.seedServerWithUUID(transferTestUUID)
+}
+
+func (h *transferHarness) seedServerWithUUID(id string) *wserver.Server {
 	h.t.Helper()
 
-	s, err := h.mgr.InitServer(transferTestUUID, h.panel.config)
+	cfg := h.panel.config
+	settings, err := json.Marshal(map[string]string{"uuid": id})
+	require.NoError(h.t, err)
+	cfg.Settings = settings
+
+	s, err := h.mgr.InitServer(id, cfg)
 	require.NoError(h.t, err)
 	s.Environment = transferTestEnvironment{st: system.NewAtomicString(environment.ProcessOfflineState)}
 	require.True(h.t, h.mgr.AddIfMissing(s))

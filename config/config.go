@@ -50,10 +50,11 @@ var DefaultTLSConfig = &tls.Config{
 }
 
 var (
-	mu            sync.RWMutex
-	_config       *Configuration
-	_jwtAlgo      *jwt.HMACSHA
-	_debugViaFlag bool
+	mu                 sync.RWMutex
+	_config            *Configuration
+	_jwtAlgo           *jwt.HMACSHA
+	_debugViaFlag      bool
+	logrotateDirectory = "/etc/logrotate.d"
 )
 
 // Locker specific to writing the configuration to the disk, this happens
@@ -813,12 +814,13 @@ func EnableLogRotation() error {
 		return nil
 	}
 
-	if st, err := os.Stat("/etc/logrotate.d"); err != nil && !os.IsNotExist(err) {
+	if st, err := os.Stat(logrotateDirectory); err != nil && !os.IsNotExist(err) {
 		return err
 	} else if (err != nil && os.IsNotExist(err)) || !st.IsDir() {
 		return nil
 	}
-	if _, err := os.Stat("/etc/logrotate.d/wings"); err == nil || !os.IsNotExist(err) {
+	targetFile := filepath.Join(logrotateDirectory, "wings")
+	if _, err := os.Stat(targetFile); err == nil || !os.IsNotExist(err) {
 		return err
 	}
 
@@ -826,7 +828,7 @@ func EnableLogRotation() error {
 	// If we've gotten to this point it means the logrotate directory exists on the system
 	// but there is not a file for wings already. In that case, let us write a new file to
 	// it so files can be rotated easily.
-	f, err := os.Create("/etc/logrotate.d/wings")
+	f, err := os.Create(targetFile) //nolint:gosec // system path is controlled internally
 	if err != nil {
 		return err
 	}
