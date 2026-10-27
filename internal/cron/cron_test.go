@@ -172,7 +172,7 @@ func TestCronEdgeCasesAndDeliveryErrors(t *testing.T) {
 
 	// 5. eventMap.Push edge cases: max events limit reached (forActivity returns nil) & non-slice files metadata
 	em := &eventMap{max: 1, m: map[mapKey]*eventGroup{}}
-	tNow := time.Now()
+	tNow := time.Date(2026, 1, 1, 12, 30, 45, 0, time.UTC)
 	a1 := models.Activity{
 		Server:    testServerUuid,
 		Event:     "server:sftp.write",
