@@ -1923,7 +1923,7 @@ func TestFileOperationsComprehensiveCoverage(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	// 8. postServerCompressFiles no space available (409)
-	s.Filesystem().SetDiskLimit(1)
+	s.Filesystem().SetDiskLimit(-1)
 	req = httptest.NewRequest(http.MethodPost, "/api/servers/"+s.ID()+"/files/compress", strings.NewReader(`{"root":"/","files":["sample.txt"]}`))
 	req.Header.Set("Authorization", "Bearer test-token")
 	req.Header.Set("Content-Type", "application/json")

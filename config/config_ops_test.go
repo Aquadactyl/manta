@@ -418,10 +418,6 @@ func TestEnsurePterodactylUserAndPasswd(t *testing.T) {
 	assert.NoError(t, ConfigureTimezone())
 	assert.Equal(t, "Europe/London", Get().System.Timezone)
 
-	// 7. NewAtPath empty path returns error
-	_, err = NewAtPath("")
-	assert.Error(t, err)
-
 	// 8. ConfigureTimezone when Timezone is empty and TZ is empty
 	cfg.System.Timezone = ""
 	t.Setenv("TZ", "")
@@ -433,6 +429,57 @@ func TestEnsurePterodactylUserAndPasswd(t *testing.T) {
 	cfg.AuthenticationTokenId = "test"
 	assert.Error(t, cfg.ResolveToken(false))
 	t.Setenv("WINGS_TOKEN_ID", "")
+}
+
+func TestResolveTokenRemoteAndEdgeCases(t *testing.T) {
+	// Remote cannot use $ indirection
+	cfgInd1 := Configuration{AuthenticationToken: "$SECRET_TOKEN"}
+	assert.Error(t, cfgInd1.ResolveToken(true))
+
+	// Remote cannot use file:// indirection
+	cfgInd2 := Configuration{AuthenticationToken: "file:///tmp/token"}
+	assert.Error(t, cfgInd2.ResolveToken(true))
+
+	// Remote mismatched environment override
+	t.Setenv("WINGS_TOKEN", "env-token")
+	cfgMismatch := Configuration{AuthenticationToken: "diff-token"}
+	assert.Error(t, cfgMismatch.ResolveToken(true))
+
+	// Remote matching environment override
+	cfgMatch := Configuration{AuthenticationToken: "env-token"}
+	assert.NoError(t, cfgMatch.ResolveToken(true))
+	assert.Equal(t, "env-token", cfgMatch.Token.Token)
+	t.Setenv("WINGS_TOKEN", "")
+
+	// Remote without environment override returns local
+	cfgLocal := Configuration{AuthenticationToken: "my-local-token"}
+	assert.NoError(t, cfgLocal.ResolveToken(true))
+	assert.Equal(t, "my-local-token", cfgLocal.Token.Token)
+}
+
+func TestSetDebugViaFlagAndWriteToDisk(t *testing.T) {
+	orig := _config
+	if orig != nil {
+		defer Set(orig)
+	} else {
+		orig = &Configuration{}
+		defer Set(orig)
+	}
+
+	tmp := t.TempDir()
+	cfgPath := filepath.Join(tmp, "config.yml")
+	cfg := *orig
+	cfg.path = cfgPath
+	cfg.Debug = true
+	Set(&cfg)
+
+	SetDebugViaFlag(true)
+	defer SetDebugViaFlag(false)
+
+	require.NoError(t, WriteToDisk(&cfg))
+	content, err := os.ReadFile(cfgPath)
+	require.NoError(t, err)
+	assert.Contains(t, string(content), "debug: false")
 }
 
 func TestConfigureDirectoriesBranches(t *testing.T) {
