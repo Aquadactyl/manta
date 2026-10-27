@@ -338,4 +338,88 @@ func TestMustLogErrorPath(t *testing.T) {
 		user:   "test-user",
 	}
 	eh.MustLog(models.Event("test:event"), FileAction{Entity: "test.txt"})
+	// Also test with Target populated
+	eh.MustLog(models.Event("test:event"), FileAction{Entity: "test.txt", Target: "target.txt"})
+	_ = eh.Log(models.Event("test:event"), FileAction{Entity: "test.txt", Target: "target.txt"})
+}
+
+type mockNewChannel struct {
+	chType       string
+	rejectCalled bool
+	acceptErr    error
+}
+
+func (m *mockNewChannel) ChannelType() string { return m.chType }
+func (m *mockNewChannel) ExtraData() []byte   { return nil }
+func (m *mockNewChannel) Accept() (ssh.Channel, <-chan *ssh.Request, error) {
+	if m.acceptErr != nil {
+		return nil, nil, m.acceptErr
+	}
+	return nil, nil, errors.New("cannot accept")
+}
+func (m *mockNewChannel) Reject(reason ssh.RejectionReason, message string) error {
+	m.rejectCalled = true
+	return nil
+}
+
+type mockSSHConn struct {
+	net.Conn
+}
+
+func (m *mockSSHConn) User() string          { return "user" }
+func (m *mockSSHConn) SessionID() []byte     { return []byte("session") }
+func (m *mockSSHConn) ClientVersion() []byte { return []byte("SSH-2.0-test") }
+func (m *mockSSHConn) ServerVersion() []byte { return []byte("SSH-2.0-test") }
+func (m *mockSSHConn) RemoteAddr() net.Addr  { return &net.TCPAddr{} }
+func (m *mockSSHConn) LocalAddr() net.Addr   { return &net.TCPAddr{} }
+func (m *mockSSHConn) Wait() error           { return nil }
+func (m *mockSSHConn) OpenChannel(string, []byte) (ssh.Channel, <-chan *ssh.Request, error) {
+	return nil, nil, nil
+}
+func (m *mockSSHConn) SendRequest(string, bool, []byte) (bool, []byte, error) {
+	return true, nil, nil
+}
+
+func TestServerHandleChannelBranches(t *testing.T) {
+	srv := New(&server.Manager{})
+	c1, c2 := net.Pipe()
+	defer c1.Close()
+	defer c2.Close()
+
+	sconn := &ssh.ServerConn{
+		Conn: &mockSSHConn{c1},
+		Permissions: &ssh.Permissions{
+			Extensions: map[string]string{
+				"uuid": "missing-uuid",
+			},
+		},
+	}
+
+	chans := make(chan ssh.NewChannel, 3)
+	// 1. Non-session channel
+	ch1 := &mockNewChannel{chType: "direct-tcpip"}
+	chans <- ch1
+
+	// 2. Session channel with missing server
+	ch2 := &mockNewChannel{chType: "session"}
+	chans <- ch2
+
+	// 3. Session channel with error on Accept
+	ch3 := &mockNewChannel{chType: "session", acceptErr: errors.New("accept error")}
+	chans <- ch3
+
+	close(chans)
+	reqs := make(chan *ssh.Request)
+	close(reqs)
+
+	err := srv.handle(sconn, chans, reqs)
+	if err != nil {
+		t.Fatalf("unexpected error from handle: %v", err)
+	}
+	if !ch1.rejectCalled {
+		t.Fatal("expected ch1 to be rejected")
+	}
+	if !ch2.rejectCalled {
+		t.Fatal("expected ch2 to be rejected")
+	}
 }

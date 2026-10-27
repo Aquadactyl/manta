@@ -424,6 +424,17 @@ func TestDockerRunningContainerOperations(t *testing.T) {
 	assert.NoError(t, err)
 	assert.True(t, uptime >= 0)
 
+	// Exists and IsRunning and InSituUpdate on running container
+	exists, err := env.Exists()
+	assert.NoError(t, err)
+	assert.True(t, exists)
+
+	isRunning, err := env.IsRunning(ctx)
+	assert.NoError(t, err)
+	assert.True(t, isRunning)
+
+	assert.NoError(t, env.InSituUpdate())
+
 	// Attach when already attached returns nil immediately
 	assert.NoError(t, env.Attach(ctx))
 
@@ -455,6 +466,20 @@ func TestDockerRunningContainerOperations(t *testing.T) {
 	cancelFn()
 	assert.Error(t, env.WaitForStop(cancCtx, 50*time.Millisecond, false))
 	assert.Error(t, env.WaitForStop(cancCtx, 50*time.Millisecond, true))
+
+	// Non-existent environment Exists, ExitState, InSituUpdate, OnBeforeStart
+	nonEnv, err := New("test-nonexistent-uuid-9999", meta, envCfg)
+	require.NoError(t, err)
+	nonExists, err := nonEnv.Exists()
+	assert.NoError(t, err)
+	assert.False(t, nonExists)
+
+	exitCode, oom, err := nonEnv.ExitState()
+	assert.NoError(t, err)
+	assert.Equal(t, uint32(1), exitCode)
+	assert.False(t, oom)
+
+	assert.NoError(t, nonEnv.InSituUpdate())
 
 	_ = env.Destroy()
 }

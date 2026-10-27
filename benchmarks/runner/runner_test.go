@@ -820,3 +820,51 @@ func TestSocketNoAuthenticationResult(t *testing.T) {
 	}
 	assert.Equal(t, "no authentication result", res)
 }
+
+func TestHarnessPowerAndCommands(t *testing.T) {
+	state := "offline"
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/power") {
+			var body map[string]any
+			_ = json.NewDecoder(r.Body).Decode(&body)
+			if body["action"] == "start" {
+				state = "running"
+			} else {
+				state = "offline"
+			}
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		if strings.HasSuffix(r.URL.Path, "/commands") {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		// GET /api/servers/:uuid
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"status":      state,
+			"utilization": map[string]any{},
+		})
+	}))
+	defer ts.Close()
+
+	n := node{Base: ts.URL}
+	s := server{UUID: "srv-uuid", Name: "test-server"}
+	h := &harness{
+		http: ts.Client(),
+		manifest: manifest{
+			PanelOrigin: "http://example.com",
+			Nodes: map[string]node{
+				"manta": {Base: ts.URL, Servers: []server{s}},
+				"wings": {Base: ts.URL, Servers: []server{s}},
+			},
+		},
+	}
+
+	h.commands(n, s, "say hello")
+	dur := h.power(n, s, "start")
+	assert.True(t, dur >= 0)
+	dur = h.power(n, s, "stop")
+	assert.True(t, dur >= 0)
+
+	h.startAll()
+}

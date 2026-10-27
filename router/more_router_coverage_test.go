@@ -569,6 +569,70 @@ func TestRouterRemainingCoverage(t *testing.T) {
 	h.router.ServeHTTP(w, authReq(http.MethodDelete, "/api/servers/"+s.ID()+"/backup/"+uuid.New().String(), ""))
 	assert.Equal(t, http.StatusNotFound, w.Code)
 
+	// 14b. deleteServerBackup & getDownloadBackup with real local backup file
+	realBackupUUID := uuid.New().String()
+	require.NoError(t, os.MkdirAll(config.Get().System.BackupDirectory, 0755))
+	realBackupPath := filepath.Join(config.Get().System.BackupDirectory, realBackupUUID+".tar.gz")
+	require.NoError(t, os.WriteFile(realBackupPath, []byte("dummy-backup-archive-content"), 0644))
+
+	realBackupTok := tokens.BackupPayload{
+		Payload: jwt.Payload{
+			IssuedAt:       jwt.NumericDate(now),
+			NotBefore:      jwt.NumericDate(now.Add(-5 * time.Second)),
+			ExpirationTime: jwt.NumericDate(now.Add(10 * time.Minute)),
+			Subject:        "user-1",
+		},
+		UserUuid:   "user-1",
+		ServerUuid: s.ID(),
+		BackupUuid: realBackupUUID,
+		UniqueId:   uuid.New().String(),
+		Scoped:     tokens.Scoped{Scope: string(tokens.BackupDownload)},
+	}
+	signedRealBackup, err := jwt.Sign(&realBackupTok, config.GetJwtAlgorithm())
+	require.NoError(t, err)
+
+	w = httptest.NewRecorder()
+	reqDlReal := httptest.NewRequest(http.MethodGet, "/download/backup?token="+string(signedRealBackup), nil)
+	h.router.ServeHTTP(w, reqDlReal)
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, "dummy-backup-archive-content", w.Body.String())
+
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, authReq(http.MethodDelete, "/api/servers/"+s.ID()+"/backup/"+realBackupUUID, ""))
+	assert.Equal(t, http.StatusNoContent, w.Code)
+
+	// 14c. postServerCreateDirectory & postServerCopyFile & postServerWriteFile directory conflict
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, authReq(http.MethodPost, "/api/servers/"+s.ID()+"/files/create-directory", `{"name":"created_dir","root":"/"}`))
+	assert.Equal(t, http.StatusNoContent, w.Code)
+
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, authReq(http.MethodPost, "/api/servers/"+s.ID()+"/files/copy", `{"location":"/hello.txt"}`))
+	assert.Equal(t, http.StatusNoContent, w.Code)
+
+	reqWriteDir = authReq(http.MethodPost, "/api/servers/"+s.ID()+"/files/write?file=/created_dir", "text")
+	reqWriteDir.ContentLength = 4
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, reqWriteDir)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+
+	// 14d. postServerDecompressFiles with valid archive
+	_, err = s.Filesystem().CompressFiles("/", []string{"hello.txt"})
+	require.NoError(t, err)
+	entries, _ := s.Filesystem().ListDirectory("/")
+	var archiveName string
+	for _, entry := range entries {
+		if strings.HasSuffix(entry.Name(), ".tar.gz") {
+			archiveName = entry.Name()
+			break
+		}
+	}
+	if archiveName != "" {
+		w = httptest.NewRecorder()
+		h.router.ServeHTTP(w, authReq(http.MethodPost, "/api/servers/"+s.ID()+"/files/decompress", `{"root":"/","file":"`+archiveName+`"}`))
+		assert.Equal(t, http.StatusNoContent, w.Code)
+	}
+
 	// 15. getSystemInformation v2
 	w = httptest.NewRecorder()
 	h.router.ServeHTTP(w, authReq(http.MethodGet, "/api/system?v=2", ""))
@@ -588,4 +652,42 @@ func TestRouterRemainingCoverage(t *testing.T) {
 	w = httptest.NewRecorder()
 	h.router.ServeHTTP(w, authReq(http.MethodPost, "/api/update", `{invalid`))
 	assert.Equal(t, http.StatusBadRequest, w.Code)
+
+	// 17. postServerSync, postServerInstall, postServerReinstall
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, authReq(http.MethodPost, "/api/servers/"+s.ID()+"/sync", ""))
+	// either 204 or 500 depending on remote panel response
+	assert.True(t, w.Code == http.StatusNoContent || w.Code == http.StatusInternalServerError)
+
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, authReq(http.MethodPost, "/api/servers/"+s.ID()+"/install", ""))
+	assert.Equal(t, http.StatusAccepted, w.Code)
+
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, authReq(http.MethodPost, "/api/servers/"+s.ID()+"/reinstall", ""))
+	assert.Equal(t, http.StatusAccepted, w.Code)
+
+	// 18. postServerRestoreBackup with local adapter error and missing backup
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, authReq(http.MethodPost, "/api/servers/"+s.ID()+"/backup/"+uuid.New().String()+"/restore", `{"adapter":"wings","truncate_directory":false}`))
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+
+	// 19. completeIncomingTransfer and deleteTransfer
+	trnsfr := transfer.New(context.Background(), s)
+	transfer.Incoming().Add(trnsfr)
+	assert.NotNil(t, transfer.Incoming().Get(s.ID()))
+
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, authReq(http.MethodDelete, "/api/transfers/"+s.ID(), ""))
+	assert.Equal(t, http.StatusAccepted, w.Code)
+
+	completeIncomingTransfer(h.mgr, trnsfr, true)
+	completeIncomingTransfer(h.mgr, trnsfr, false)
+
+	// 20. deleteServer while transferring
+	sTransfer := h.seedServer()
+	sTransfer.SetTransferring(true)
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, authReq(http.MethodDelete, "/api/servers/"+sTransfer.ID(), ""))
+	assert.Equal(t, http.StatusNoContent, w.Code)
 }
