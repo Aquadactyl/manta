@@ -16,6 +16,7 @@ import (
 
 	"github.com/pterodactyl/wings/config"
 	"github.com/pterodactyl/wings/server"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestMain(m *testing.M) {
@@ -206,4 +207,32 @@ func TestDownloadsFromInternalPortsAreRefused(t *testing.T) {
 	}
 	_ = open.Close()
 	wg.Wait()
+}
+
+func TestIsValidRedirectURL(t *testing.T) {
+	valid := []string{
+		"http://127.0.0.1:8080/file.txt",
+		"https://example.com/file.zip",
+		"http://[::1]:8080/file.tar.gz",
+		"https://sub.domain.com:8443/path/to/file?download=1&key=val",
+	}
+	for _, u := range valid {
+		assert.True(t, IsValidRedirectURL(u), "expected %s to be valid", u)
+	}
+
+	invalid := []string{
+		"",
+		"://invalid-url",
+		"ftp://example.com/file.txt",
+		"file:///etc/passwd",
+		"http://",
+		"http://attacker.com@internal/file",
+		"http://internal/#attacker.com",
+		"javascript:alert(1)",
+		"http://[invalid-ipv6/file",
+		"http://\nnewline",
+	}
+	for _, u := range invalid {
+		assert.False(t, IsValidRedirectURL(u), "expected %s to be invalid", u)
+	}
 }

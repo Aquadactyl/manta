@@ -14,6 +14,7 @@ import (
 
 	"github.com/apex/log"
 	"github.com/gin-gonic/gin"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/pterodactyl/wings/config"
@@ -449,4 +450,22 @@ func TestDeleteServerBackupFlow(t *testing.T) {
 	if c.Writer.Status() != http.StatusNoContent {
 		t.Fatalf("expected 204 NoContent for deleting existing backup, got %d", c.Writer.Status())
 	}
+}
+
+func TestBackupRestoreURLValidation(t *testing.T) {
+	assert.False(t, isValidRedirectUrl(""))
+	assert.False(t, isValidRedirectUrl("://invalid-url"))
+	assert.False(t, isValidRedirectUrl("ftp://example.com/backup.tar.gz"))
+	assert.False(t, isValidRedirectUrl("http://attacker.com@internal/backup.tar.gz"))
+	assert.False(t, isValidRedirectUrl("http://internal/#attacker.com"))
+	assert.False(t, isValidRedirectUrl("javascript:alert(1)"))
+	assert.False(t, isValidRedirectUrl("http://127.0.0.1/backup.tar.gz"))
+
+	client := backupTestRemoteClient{restoreStatus: make(chan string, 1)}
+	backupID := "22222222-2222-2222-2222-222222222222"
+	c, _, s := newBackupRestoreContext(t, client, backupID, `{"adapter":"s3","download_url":"ftp://bad-url"}`)
+	defer s.CtxCancel()
+
+	postServerRestoreBackup(c)
+	assert.Equal(t, http.StatusBadRequest, c.Writer.Status())
 }

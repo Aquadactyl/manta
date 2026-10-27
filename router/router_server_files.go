@@ -302,6 +302,11 @@ func getServerPullingFiles(c *gin.Context) {
 }
 
 // Writes the contents of the remote URL to a file on a server.
+// isValidRedirectURL validates that the incoming file download URL has a valid scheme and host.
+func isValidRedirectURL(raw string) bool {
+	return downloader.IsValidRedirectURL(raw)
+}
+
 func postServerPullRemoteFile(c *gin.Context) {
 	s := ExtractServer(c)
 	var data struct {
@@ -331,6 +336,13 @@ func postServerPullRemoteFile(c *gin.Context) {
 			return
 		}
 		middleware.CaptureAndAbort(c, err)
+		return
+	}
+
+	if !isValidRedirectURL(data.URL) {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
+			"error": "The provided download URL is invalid.",
+		})
 		return
 	}
 

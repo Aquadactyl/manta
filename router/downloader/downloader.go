@@ -11,6 +11,7 @@ import (
 	"net/netip"
 	"net/url"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 	"syscall"
@@ -197,6 +198,28 @@ func (dl *Download) MarshalJSON() ([]byte, error) {
 	})
 }
 
+var validDownloadURLRegexp = regexp.MustCompile(`^https?://[a-zA-Z0-9.\-_~%:\[\]]+(/[^?#\s]*)?(\?[^#\s]*)?$`)
+
+// IsValidRedirectURL validates that the target download URL uses HTTP/HTTPS, has a valid
+// host, and matches strict URL formatting without credentials or fragment components.
+func IsValidRedirectURL(raw string) bool {
+	if !validDownloadURLRegexp.MatchString(raw) {
+		return false
+	}
+	parsed, err := url.Parse(raw)
+	if err != nil || parsed.Host == "" || parsed.Hostname() == "" {
+		return false
+	}
+	if parsed.Scheme != "http" && parsed.Scheme != "https" {
+		return false
+	}
+	return true
+}
+
+func isValidRedirectUrl(raw string) bool {
+	return IsValidRedirectURL(raw)
+}
+
 // Execute executes a given download for the server and begins writing the file to the disk. Once
 // completed the download will be removed from the cache.
 func (dl *Download) Execute() error {
@@ -212,10 +235,19 @@ func (dl *Download) Execute() error {
 	dl.mu.Unlock()
 	defer dl.Cancel()
 
+	if dl.req.URL == nil {
+		return errors.WrapIf(ErrInvalidIPAddress, "downloader: invalid download URL")
+	}
+
+	targetURL := dl.req.URL.String()
+	if !isValidRedirectUrl(targetURL) {
+		return errors.WrapIf(ErrInvalidIPAddress, "downloader: invalid download URL")
+	}
+
 	// At this point we have verified the destination is not within the local network, so we can
 	// now make a request to that URL and pull down the file, saving it to the server's data
 	// directory.
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, dl.req.URL.String(), nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, targetURL, nil)
 	if err != nil {
 		return errors.WrapIf(err, "downloader: failed to create request")
 	}

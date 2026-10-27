@@ -9,6 +9,7 @@ import (
 	"net/netip"
 	"net/url"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 
@@ -117,6 +118,10 @@ func postServerRestoreBackup(c *gin.Context) {
 			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
+		if !isValidRedirectUrl(data.DownloadUrl) {
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "The provided backup link is not a valid URL."})
+			return
+		}
 	}
 
 	s.SetRestoring(true)
@@ -165,7 +170,12 @@ func postServerRestoreBackup(c *gin.Context) {
 	//
 	// For now I'm just using the server context so at least the request is canceled if
 	// the server gets deleted.
-	req, err := http.NewRequestWithContext(s.Context(), http.MethodGet, data.DownloadUrl, nil)
+	targetURL := data.DownloadUrl
+	if !isValidRedirectUrl(targetURL) {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "The provided backup link is not a valid URL."})
+		return
+	}
+	req, err := http.NewRequestWithContext(s.Context(), http.MethodGet, targetURL, nil)
 	if err != nil {
 		middleware.CaptureAndAbort(c, err)
 		return
@@ -249,6 +259,15 @@ func parseBackupUuid(c *gin.Context, value string) (string, bool) {
 	return "", false
 }
 
+var validBackupURLRegexp = regexp.MustCompile(`^https?://[a-zA-Z0-9.\-_~%:\[\]]+(/[^?#\s]*)?(\?[^#\s]*)?$`)
+
+func isValidRedirectUrl(raw string) bool {
+	if !validBackupURLRegexp.MatchString(raw) {
+		return false
+	}
+	return validateBackupDownloadUrl(raw) == nil
+}
+
 func validateBackupDownloadUrl(raw string) error {
 	parsed, err := url.Parse(raw)
 	if err != nil || parsed.Host == "" {
@@ -256,6 +275,9 @@ func validateBackupDownloadUrl(raw string) error {
 	}
 	if parsed.Scheme != "http" && parsed.Scheme != "https" {
 		return backupDownloadError("The provided backup link must use HTTP or HTTPS.")
+	}
+	if !validBackupURLRegexp.MatchString(raw) {
+		return backupDownloadError("The provided backup link is not a valid URL.")
 	}
 	if ip := net.ParseIP(parsed.Hostname()); ip != nil && isBlockedBackupRestoreIP(parsed.Hostname(), ip) {
 		return backupDownloadError("The provided backup link resolves to a blocked address.")
@@ -304,7 +326,11 @@ func backupRestoreHttpClient() http.Client {
 			if len(via) >= 10 {
 				return backupDownloadError("The provided backup link redirects too many times.")
 			}
-			return validateBackupDownloadUrl(req.URL.String())
+			redirectURL := req.URL.String()
+			if !isValidRedirectUrl(redirectURL) {
+				return backupDownloadError("The provided backup link is not a valid URL.")
+			}
+			return validateBackupDownloadUrl(redirectURL)
 		},
 	}
 }
