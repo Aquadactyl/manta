@@ -33,6 +33,8 @@ import (
 // Pass true as the first argument in order to execute a server sync before the
 // process to ensure the latest information is used.
 func (s *Server) Install() error {
+	s.SetInstalling(true)
+	defer s.SetInstalling(false)
 	return s.install(false)
 }
 
@@ -80,6 +82,9 @@ func (s *Server) install(reinstall bool) error {
 // for the server egg. This does not touch any existing files for the server,
 // other than what the script modifies.
 func (s *Server) Reinstall() error {
+	s.SetInstalling(true)
+	defer s.SetInstalling(false)
+
 	if s.Environment.State() != environment.ProcessOfflineState {
 		s.Log().Debug("waiting for server instance to enter a stopped state")
 		if err := s.Environment.WaitForStop(s.Context(), time.Second*10, true); err != nil {

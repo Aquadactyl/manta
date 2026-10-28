@@ -86,11 +86,16 @@ func postServerPower(c *gin.Context) {
 	// we can immediately return a response from the server. Some of these actions
 	// can take quite some time, especially stopping or restarting.
 	go func(s *server.Server) {
+		if s.Context().Err() != nil {
+			return
+		}
 		if data.WaitSeconds < 0 || data.WaitSeconds > 300 {
 			data.WaitSeconds = 30
 		}
 		if err := s.HandlePowerAction(data.Action, data.WaitSeconds); err != nil {
-			if errors.Is(err, context.DeadlineExceeded) {
+			if errors.Is(err, context.Canceled) || s.Context().Err() != nil {
+				return
+			} else if errors.Is(err, context.DeadlineExceeded) {
 				s.Log().WithField("action", data.Action).WithField("error", err).Warn("could not process server power action")
 			} else if errors.Is(err, server.ErrIsRunning) {
 				// Do nothing, this isn't something we care about for logging,
@@ -154,14 +159,21 @@ func postServerInstall(c *gin.Context) {
 	s := ExtractServer(c)
 
 	go func(s *server.Server) {
+		if s.Context().Err() != nil {
+			return
+		}
 		s.Log().Info("syncing server state with remote source before executing installation process")
 		if err := s.Sync(); err != nil {
-			s.Log().WithField("error", err).Error("failed to sync server state with Panel")
+			if !errors.Is(err, context.Canceled) && s.Context().Err() == nil {
+				s.Log().WithField("error", err).Error("failed to sync server state with Panel")
+			}
 			return
 		}
 
 		if err := s.Install(); err != nil {
-			s.Log().WithField("error", err).Error("failed to execute server installation process")
+			if !errors.Is(err, context.Canceled) && s.Context().Err() == nil {
+				s.Log().WithField("error", err).Error("failed to execute server installation process")
+			}
 		}
 	}(s)
 
@@ -180,8 +192,13 @@ func postServerReinstall(c *gin.Context) {
 	}
 
 	go func(s *server.Server) {
+		if s.Context().Err() != nil {
+			return
+		}
 		if err := s.Reinstall(); err != nil {
-			s.Log().WithField("error", err).Error("failed to complete server re-install process")
+			if !errors.Is(err, context.Canceled) && s.Context().Err() == nil {
+				s.Log().WithField("error", err).Error("failed to complete server re-install process")
+			}
 		}
 	}(s)
 

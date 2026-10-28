@@ -105,27 +105,39 @@ func postCreateServer(c *gin.Context) {
 	// cycle. If there are any errors they will be logged and communicated back
 	// to the Panel where a reinstall may take place.
 	go func(i *installer.Installer) {
-		if err := i.Server().CreateEnvironment(); err != nil {
-			i.Server().Log().WithField("error", err).Error("failed to create server environment during install process")
+		s := i.Server()
+		if s.Context().Err() != nil {
 			return
 		}
 
-		if err := i.Server().Install(); err != nil {
-			log.WithFields(log.Fields{"server": i.Server().ID(), "error": err}).Error("failed to run install process for server")
+		if err := s.CreateEnvironment(); err != nil {
+			if !errors.Is(err, context.Canceled) && s.Context().Err() == nil {
+				s.Log().WithField("error", err).Error("failed to create server environment during install process")
+			}
+			return
+		}
+
+		if err := s.Install(); err != nil {
+			if !errors.Is(err, context.Canceled) && s.Context().Err() == nil {
+				log.WithFields(log.Fields{"server": s.ID(), "error": err}).Error("failed to run install process for server")
+			}
 			return
 		}
 
 		if i.StartOnCompletion {
-			log.WithField("server_id", i.Server().ID()).Debug("starting server after successful installation")
-			if err := i.Server().HandlePowerAction(server.PowerActionStart, 30); err != nil {
+			if s.Context().Err() != nil {
+				return
+			}
+			log.WithField("server_id", s.ID()).Debug("starting server after successful installation")
+			if err := s.HandlePowerAction(server.PowerActionStart, 30); err != nil {
 				if errors.Is(err, context.DeadlineExceeded) {
-					log.WithFields(log.Fields{"server_id": i.Server().ID(), "action": "start"}).Warn("could not acquire a lock while attempting to perform a power action")
-				} else {
-					log.WithFields(log.Fields{"server_id": i.Server().ID(), "action": "start", "error": err}).Error("encountered error processing a server power action in the background")
+					log.WithFields(log.Fields{"server_id": s.ID(), "action": "start"}).Warn("could not acquire a lock while attempting to perform a power action")
+				} else if !errors.Is(err, context.Canceled) && s.Context().Err() == nil {
+					log.WithFields(log.Fields{"server_id": s.ID(), "action": "start", "error": err}).Error("encountered error processing a server power action in the background")
 				}
 			}
 		} else {
-			log.WithField("server_id", i.Server().ID()).Debug("skipping automatic start after successful server installation")
+			log.WithField("server_id", s.ID()).Debug("skipping automatic start after successful server installation")
 		}
 	}(install)
 
