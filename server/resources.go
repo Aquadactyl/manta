@@ -2,7 +2,6 @@ package server
 
 import (
 	"sync"
-	"sync/atomic"
 
 	"github.com/pterodactyl/wings/environment"
 	"github.com/pterodactyl/wings/system"
@@ -33,7 +32,7 @@ func (s *Server) Proc() ResourceUsage {
 	s.resources.mu.Lock()
 	defer s.resources.mu.Unlock()
 	// Store the updated disk usage when requesting process usage.
-	atomic.StoreInt64(&s.resources.Disk, s.Filesystem().CachedUsage())
+	s.resources.Disk = s.Filesystem().CachedUsage()
 	return ResourceUsage{
 		Stats: s.resources.Stats,
 		State: s.resources.State,

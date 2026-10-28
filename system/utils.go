@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"io"
 	"strconv"
-	"sync"
+	"sync/atomic"
 
 	"emperror.dev/errors"
 )
@@ -133,43 +133,37 @@ func FormatBytes[T int | int16 | int32 | int64 | uint | uint16 | uint32 | uint64
 }
 
 type AtomicBool struct {
-	v  bool
-	mu sync.RWMutex
+	v atomic.Bool
 }
 
 func NewAtomicBool(v bool) *AtomicBool {
-	return &AtomicBool{v: v}
+	ab := &AtomicBool{}
+	ab.v.Store(v)
+	return ab
 }
 
 func (ab *AtomicBool) Store(v bool) {
-	ab.mu.Lock()
-	ab.v = v
-	ab.mu.Unlock()
+	ab.v.Store(v)
 }
 
 // SwapIf stores the value "v" if the current value stored in the AtomicBool is
 // the opposite boolean value. If successfully swapped, the response is "true",
 // otherwise "false" is returned.
 func (ab *AtomicBool) SwapIf(v bool) bool {
-	ab.mu.Lock()
-	defer ab.mu.Unlock()
-	if ab.v != v {
-		ab.v = v
-		return true
-	}
-	return false
+	return ab.v.CompareAndSwap(!v, v)
 }
 
 func (ab *AtomicBool) Load() bool {
-	ab.mu.RLock()
-	defer ab.mu.RUnlock()
-	return ab.v
+	return ab.v.Load()
 }
 
 func (ab *AtomicBool) UnmarshalJSON(b []byte) error {
-	ab.mu.Lock()
-	defer ab.mu.Unlock()
-	return json.Unmarshal(b, &ab.v)
+	var val bool
+	if err := json.Unmarshal(b, &val); err != nil {
+		return err
+	}
+	ab.v.Store(val)
+	return nil
 }
 
 func (ab *AtomicBool) MarshalJSON() ([]byte, error) {
@@ -177,35 +171,38 @@ func (ab *AtomicBool) MarshalJSON() ([]byte, error) {
 }
 
 // AtomicString allows for reading/writing to a given struct field without having to worry
-// about a potential race condition scenario. Under the hood it uses a simple sync.RWMutex
+// about a potential race condition scenario. Under the hood it uses an atomic.Pointer[string]
 // to control access to the value.
 type AtomicString struct {
-	v  string
-	mu sync.RWMutex
+	v atomic.Pointer[string]
 }
 
 func NewAtomicString(v string) *AtomicString {
-	return &AtomicString{v: v}
+	as := &AtomicString{}
+	as.v.Store(&v)
+	return as
 }
 
 // Store stores the string value passed atomically.
 func (as *AtomicString) Store(v string) {
-	as.mu.Lock()
-	as.v = v
-	as.mu.Unlock()
+	as.v.Store(&v)
 }
 
 // Load loads the string value and returns it.
 func (as *AtomicString) Load() string {
-	as.mu.RLock()
-	defer as.mu.RUnlock()
-	return as.v
+	if p := as.v.Load(); p != nil {
+		return *p
+	}
+	return ""
 }
 
 func (as *AtomicString) UnmarshalJSON(b []byte) error {
-	as.mu.Lock()
-	defer as.mu.Unlock()
-	return json.Unmarshal(b, &as.v)
+	var val string
+	if err := json.Unmarshal(b, &val); err != nil {
+		return err
+	}
+	as.Store(val)
+	return nil
 }
 
 func (as *AtomicString) MarshalJSON() ([]byte, error) {
@@ -213,36 +210,37 @@ func (as *AtomicString) MarshalJSON() ([]byte, error) {
 }
 
 type Atomic[T any] struct {
-	v  T
-	mu sync.RWMutex
+	v atomic.Pointer[T]
 }
 
 func NewAtomic[T any](v T) *Atomic[T] {
-	return &Atomic[T]{v: v}
+	a := &Atomic[T]{}
+	a.v.Store(&v)
+	return a
 }
 
-// Store stores the string value passed atomically.
+// Store stores the value passed atomically.
 func (a *Atomic[T]) Store(v T) {
-	a.mu.Lock()
-	defer a.mu.Unlock()
-
-	a.v = v
+	a.v.Store(&v)
 }
 
-// Load loads the string value and returns it.
+// Load loads the value and returns it.
 func (a *Atomic[T]) Load() T {
-	a.mu.RLock()
-	defer a.mu.RUnlock()
-
-	return a.v
+	if p := a.v.Load(); p != nil {
+		return *p
+	}
+	var zero T
+	return zero
 }
 
 // UnmarshalJSON unmarshals the JSON value into the Atomic[T] value.
 func (a *Atomic[T]) UnmarshalJSON(b []byte) error {
-	a.mu.Lock()
-	defer a.mu.Unlock()
-
-	return json.Unmarshal(b, &a.v)
+	var val T
+	if err := json.Unmarshal(b, &val); err != nil {
+		return err
+	}
+	a.Store(val)
+	return nil
 }
 
 // MarshalJSON marshals the Atomic[T] value into JSON.

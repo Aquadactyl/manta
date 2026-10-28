@@ -8,6 +8,10 @@ This project follows [Semantic Versioning](http://semver.org) guidelines.
 
 ## Unreleased (Manta)
 
+### Changed
+
+- Modernize atomic concurrency primitives across `system` and `internal/progress` packages to Go 1.19+ typed atomics (`atomic.Bool`, `atomic.Uint64`, `atomic.Pointer[string]`, `atomic.Pointer[T]`), converting `AtomicBool` and `AtomicString` from `sync.RWMutex` to lock-free operations to eliminate lock contention on server state checks.
+
 ## v0.1-beta
 
 ### Security

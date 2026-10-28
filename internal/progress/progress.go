@@ -12,9 +12,9 @@ import (
 // performed.
 type Progress struct {
 	// written is the total size of the files that have been written to the writer.
-	written uint64
-	// Total is the total size of the archive in bytes.
-	total uint64
+	written atomic.Uint64
+	// total is the total size of the archive in bytes.
+	total atomic.Uint64
 
 	// Writer .
 	Writer io.Writer
@@ -22,18 +22,20 @@ type Progress struct {
 
 // NewProgress returns a new progress tracker for the given total size.
 func NewProgress(total uint64) *Progress {
-	return &Progress{total: total}
+	p := &Progress{}
+	p.total.Store(total)
+	return p
 }
 
 // Written returns the total number of bytes written.
 // This function should be used when the progress is tracking data being written.
 func (p *Progress) Written() uint64 {
-	return atomic.LoadUint64(&p.written)
+	return p.written.Load()
 }
 
 // Total returns the total size in bytes.
 func (p *Progress) Total() uint64 {
-	return atomic.LoadUint64(&p.total)
+	return p.total.Load()
 }
 
 // SetTotal sets the total size of the archive in bytes. This function is safe
@@ -41,13 +43,13 @@ func (p *Progress) Total() uint64 {
 // such as when the total size is simultaneously being calculated as data is
 // being written through the progress writer.
 func (p *Progress) SetTotal(total uint64) {
-	atomic.StoreUint64(&p.total, total)
+	p.total.Store(total)
 }
 
 // Write totals the number of bytes that have been written to the writer.
 func (p *Progress) Write(v []byte) (int, error) {
 	n := len(v)
-	atomic.AddUint64(&p.written, uint64(n))
+	p.written.Add(uint64(n))
 	if p.Writer != nil {
 		return p.Writer.Write(v)
 	}
