@@ -21,7 +21,7 @@ import (
 	"github.com/pterodactyl/wings/internal/ufs"
 )
 
-const memory = 4 * 1024
+const memory = 32 * 1024
 
 var pool = sync.Pool{
 	New: func() interface{} {
@@ -321,16 +321,10 @@ func (a *Archive) addToArchive(dirfd int, name, relative string, entry ufs.DirEn
 		return nil
 	}
 
-	// If the buffer size is larger than the file size, create a smaller buffer to hold the file.
-	var buf []byte
-	if header.Size < memory {
-		buf = make([]byte, header.Size)
-	} else {
-		// Get a fixed-size buffer from the pool to save on allocations.
-		bp := pool.Get().(*[]byte)
-		defer pool.Put(bp)
-		buf = *bp
-	}
+	// Get a fixed-size buffer from the pool to save on allocations.
+	bp := pool.Get().(*[]byte)
+	defer pool.Put(bp)
+	buf := *bp
 
 	// Open the file.
 	f, err := a.Filesystem.unixFS.OpenFileat(dirfd, name, ufs.O_RDONLY, 0)

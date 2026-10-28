@@ -11,12 +11,20 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"sync"
 	"time"
 
 	"github.com/pterodactyl/wings/internal/progress"
 )
 
 var validTransferURLRegexp = regexp.MustCompile(`^https?://[a-zA-Z0-9.\-_~%:\[\]]+(/[^?#\s]*)?(\?[^#\s]*)?$`)
+
+var transferCopyBuffers = sync.Pool{
+	New: func() any {
+		b := make([]byte, 64*1024)
+		return &b
+	},
+}
 
 // IsValidRedirectURL validates that the target URL uses http or https, has a valid
 // host, and does not contain illegal characters or ambiguous authority components.
@@ -116,11 +124,14 @@ func (t *Transfer) PushArchiveToTarget(targetURL, token string) ([]byte, error) 
 			return
 		}
 
-		ch := make(chan error)
+		ch := make(chan error, 1)
 		go func() {
 			defer close(ch)
 
-			if _, err := io.Copy(dest, tee); err != nil {
+			bp := transferCopyBuffers.Get().(*[]byte)
+			defer transferCopyBuffers.Put(bp)
+
+			if _, err := io.CopyBuffer(dest, tee, *bp); err != nil {
 				ch <- fmt.Errorf("failed to stream archive to destination: %w", err)
 				return
 			}

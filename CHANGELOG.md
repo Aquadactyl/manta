@@ -13,6 +13,7 @@ This project follows [Semantic Versioning](http://semver.org) guidelines.
 - Modernize atomic concurrency primitives across `system` and `internal/progress` packages to Go 1.19+ typed atomics (`atomic.Bool`, `atomic.Uint64`, `atomic.Pointer[string]`, `atomic.Pointer[T]`), converting `AtomicBool` and `AtomicString` from `sync.RWMutex` to lock-free operations to eliminate lock contention on server state checks.
 - Bind background installation, reinstallation, and power action goroutines in the router to `Server.Context()`, gracefully aborting operations and suppressing spurious error logs during server deletions and daemon shutdowns.
 - Guard server installation state by setting `Server.SetInstalling(true)` during `Install()` and `Reinstall()` lifecycles to block conflicting power actions and transfers.
+- Optimize streaming memory and throughput during archive creation and inter-daemon file transfers by increasing copy buffer sizes to 32KB/64KB and pooling buffers via `sync.Pool`, eliminating per-file heap slice allocations.
 
 ## v0.1-beta
 
