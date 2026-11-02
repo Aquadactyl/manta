@@ -6,6 +6,7 @@ import (
 	"compress/gzip"
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -794,6 +795,34 @@ func TestMoreFilesAndBackupRoutes(t *testing.T) {
 	s.SetRestoring(false)
 
 	// 7. Transfer Endpoints
+	// Keep the upload in flight until cancellation. A refused connection can
+	// finish before the duplicate request, making its expected 409 depend on
+	// goroutine scheduling.
+	received := make(chan struct{}, 1)
+	release := make(chan struct{})
+	destination := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if _, err := io.Copy(io.Discard, r.Body); err != nil {
+			return
+		}
+		select {
+		case received <- struct{}{}:
+		default:
+		}
+		select {
+		case <-r.Context().Done():
+		case <-release:
+		}
+	}))
+	t.Cleanup(func() {
+		if tr := transfer.Outgoing().Get(s.ID()); tr != nil {
+			tr.Cancel()
+		}
+		close(release)
+		destination.Close()
+		require.Eventually(t, func() bool { return transfer.Outgoing().Get(s.ID()) == nil }, 5*time.Second, time.Millisecond)
+	})
+	transferBody := `{"url":"` + destination.URL + `/transfer","token":"tok"}`
+
 	// Cancel when not transferring
 	req = httptest.NewRequest(http.MethodDelete, "/api/servers/"+s.ID()+"/transfer", nil)
 	req.Header.Set("Authorization", "Bearer test-token")
@@ -802,15 +831,20 @@ func TestMoreFilesAndBackupRoutes(t *testing.T) {
 	assert.Equal(t, http.StatusConflict, w.Code)
 
 	// Start transfer
-	req = httptest.NewRequest(http.MethodPost, "/api/servers/"+s.ID()+"/transfer", strings.NewReader(`{"url":"http://127.0.0.1:9999/transfer","token":"tok"}`))
+	req = httptest.NewRequest(http.MethodPost, "/api/servers/"+s.ID()+"/transfer", strings.NewReader(transferBody))
 	req.Header.Set("Authorization", "Bearer test-token")
 	req.Header.Set("Content-Type", "application/json")
 	w = httptest.NewRecorder()
 	h.router.ServeHTTP(w, req)
-	assert.Equal(t, http.StatusAccepted, w.Code)
+	require.Equal(t, http.StatusAccepted, w.Code)
+	select {
+	case <-received:
+	case <-time.After(5 * time.Second):
+		t.Fatal("transfer did not reach the controlled destination")
+	}
 
 	// Start transfer again while transferring -> 409
-	req = httptest.NewRequest(http.MethodPost, "/api/servers/"+s.ID()+"/transfer", strings.NewReader(`{"url":"http://127.0.0.1:9999/transfer","token":"tok"}`))
+	req = httptest.NewRequest(http.MethodPost, "/api/servers/"+s.ID()+"/transfer", strings.NewReader(transferBody))
 	req.Header.Set("Authorization", "Bearer test-token")
 	req.Header.Set("Content-Type", "application/json")
 	w = httptest.NewRecorder()
@@ -823,6 +857,9 @@ func TestMoreFilesAndBackupRoutes(t *testing.T) {
 	w = httptest.NewRecorder()
 	h.router.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusAccepted, w.Code)
+	require.Eventually(t, func() bool {
+		return transfer.Outgoing().Get(s.ID()) == nil && !s.IsTransferring()
+	}, 5*time.Second, time.Millisecond)
 }
 
 func TestMoreServerAndDownloadRoutes(t *testing.T) {
