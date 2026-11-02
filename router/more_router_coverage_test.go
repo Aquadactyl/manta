@@ -31,12 +31,13 @@ import (
 
 type customizableEnv struct {
 	transferTestEnvironment
-	readlogErr     error
-	isRunning      bool
-	isRunningErr   error
-	sendCommandErr error
-	destroyErr     error
-	waitForStopErr error
+	readlogErr      error
+	isRunning       bool
+	isRunningErr    error
+	sendCommandErr  error
+	destroyErr      error
+	waitForStopErr  error
+	waitForStopDone chan struct{}
 }
 
 func (e *customizableEnv) Readlog(n int) ([]string, error) {
@@ -59,7 +60,12 @@ func (e *customizableEnv) Destroy() error {
 }
 
 func (e *customizableEnv) WaitForStop(context.Context, time.Duration, bool) error {
-	return e.waitForStopErr
+	err := e.waitForStopErr
+	select {
+	case e.waitForStopDone <- struct{}{}:
+	default:
+	}
+	return err
 }
 
 type failingPanel struct {
@@ -81,6 +87,7 @@ func TestRouterRemainingCoverage(t *testing.T) {
 
 	cenv := &customizableEnv{
 		transferTestEnvironment: transferTestEnvironment{st: system.NewAtomicString(environment.ProcessOfflineState)},
+		waitForStopDone:         make(chan struct{}, 1),
 	}
 	s.Environment = cenv
 
@@ -132,6 +139,11 @@ func TestRouterRemainingCoverage(t *testing.T) {
 	w = httptest.NewRecorder()
 	h.router.ServeHTTP(w, authReq(http.MethodPost, "/api/servers/"+s.ID()+"/power", `{"action":"stop","wait_seconds":500}`))
 	assert.Equal(t, http.StatusAccepted, w.Code)
+	select {
+	case <-cenv.waitForStopDone:
+	case <-time.After(5 * time.Second):
+		t.Fatal("background stop did not finish reading the test environment")
+	}
 
 	// 3. postServerCommands branches
 	cenv.isRunningErr = errors.New("isrunning boom")

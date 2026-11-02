@@ -22,6 +22,8 @@ These bounds apply per request. They do not establish a global limit for simulta
 
 See the [hardening review](HARDENING.md) for benchmark results, regression coverage, and the remaining Docker dependency scan findings.
 
+The [2 November coverage audit](benchmarks/COVERAGE.md) records 823 passing Go cases/subtests with race detection and 91.70% statement coverage across the complete module. The 100% coverage target remains unmet; the audit retains every uncovered source block and provides a command that fails until the target is reached.
+
 ## Host resource metrics
 
 On Linux, authenticated `GET /api/system/usage` returns host CPU utilization, used

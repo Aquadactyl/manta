@@ -1,0 +1,14 @@
+{
+    "date":  "2026-11-02",
+    "race":  "passed",
+    "vet":  "passed",
+    "failed":  0,
+    "skipped":  0,
+    "passedCases":  823,
+    "passedPackages":  28,
+    "testToolchain":  "go version go1.26.9 linux/amd64",
+    "command":  "go test -race -json -count=1 -coverpkg=./... -covermode=atomic -coverprofile=coverage.out ./...",
+    "coverageProfileSha256":  "4b64e6c0476b8fbc1b302811e61d5fcd7f24ae9a5223eab21f9fbdf6a0d08077",
+    "coverageLogSha256":  "d993f5c4d4e347d493572d6b8dd830eed16f8a259864a8ccf8cd32bc432ca237",
+    "testEngine":  "Docker 29.9.2 isolated Docker-in-Docker"
+}

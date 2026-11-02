@@ -47,3 +47,11 @@ The Panel's SFTP compatibility fix is in the Aquadactyl repository and has been 
 Install containers and Panel status callbacks, game startup/shutdown, API concurrency, directory listing, HTTP/SFTP transfers with integrity checks, archive round trips, log fanout, idle/load CPU and working memory, game queries and Paper tick reports, and 16 live hardening/compatibility checks per daemon.
 
 The full Go race suite also covers cancellation races, bounded pagination, redirect credential protection, Panel response limits/read failures, token expiry retention, and the other source-level protections. The benchmark does not run authenticated player bots or a production endurance test.
+
+## Complete coverage audit
+
+Run `benchmarks/Run-Verification.ps1 -Python python` to collect unfiltered coverage with the race detector, run vet, and audit the exact 100% statement-coverage target. It starts an isolated Docker-in-Docker engine, exposes no host ports, and removes its test engine, temporary volumes, and network afterward. Docker must support privileged Linux containers; Python 3 is required on the host.
+
+The default output is `build/verification/`. The script fails if tests/vet fail, any test is skipped, or the coverage target is unmet. A passing test suite alone does not establish 100% coverage. The JSON report retains counts and uncovered block spans for every source file, including CLI and benchmark-runner code. CI uses the same `-coverpkg=./...` instrumentation scope.
+
+For an existing profile, run `python benchmarks/coverage_report.py coverage.out --output coverage.json`. Repeated blocks from cross-package instrumentation are merged by location without increasing the statement denominator. The exact count comparison prevents rounding a value below 100% into a passing result.

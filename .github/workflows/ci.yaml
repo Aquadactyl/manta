@@ -60,7 +60,7 @@ jobs:
         env:
           CGO_ENABLED: 1
         run: |
-          go test -race -coverprofile=coverage.out -covermode=atomic ./...
+          go test -race -coverpkg=./... -coverprofile=coverage.out -covermode=atomic ./...
 
       - name: Upload coverage
         if: always() && matrix.goarch == 'amd64' && matrix.go == '1.27.2'

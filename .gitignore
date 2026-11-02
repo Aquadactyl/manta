@@ -22,6 +22,7 @@
 
 # Local benchmark build and container logs
 /benchmarks/results/**/*.log
+/benchmarks/__pycache__/
 
 # ignore configuration file
 /config.yml

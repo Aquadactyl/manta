@@ -186,6 +186,7 @@ func (t *Transfer) PushArchiveToTarget(targetURL, token string) ([]byte, error) 
 		t.Log().Debug("error while sending archive to destination")
 		return nil, err
 	}
+	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("unexpected status code from destination: %d", res.StatusCode)
 	}
@@ -203,16 +204,11 @@ func (t *Transfer) PushArchiveToTarget(targetURL, token string) ([]byte, error) 
 			t.Log().WithError(err2).Debug("failed to send archive to destination")
 			return nil, fmt.Errorf("multipart error: %w", err2)
 		}
-		defer res.Body.Close()
 		t.Log().Debug("received response from destination")
 
 		v, err := io.ReadAll(res.Body)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read response body: %w", err)
-		}
-
-		if res.StatusCode != http.StatusOK {
-			return nil, errors.New(string(v))
 		}
 
 		return v, nil

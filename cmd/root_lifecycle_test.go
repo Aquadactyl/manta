@@ -89,6 +89,7 @@ func TestRootCmdRunLifecycle(t *testing.T) {
 	cfg.System.Sftp.Address = "127.0.0.1"
 	cfg.System.Sftp.Port = 20225
 	cfg.Docker.Network.Mode = "bridge"
+	cfg.Docker.Network.Name = "bridge"
 	cfg.Api.Host = "127.0.0.1"
 	cfg.Api.Port = 0
 	cfg.Api.Ssl.Enabled = false

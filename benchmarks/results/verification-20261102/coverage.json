@@ -1,0 +1,3004 @@
+{
+  "schemaVersion": 1,
+  "metric": "Go statement coverage",
+  "scope": "All packages returned by go list ./..., including CLI and benchmark runner; no source exclusions",
+  "mode": "atomic",
+  "minimumPercent": 100.0,
+  "targetMet": false,
+  "statements": 8250,
+  "covered": 7565,
+  "uncovered": 685,
+  "percent": 91.69697,
+  "files": [
+    {
+      "file": "github.com/pterodactyl/wings/benchmarks/runner/events.go",
+      "statements": 50,
+      "covered": 41,
+      "uncoveredBlocks": [
+        {
+          "span": "24.33,25.44",
+          "statements": 1
+        },
+        {
+          "span": "30.32,32.49",
+          "statements": 2
+        },
+        {
+          "span": "51.33,52.59",
+          "statements": 1
+        },
+        {
+          "span": "57.44,58.52",
+          "statements": 1
+        },
+        {
+          "span": "61.35,62.62",
+          "statements": 1
+        },
+        {
+          "span": "71.226,72.250",
+          "statements": 1
+        },
+        {
+          "span": "76.140,77.53",
+          "statements": 1
+        },
+        {
+          "span": "81.37,82.47",
+          "statements": 1
+        }
+      ]
+    },
+    {
+      "file": "github.com/pterodactyl/wings/benchmarks/runner/main.go",
+      "statements": 161,
+      "covered": 134,
+      "uncoveredBlocks": [
+        {
+          "span": "101.19,102.16",
+          "statements": 1
+        },
+        {
+          "span": "103.21,104.18",
+          "statements": 1
+        },
+        {
+          "span": "105.18,106.15",
+          "statements": 1
+        },
+        {
+          "span": "107.19,108.16",
+          "statements": 1
+        },
+        {
+          "span": "109.16,110.19",
+          "statements": 1
+        },
+        {
+          "span": "111.10,112.25",
+          "statements": 1
+        },
+        {
+          "span": "114.2,114.52",
+          "statements": 1
+        },
+        {
+          "span": "223.3,223.37",
+          "statements": 1
+        },
+        {
+          "span": "225.2,225.55",
+          "statements": 1
+        },
+        {
+          "span": "240.31,241.52",
+          "statements": 1
+        },
+        {
+          "span": "241.52,242.38",
+          "statements": 1
+        },
+        {
+          "span": "242.38,244.20",
+          "statements": 2
+        },
+        {
+          "span": "244.20,246.5",
+          "statements": 1
+        },
+        {
+          "span": "247.28,250.35",
+          "statements": 3
+        },
+        {
+          "span": "247.4,247.28",
+          "statements": 1
+        },
+        {
+          "span": "250.35,252.6",
+          "statements": 1
+        },
+        {
+          "span": "253.5,256.237",
+          "statements": 4
+        },
+        {
+          "span": "260.2,260.14",
+          "statements": 1
+        },
+        {
+          "span": "300.16,303.3",
+          "statements": 2
+        },
+        {
+          "span": "80.64,81.42",
+          "statements": 1
+        }
+      ]
+    },
+    {
+      "file": "github.com/pterodactyl/wings/benchmarks/runner/performance.go",
+      "statements": 133,
+      "covered": 127,
+      "uncoveredBlocks": [
+        {
+          "span": "100.24,101.38",
+          "statements": 1
+        },
+        {
+          "span": "119.70,120.44",
+          "statements": 1
+        },
+        {
+          "span": "168.23,169.34",
+          "statements": 1
+        },
+        {
+          "span": "175.40,176.46",
+          "statements": 1
+        },
+        {
+          "span": "66.40,68.10",
+          "statements": 1
+        },
+        {
+          "span": "94.24,95.57",
+          "statements": 1
+        }
+      ]
+    },
+    {
+      "file": "github.com/pterodactyl/wings/benchmarks/runner/resources.go",
+      "statements": 166,
+      "covered": 151,
+      "uncoveredBlocks": [
+        {
+          "span": "143.20,144.59",
+          "statements": 1
+        },
+        {
+          "span": "216.37,218.3",
+          "statements": 1
+        },
+        {
+          "span": "220.16,222.3",
+          "statements": 1
+        },
+        {
+          "span": "227.44,229.3",
+          "statements": 1
+        },
+        {
+          "span": "231.25,233.3",
+          "statements": 1
+        },
+        {
+          "span": "245.16,247.3",
+          "statements": 1
+        },
+        {
+          "span": "254.37,256.3",
+          "statements": 1
+        },
+        {
+          "span": "259.16,261.3",
+          "statements": 1
+        },
+        {
+          "span": "269.2,269.31",
+          "statements": 1
+        },
+        {
+          "span": "80.23,82.20",
+          "statements": 2
+        },
+        {
+          "span": "82.20,84.9",
+          "statements": 1
+        },
+        {
+          "span": "85.8,87.11",
+          "statements": 3
+        }
+      ]
+    },
+    {
+      "file": "github.com/pterodactyl/wings/benchmarks/runner/security.go",
+      "statements": 141,
+      "covered": 137,
+      "uncoveredBlocks": [
+        {
+          "span": "43.40,45.4",
+          "statements": 1
+        },
+        {
+          "span": "65.30,66.60",
+          "statements": 1
+        },
+        {
+          "span": "77.19,79.6",
+          "statements": 1
+        },
+        {
+          "span": "81.42,82.14",
+          "statements": 1
+        }
+      ]
+    },
+    {
+      "file": "github.com/pterodactyl/wings/cmd/configure.go",
+      "statements": 91,
+      "covered": 69,
+      "uncoveredBlocks": [
+        {
+          "span": "102.89,105.3",
+          "statements": 2
+        },
+        {
+          "span": "105.44,110.3",
+          "statements": 3
+        },
+        {
+          "span": "113.16,114.13",
+          "statements": 1
+        },
+        {
+          "span": "117.83,120.3",
+          "statements": 2
+        },
+        {
+          "span": "185.16,187.3",
+          "statements": 1
+        },
+        {
+          "span": "209.16,210.13",
+          "statements": 1
+        },
+        {
+          "span": "216.16,218.3",
+          "statements": 1
+        },
+        {
+          "span": "59.88,61.3",
+          "statements": 1
+        },
+        {
+          "span": "63.70,66.30",
+          "statements": 2
+        },
+        {
+          "span": "66.30,69.4",
+          "statements": 2
+        },
+        {
+          "span": "76.62,77.35",
+          "statements": 1
+        },
+        {
+          "span": "77.35,79.4",
+          "statements": 1
+        },
+        {
+          "span": "81.3,81.13",
+          "statements": 1
+        },
+        {
+          "span": "89.16,90.13",
+          "statements": 1
+        },
+        {
+          "span": "96.16,99.3",
+          "statements": 2
+        }
+      ]
+    },
+    {
+      "file": "github.com/pterodactyl/wings/cmd/diagnostics.go",
+      "statements": 139,
+      "covered": 111,
+      "uncoveredBlocks": [
+        {
+          "span": "103.40,107.3",
+          "statements": 3
+        },
+        {
+          "span": "111.2,113.12",
+          "statements": 3
+        },
+        {
+          "span": "113.12,115.17",
+          "statements": 2
+        },
+        {
+          "span": "115.17,117.4",
+          "statements": 1
+        },
+        {
+          "span": "165.39,167.3",
+          "statements": 1
+        },
+        {
+          "span": "174.17,176.4",
+          "statements": 1
+        },
+        {
+          "span": "179.9,181.4",
+          "statements": 1
+        },
+        {
+          "span": "234.16,236.3",
+          "statements": 1
+        },
+        {
+          "span": "238.16,240.3",
+          "statements": 1
+        },
+        {
+          "span": "242.16,244.3",
+          "statements": 1
+        },
+        {
+          "span": "268.16,271.3",
+          "statements": 2
+        },
+        {
+          "span": "52.51,55.4",
+          "statements": 2
+        },
+        {
+          "span": "72.50,91.64",
+          "statements": 2
+        },
+        {
+          "span": "91.64,92.35",
+          "statements": 1
+        },
+        {
+          "span": "92.35,94.4",
+          "statements": 1
+        },
+        {
+          "span": "95.3,95.13",
+          "statements": 1
+        },
+        {
+          "span": "98.2,103.40",
+          "statements": 4
+        }
+      ]
+    },
+    {
+      "file": "github.com/pterodactyl/wings/cmd/root.go",
+      "statements": 214,
+      "covered": 138,
+      "uncoveredBlocks": [
+        {
+          "span": "101.67,104.3",
+          "statements": 2
+        },
+        {
+          "span": "106.51,109.3",
+          "statements": 2
+        },
+        {
+          "span": "111.54,114.3",
+          "statements": 2
+        },
+        {
+          "span": "115.55,118.3",
+          "statements": 2
+        },
+        {
+          "span": "119.49,122.3",
+          "statements": 2
+        },
+        {
+          "span": "128.51,131.3",
+          "statements": 2
+        },
+        {
+          "span": "142.46,145.3",
+          "statements": 2
+        },
+        {
+          "span": "148.16,151.3",
+          "statements": 2
+        },
+        {
+          "span": "153.67,156.3",
+          "statements": 2
+        },
+        {
+          "span": "158.57,159.37",
+          "statements": 1
+        },
+        {
+          "span": "159.37,161.4",
+          "statements": 1
+        },
+        {
+          "span": "161.9,163.4",
+          "statements": 1
+        },
+        {
+          "span": "172.16,174.3",
+          "statements": 1
+        },
+        {
+          "span": "183.20,184.51",
+          "statements": 1
+        },
+        {
+          "span": "184.51,186.6",
+          "statements": 1
+        },
+        {
+          "span": "187.32,189.11",
+          "statements": 2
+        },
+        {
+          "span": "202.47,204.12",
+          "statements": 2
+        },
+        {
+          "span": "210.47,212.5",
+          "statements": 1
+        },
+        {
+          "span": "229.47,231.5",
+          "statements": 1
+        },
+        {
+          "span": "239.95,240.72",
+          "statements": 1
+        },
+        {
+          "span": "240.72,242.6",
+          "statements": 1
+        },
+        {
+          "span": "243.41,253.53",
+          "statements": 3
+        },
+        {
+          "span": "253.53,255.6",
+          "statements": 1
+        },
+        {
+          "span": "263.125,265.36",
+          "statements": 2
+        },
+        {
+          "span": "265.36,267.6",
+          "statements": 1
+        },
+        {
+          "span": "282.66,284.3",
+          "statements": 1
+        },
+        {
+          "span": "296.35,299.4",
+          "statements": 2
+        },
+        {
+          "span": "306.66,308.4",
+          "statements": 1
+        },
+        {
+          "span": "313.65,315.3",
+          "statements": 1
+        },
+        {
+          "span": "318.64,320.3",
+          "statements": 1
+        },
+        {
+          "span": "340.16,342.3",
+          "statements": 1
+        },
+        {
+          "span": "371.13,385.13",
+          "statements": 5
+        },
+        {
+          "span": "385.13,386.94",
+          "statements": 1
+        },
+        {
+          "span": "386.94,388.5",
+          "statements": 1
+        },
+        {
+          "span": "391.3,391.95",
+          "statements": 1
+        },
+        {
+          "span": "391.95,393.4",
+          "statements": 1
+        },
+        {
+          "span": "394.3,394.9",
+          "statements": 1
+        },
+        {
+          "span": "399.21,400.129",
+          "statements": 1
+        },
+        {
+          "span": "400.129,402.4",
+          "statements": 1
+        },
+        {
+          "span": "403.3,403.9",
+          "statements": 1
+        },
+        {
+          "span": "406.83,408.3",
+          "statements": 1
+        },
+        {
+          "span": "421.42,424.3",
+          "statements": 2
+        },
+        {
+          "span": "433.70,435.3",
+          "statements": 1
+        },
+        {
+          "span": "437.19,439.3",
+          "statements": 1
+        },
+        {
+          "span": "441.30,443.3",
+          "statements": 1
+        },
+        {
+          "span": "452.17,454.4",
+          "statements": 1
+        },
+        {
+          "span": "459.16,460.37",
+          "statements": 1
+        },
+        {
+          "span": "460.37,462.4",
+          "statements": 1
+        },
+        {
+          "span": "463.3,463.75",
+          "statements": 1
+        },
+        {
+          "span": "474.71,476.3",
+          "statements": 1
+        },
+        {
+          "span": "479.16,481.3",
+          "statements": 1
+        },
+        {
+          "span": "511.36,526.2",
+          "statements": 2
+        },
+        {
+          "span": "55.68,58.5",
+          "statements": 2
+        },
+        {
+          "span": "73.46,75.3",
+          "statements": 1
+        }
+      ]
+    },
+    {
+      "file": "github.com/pterodactyl/wings/config/config.go",
+      "statements": 259,
+      "covered": 223,
+      "uncoveredBlocks": [
+        {
+          "span": "461.41,463.3",
+          "statements": 1
+        },
+        {
+          "span": "594.16,596.3",
+          "statements": 1
+        },
+        {
+          "span": "612.16,614.3",
+          "statements": 1
+        },
+        {
+          "span": "617.29,622.3",
+          "statements": 4
+        },
+        {
+          "span": "627.17,629.4",
+          "statements": 1
+        },
+        {
+          "span": "641.48,643.4",
+          "statements": 1
+        },
+        {
+          "span": "653.42,657.93",
+          "statements": 2
+        },
+        {
+          "span": "657.93,659.4",
+          "statements": 1
+        },
+        {
+          "span": "670.2,672.12",
+          "statements": 3
+        },
+        {
+          "span": "714.16,716.3",
+          "statements": 1
+        },
+        {
+          "span": "855.16,857.3",
+          "statements": 1
+        },
+        {
+          "span": "879.17,880.27",
+          "statements": 1
+        },
+        {
+          "span": "880.27,882.5",
+          "statements": 1
+        },
+        {
+          "span": "884.4,891.18",
+          "statements": 5
+        },
+        {
+          "span": "891.18,894.5",
+          "statements": 2
+        },
+        {
+          "span": "896.4,898.53",
+          "statements": 3
+        },
+        {
+          "span": "898.53,901.5",
+          "statements": 2
+        },
+        {
+          "span": "902.4,902.48",
+          "statements": 1
+        },
+        {
+          "span": "918.16,920.3",
+          "statements": 1
+        },
+        {
+          "span": "946.17,950.4",
+          "statements": 3
+        }
+      ]
+    },
+    {
+      "file": "github.com/pterodactyl/wings/config/config_docker.go",
+      "statements": 73,
+      "covered": 71,
+      "uncoveredBlocks": [
+        {
+          "span": "211.61,213.3",
+          "statements": 1
+        },
+        {
+          "span": "240.16,242.3",
+          "statements": 1
+        }
+      ]
+    },
+    {
+      "file": "github.com/pterodactyl/wings/environment/allocations.go",
+      "statements": 27,
+      "covered": 27,
+      "uncoveredBlocks": []
+    },
+    {
+      "file": "github.com/pterodactyl/wings/environment/config.go",
+      "statements": 22,
+      "covered": 22,
+      "uncoveredBlocks": []
+    },
+    {
+      "file": "github.com/pterodactyl/wings/environment/docker.go",
+      "statements": 34,
+      "covered": 28,
+      "uncoveredBlocks": [
+        {
+          "span": "37.16,39.3",
+          "statements": 1
+        },
+        {
+          "span": "49.55,51.4",
+          "statements": 1
+        },
+        {
+          "span": "60.18,61.15",
+          "statements": 1
+        },
+        {
+          "span": "62.20,64.32",
+          "statements": 2
+        },
+        {
+          "span": "99.16,101.3",
+          "statements": 1
+        }
+      ]
+    },
+    {
+      "file": "github.com/pterodactyl/wings/environment/docker/api.go",
+      "statements": 52,
+      "covered": 50,
+      "uncoveredBlocks": [
+        {
+          "span": "81.3,82.46",
+          "statements": 2
+        }
+      ]
+    },
+    {
+      "file": "github.com/pterodactyl/wings/environment/docker/cgroup_burst.go",
+      "statements": 50,
+      "covered": 47,
+      "uncoveredBlocks": [
+        {
+          "span": "115.2,115.114",
+          "statements": 1
+        },
+        {
+          "span": "73.2,73.69",
+          "statements": 1
+        },
+        {
+          "span": "82.16,84.3",
+          "statements": 1
+        }
+      ]
+    },
+    {
+      "file": "github.com/pterodactyl/wings/environment/docker/container.go",
+      "statements": 181,
+      "covered": 158,
+      "uncoveredBlocks": [
+        {
+          "span": "104.35,107.4",
+          "statements": 2
+        },
+        {
+          "span": "143.3,143.92",
+          "statements": 1
+        },
+        {
+          "span": "143.92,145.4",
+          "statements": 1
+        },
+        {
+          "span": "146.3,146.81",
+          "statements": 1
+        },
+        {
+          "span": "154.53,156.3",
+          "statements": 1
+        },
+        {
+          "span": "179.3,179.77",
+          "statements": 1
+        },
+        {
+          "span": "194.17,196.3",
+          "statements": 1
+        },
+        {
+          "span": "213.38,215.3",
+          "statements": 1
+        },
+        {
+          "span": "237.30,239.3",
+          "statements": 1
+        },
+        {
+          "span": "271.33,273.5",
+          "statements": 1
+        },
+        {
+          "span": "288.19,290.5",
+          "statements": 1
+        },
+        {
+          "span": "329.89,331.3",
+          "statements": 1
+        },
+        {
+          "span": "414.38,416.3",
+          "statements": 1
+        },
+        {
+          "span": "453.17,455.4",
+          "statements": 1
+        },
+        {
+          "span": "464.18,468.4",
+          "statements": 1
+        },
+        {
+          "span": "476.5,484.15",
+          "statements": 2
+        },
+        {
+          "span": "506.38,508.3",
+          "statements": 1
+        },
+        {
+          "span": "82.20,84.5",
+          "statements": 1
+        },
+        {
+          "span": "89.51,90.42",
+          "statements": 1
+        },
+        {
+          "span": "90.42,92.6",
+          "statements": 1
+        },
+        {
+          "span": "92.11,94.6",
+          "statements": 1
+        }
+      ]
+    },
+    {
+      "file": "github.com/pterodactyl/wings/environment/docker/environment.go",
+      "statements": 48,
+      "covered": 45,
+      "uncoveredBlocks": [
+        {
+          "span": "128.3,128.20",
+          "statements": 1
+        },
+        {
+          "span": "166.3,166.89",
+          "statements": 1
+        },
+        {
+          "span": "69.16,71.3",
+          "statements": 1
+        }
+      ]
+    },
+    {
+      "file": "github.com/pterodactyl/wings/environment/docker/power.go",
+      "statements": 107,
+      "covered": 90,
+      "uncoveredBlocks": [
+        {
+          "span": "120.39,122.3",
+          "statements": 1
+        },
+        {
+          "span": "124.86,126.3",
+          "statements": 1
+        },
+        {
+          "span": "206.2,206.12",
+          "statements": 1
+        },
+        {
+          "span": "255.20,256.35",
+          "statements": 1
+        },
+        {
+          "span": "256.35,257.17",
+          "statements": 1
+        },
+        {
+          "span": "257.17,259.5",
+          "statements": 1
+        },
+        {
+          "span": "260.4,260.14",
+          "statements": 1
+        },
+        {
+          "span": "268.16,269.49",
+          "statements": 1
+        },
+        {
+          "span": "268.3,268.16",
+          "statements": 1
+        },
+        {
+          "span": "269.49,271.5",
+          "statements": 1
+        },
+        {
+          "span": "272.4,272.32",
+          "statements": 1
+        },
+        {
+          "span": "274.3,274.109",
+          "statements": 1
+        },
+        {
+          "span": "29.32,31.4",
+          "statements": 1
+        },
+        {
+          "span": "307.95,309.3",
+          "statements": 1
+        },
+        {
+          "span": "73.32,75.4",
+          "statements": 1
+        },
+        {
+          "span": "88.47,89.52",
+          "statements": 1
+        },
+        {
+          "span": "89.52,91.5",
+          "statements": 1
+        }
+      ]
+    },
+    {
+      "file": "github.com/pterodactyl/wings/environment/docker/stats.go",
+      "statements": 66,
+      "covered": 60,
+      "uncoveredBlocks": [
+        {
+          "span": "107.54,110.5",
+          "statements": 2
+        },
+        {
+          "span": "80.16,82.3",
+          "statements": 1
+        },
+        {
+          "span": "86.16,88.3",
+          "statements": 1
+        },
+        {
+          "span": "93.21,94.20",
+          "statements": 1
+        },
+        {
+          "span": "98.59,100.6",
+          "statements": 1
+        }
+      ]
+    },
+    {
+      "file": "github.com/pterodactyl/wings/environment/settings.go",
+      "statements": 42,
+      "covered": 38,
+      "uncoveredBlocks": [
+        {
+          "span": "116.28,118.3",
+          "statements": 1
+        },
+        {
+          "span": "146.72,148.3",
+          "statements": 1
+        },
+        {
+          "span": "154.39,156.4",
+          "statements": 1
+        },
+        {
+          "span": "187.11,188.12",
+          "statements": 1
+        }
+      ]
+    },
+    {
+      "file": "github.com/pterodactyl/wings/events/events.go",
+      "statements": 15,
+      "covered": 15,
+      "uncoveredBlocks": []
+    },
+    {
+      "file": "github.com/pterodactyl/wings/internal/cron/activity_cron.go",
+      "statements": 32,
+      "covered": 31,
+      "uncoveredBlocks": [
+        {
+          "span": "85.72,87.3",
+          "statements": 1
+        }
+      ]
+    },
+    {
+      "file": "github.com/pterodactyl/wings/internal/cron/cron.go",
+      "statements": 24,
+      "covered": 22,
+      "uncoveredBlocks": [
+        {
+          "span": "53.38,55.5",
+          "statements": 1
+        },
+        {
+          "span": "64.38,66.5",
+          "statements": 1
+        }
+      ]
+    },
+    {
+      "file": "github.com/pterodactyl/wings/internal/cron/delivery.go",
+      "statements": 46,
+      "covered": 45,
+      "uncoveredBlocks": [
+        {
+          "span": "114.85,116.3",
+          "statements": 1
+        }
+      ]
+    },
+    {
+      "file": "github.com/pterodactyl/wings/internal/cron/sftp_cron.go",
+      "statements": 82,
+      "covered": 80,
+      "uncoveredBlocks": [
+        {
+          "span": "115.72,117.3",
+          "statements": 1
+        },
+        {
+          "span": "70.2,70.12",
+          "statements": 1
+        }
+      ]
+    },
+    {
+      "file": "github.com/pterodactyl/wings/internal/database/database.go",
+      "statements": 21,
+      "covered": 18,
+      "uncoveredBlocks": [
+        {
+          "span": "36.37,38.3",
+          "statements": 1
+        },
+        {
+          "span": "42.64,44.3",
+          "statements": 1
+        },
+        {
+          "span": "45.68,47.3",
+          "statements": 1
+        }
+      ]
+    },
+    {
+      "file": "github.com/pterodactyl/wings/internal/models/activity.go",
+      "statements": 16,
+      "covered": 14,
+      "uncoveredBlocks": [
+        {
+          "span": "44.38,45.14",
+          "statements": 1
+        },
+        {
+          "span": "48.36,49.14",
+          "statements": 1
+        }
+      ]
+    },
+    {
+      "file": "github.com/pterodactyl/wings/internal/models/models.go",
+      "statements": 10,
+      "covered": 10,
+      "uncoveredBlocks": []
+    },
+    {
+      "file": "github.com/pterodactyl/wings/internal/network/address.go",
+      "statements": 10,
+      "covered": 10,
+      "uncoveredBlocks": []
+    },
+    {
+      "file": "github.com/pterodactyl/wings/internal/network/allowlist.go",
+      "statements": 13,
+      "covered": 13,
+      "uncoveredBlocks": []
+    },
+    {
+      "file": "github.com/pterodactyl/wings/internal/network/limit_listener.go",
+      "statements": 16,
+      "covered": 16,
+      "uncoveredBlocks": []
+    },
+    {
+      "file": "github.com/pterodactyl/wings/internal/progress/progress.go",
+      "statements": 23,
+      "covered": 23,
+      "uncoveredBlocks": []
+    },
+    {
+      "file": "github.com/pterodactyl/wings/internal/ufs/error.go",
+      "statements": 32,
+      "covered": 32,
+      "uncoveredBlocks": []
+    },
+    {
+      "file": "github.com/pterodactyl/wings/internal/ufs/file_posix.go",
+      "statements": 12,
+      "covered": 12,
+      "uncoveredBlocks": []
+    },
+    {
+      "file": "github.com/pterodactyl/wings/internal/ufs/fs_quota.go",
+      "statements": 58,
+      "covered": 58,
+      "uncoveredBlocks": []
+    },
+    {
+      "file": "github.com/pterodactyl/wings/internal/ufs/fs_unix.go",
+      "statements": 339,
+      "covered": 320,
+      "uncoveredBlocks": [
+        {
+          "span": "112.44,114.3",
+          "statements": 1
+        },
+        {
+          "span": "396.17,398.3",
+          "statements": 1
+        },
+        {
+          "span": "507.32,509.4",
+          "statements": 1
+        },
+        {
+          "span": "510.61,512.4",
+          "statements": 1
+        },
+        {
+          "span": "515.17,517.4",
+          "statements": 1
+        },
+        {
+          "span": "541.36,542.13",
+          "statements": 1
+        },
+        {
+          "span": "544.76,546.3",
+          "statements": 1
+        },
+        {
+          "span": "571.16,573.3",
+          "statements": 1
+        },
+        {
+          "span": "585.17,587.3",
+          "statements": 1
+        },
+        {
+          "span": "700.31,702.3",
+          "statements": 1
+        },
+        {
+          "span": "703.60,705.3",
+          "statements": 1
+        },
+        {
+          "span": "765.24,766.12",
+          "statements": 1
+        },
+        {
+          "span": "800.35,802.4",
+          "statements": 1
+        },
+        {
+          "span": "808.29,810.4",
+          "statements": 1
+        },
+        {
+          "span": "846.52,848.3",
+          "statements": 1
+        },
+        {
+          "span": "866.18,867.17",
+          "statements": 1
+        },
+        {
+          "span": "868.19,869.17",
+          "statements": 1
+        },
+        {
+          "span": "905.18,906.17",
+          "statements": 1
+        },
+        {
+          "span": "907.19,908.17",
+          "statements": 1
+        }
+      ]
+    },
+    {
+      "file": "github.com/pterodactyl/wings/internal/ufs/mkdir_unix.go",
+      "statements": 29,
+      "covered": 24,
+      "uncoveredBlocks": [
+        {
+          "span": "44.32,46.3",
+          "statements": 1
+        },
+        {
+          "span": "64.16,68.33",
+          "statements": 2
+        },
+        {
+          "span": "68.33,70.4",
+          "statements": 1
+        },
+        {
+          "span": "71.3,71.22",
+          "statements": 1
+        }
+      ]
+    },
+    {
+      "file": "github.com/pterodactyl/wings/internal/ufs/path_unix.go",
+      "statements": 28,
+      "covered": 27,
+      "uncoveredBlocks": [
+        {
+          "span": "69.14,71.5",
+          "statements": 1
+        }
+      ]
+    },
+    {
+      "file": "github.com/pterodactyl/wings/internal/ufs/quota_writer.go",
+      "statements": 30,
+      "covered": 30,
+      "uncoveredBlocks": []
+    },
+    {
+      "file": "github.com/pterodactyl/wings/internal/ufs/removeall_unix.go",
+      "statements": 108,
+      "covered": 93,
+      "uncoveredBlocks": [
+        {
+          "span": "107.9,109.4",
+          "statements": 1
+        },
+        {
+          "span": "128.35,130.5",
+          "statements": 1
+        },
+        {
+          "span": "140.43,142.40",
+          "statements": 2
+        },
+        {
+          "span": "142.40,144.6",
+          "statements": 1
+        },
+        {
+          "span": "145.5,145.68",
+          "statements": 1
+        },
+        {
+          "span": "209.20,210.38",
+          "statements": 1
+        },
+        {
+          "span": "210.38,212.4",
+          "statements": 1
+        },
+        {
+          "span": "213.3,213.61",
+          "statements": 1
+        },
+        {
+          "span": "215.47,218.3",
+          "statements": 1
+        },
+        {
+          "span": "236.2,236.53",
+          "statements": 1
+        },
+        {
+          "span": "255.24,256.12",
+          "statements": 1
+        },
+        {
+          "span": "62.3,62.13",
+          "statements": 1
+        },
+        {
+          "span": "70.9,72.4",
+          "statements": 1
+        },
+        {
+          "span": "95.35,97.4",
+          "statements": 1
+        }
+      ]
+    },
+    {
+      "file": "github.com/pterodactyl/wings/internal/ufs/stat_unix.go",
+      "statements": 23,
+      "covered": 23,
+      "uncoveredBlocks": []
+    },
+    {
+      "file": "github.com/pterodactyl/wings/internal/ufs/walk.go",
+      "statements": 25,
+      "covered": 25,
+      "uncoveredBlocks": []
+    },
+    {
+      "file": "github.com/pterodactyl/wings/internal/ufs/walk_unix.go",
+      "statements": 119,
+      "covered": 112,
+      "uncoveredBlocks": [
+        {
+          "span": "112.16,114.3",
+          "statements": 1
+        },
+        {
+          "span": "218.26,219.14",
+          "statements": 1
+        },
+        {
+          "span": "235.19,236.12",
+          "statements": 1
+        },
+        {
+          "span": "248.17,250.4",
+          "statements": 1
+        },
+        {
+          "span": "63.17,64.35",
+          "statements": 1
+        },
+        {
+          "span": "64.35,66.5",
+          "statements": 1
+        },
+        {
+          "span": "67.4,67.14",
+          "statements": 1
+        }
+      ]
+    },
+    {
+      "file": "github.com/pterodactyl/wings/loggers/cli/cli.go",
+      "statements": 39,
+      "covered": 39,
+      "uncoveredBlocks": []
+    },
+    {
+      "file": "github.com/pterodactyl/wings/parser/helpers.go",
+      "statements": 84,
+      "covered": 80,
+      "uncoveredBlocks": [
+        {
+          "span": "148.49,150.4",
+          "statements": 1
+        },
+        {
+          "span": "156.17,158.4",
+          "statements": 1
+        },
+        {
+          "span": "169.8,171.3",
+          "statements": 1
+        },
+        {
+          "span": "173.16,175.3",
+          "statements": 1
+        }
+      ]
+    },
+    {
+      "file": "github.com/pterodactyl/wings/parser/parser.go",
+      "statements": 253,
+      "covered": 241,
+      "uncoveredBlocks": [
+        {
+          "span": "286.77,288.3",
+          "statements": 1
+        },
+        {
+          "span": "382.45,384.3",
+          "statements": 1
+        },
+        {
+          "span": "436.15,438.18",
+          "statements": 2
+        },
+        {
+          "span": "438.18,440.5",
+          "statements": 1
+        },
+        {
+          "span": "455.45,457.3",
+          "statements": 1
+        },
+        {
+          "span": "495.16,497.3",
+          "statements": 1
+        },
+        {
+          "span": "508.16,510.3",
+          "statements": 1
+        },
+        {
+          "span": "540.34,542.4",
+          "statements": 1
+        },
+        {
+          "span": "595.38,597.3",
+          "statements": 1
+        },
+        {
+          "span": "619.58,621.4",
+          "statements": 1
+        },
+        {
+          "span": "627.10,628.12",
+          "statements": 1
+        }
+      ]
+    },
+    {
+      "file": "github.com/pterodactyl/wings/remote/errors.go",
+      "statements": 16,
+      "covered": 16,
+      "uncoveredBlocks": []
+    },
+    {
+      "file": "github.com/pterodactyl/wings/remote/http.go",
+      "statements": 119,
+      "covered": 118,
+      "uncoveredBlocks": [
+        {
+          "span": "201.49,203.4",
+          "statements": 1
+        }
+      ]
+    },
+    {
+      "file": "github.com/pterodactyl/wings/remote/servers.go",
+      "statements": 103,
+      "covered": 103,
+      "uncoveredBlocks": []
+    },
+    {
+      "file": "github.com/pterodactyl/wings/remote/types.go",
+      "statements": 17,
+      "covered": 17,
+      "uncoveredBlocks": []
+    },
+    {
+      "file": "github.com/pterodactyl/wings/router/downloader/downloader.go",
+      "statements": 156,
+      "covered": 151,
+      "uncoveredBlocks": [
+        {
+          "span": "213.57,215.3",
+          "statements": 1
+        },
+        {
+          "span": "251.16,253.3",
+          "statements": 1
+        },
+        {
+          "span": "302.60,304.3",
+          "statements": 1
+        },
+        {
+          "span": "48.17,50.4",
+          "statements": 1
+        },
+        {
+          "span": "78.69,80.4",
+          "statements": 1
+        }
+      ]
+    },
+    {
+      "file": "github.com/pterodactyl/wings/router/middleware.go",
+      "statements": 1,
+      "covered": 1,
+      "uncoveredBlocks": []
+    },
+    {
+      "file": "github.com/pterodactyl/wings/router/middleware/json.go",
+      "statements": 18,
+      "covered": 18,
+      "uncoveredBlocks": []
+    },
+    {
+      "file": "github.com/pterodactyl/wings/router/middleware/middleware.go",
+      "statements": 105,
+      "covered": 105,
+      "uncoveredBlocks": []
+    },
+    {
+      "file": "github.com/pterodactyl/wings/router/middleware/request_error.go",
+      "statements": 41,
+      "covered": 41,
+      "uncoveredBlocks": []
+    },
+    {
+      "file": "github.com/pterodactyl/wings/router/router.go",
+      "statements": 69,
+      "covered": 68,
+      "uncoveredBlocks": [
+        {
+          "span": "63.82,64.31",
+          "statements": 1
+        }
+      ]
+    },
+    {
+      "file": "github.com/pterodactyl/wings/router/router_download.go",
+      "statements": 51,
+      "covered": 43,
+      "uncoveredBlocks": [
+        {
+          "span": "31.141,36.3",
+          "statements": 2
+        },
+        {
+          "span": "56.3,57.9",
+          "statements": 2
+        },
+        {
+          "span": "63.16,66.3",
+          "statements": 2
+        },
+        {
+          "span": "95.16,98.3",
+          "statements": 2
+        }
+      ]
+    },
+    {
+      "file": "github.com/pterodactyl/wings/router/router_server.go",
+      "statements": 103,
+      "covered": 88,
+      "uncoveredBlocks": [
+        {
+          "span": "100.10,100.50",
+          "statements": 1
+        },
+        {
+          "span": "102.10,105.5",
+          "statements": 1
+        },
+        {
+          "span": "150.33,152.3",
+          "statements": 1
+        },
+        {
+          "span": "162.31,164.4",
+          "statements": 1
+        },
+        {
+          "span": "166.34,167.69",
+          "statements": 1
+        },
+        {
+          "span": "167.69,169.5",
+          "statements": 1
+        },
+        {
+          "span": "170.4,170.10",
+          "statements": 1
+        },
+        {
+          "span": "187.30,192.3",
+          "statements": 2
+        },
+        {
+          "span": "195.31,197.4",
+          "statements": 1
+        },
+        {
+          "span": "251.41,253.4",
+          "statements": 1
+        },
+        {
+          "span": "95.76,96.68",
+          "statements": 1
+        },
+        {
+          "span": "96.68,98.5",
+          "statements": 1
+        },
+        {
+          "span": "98.10,98.55",
+          "statements": 1
+        },
+        {
+          "span": "98.55,100.5",
+          "statements": 1
+        }
+      ]
+    },
+    {
+      "file": "github.com/pterodactyl/wings/router/router_server_backup.go",
+      "statements": 178,
+      "covered": 158,
+      "uncoveredBlocks": [
+        {
+          "span": "105.54,107.3",
+          "statements": 1
+        },
+        {
+          "span": "121.44,124.4",
+          "statements": 2
+        },
+        {
+          "span": "169.36,172.3",
+          "statements": 2
+        },
+        {
+          "span": "174.16,177.3",
+          "statements": 2
+        },
+        {
+          "span": "185.3,186.9",
+          "statements": 2
+        },
+        {
+          "span": "235.3,236.9",
+          "statements": 2
+        },
+        {
+          "span": "241.70,244.3",
+          "statements": 2
+        },
+        {
+          "span": "274.44,276.3",
+          "statements": 1
+        },
+        {
+          "span": "297.17,299.4",
+          "statements": 1
+        },
+        {
+          "span": "300.20,302.4",
+          "statements": 1
+        },
+        {
+          "span": "314.4,314.17",
+          "statements": 1
+        },
+        {
+          "span": "316.3,316.22",
+          "statements": 1
+        },
+        {
+          "span": "328.4,328.49",
+          "statements": 1
+        },
+        {
+          "span": "46.54,48.3",
+          "statements": 1
+        }
+      ]
+    },
+    {
+      "file": "github.com/pterodactyl/wings/router/router_server_files.go",
+      "statements": 306,
+      "covered": 261,
+      "uncoveredBlocks": [
+        {
+          "span": "137.22,138.21",
+          "statements": 1
+        },
+        {
+          "span": "143.48,145.6",
+          "statements": 1
+        },
+        {
+          "span": "155.6,155.16",
+          "statements": 1
+        },
+        {
+          "span": "167.34,172.4",
+          "statements": 2
+        },
+        {
+          "span": "193.64,196.3",
+          "statements": 2
+        },
+        {
+          "span": "238.22,239.21",
+          "statements": 1
+        },
+        {
+          "span": "265.52,268.3",
+          "statements": 2
+        },
+        {
+          "span": "286.3,287.9",
+          "statements": 2
+        },
+        {
+          "span": "338.3,339.9",
+          "statements": 2
+        },
+        {
+          "span": "342.35,347.3",
+          "statements": 2
+        },
+        {
+          "span": "391.38,393.52",
+          "statements": 2
+        },
+        {
+          "span": "393.52,397.5",
+          "statements": 2
+        },
+        {
+          "span": "399.4,404.10",
+          "statements": 2
+        },
+        {
+          "span": "411.16,414.3",
+          "statements": 2
+        },
+        {
+          "span": "441.39,446.4",
+          "statements": 2
+        },
+        {
+          "span": "47.37,52.3",
+          "statements": 2
+        },
+        {
+          "span": "509.16,510.68",
+          "statements": 1
+        },
+        {
+          "span": "510.68,514.4",
+          "statements": 3
+        },
+        {
+          "span": "515.3,516.9",
+          "statements": 2
+        },
+        {
+          "span": "524.54,530.4",
+          "statements": 3
+        },
+        {
+          "span": "574.22,575.21",
+          "statements": 1
+        },
+        {
+          "span": "589.6,589.16",
+          "statements": 1
+        },
+        {
+          "span": "654.17,659.4",
+          "statements": 2
+        },
+        {
+          "span": "694.52,696.3",
+          "statements": 1
+        },
+        {
+          "span": "74.61,80.3",
+          "statements": 2
+        },
+        {
+          "span": "87.65,89.3",
+          "statements": 1
+        }
+      ]
+    },
+    {
+      "file": "github.com/pterodactyl/wings/router/router_server_transfer.go",
+      "statements": 49,
+      "covered": 44,
+      "uncoveredBlocks": [
+        {
+          "span": "102.31,106.5",
+          "statements": 3
+        },
+        {
+          "span": "118.3,118.42",
+          "statements": 1
+        },
+        {
+          "span": "61.97,66.4",
+          "statements": 1
+        }
+      ]
+    },
+    {
+      "file": "github.com/pterodactyl/wings/router/router_server_ws.go",
+      "statements": 74,
+      "covered": 61,
+      "uncoveredBlocks": [
+        {
+          "span": "117.52,119.4",
+          "statements": 1
+        },
+        {
+          "span": "130.29,132.9",
+          "statements": 2
+        },
+        {
+          "span": "140.21,144.3",
+          "statements": 2
+        },
+        {
+          "span": "158.61,160.5",
+          "statements": 1
+        },
+        {
+          "span": "178.45,179.12",
+          "statements": 1
+        },
+        {
+          "span": "186.47,187.12",
+          "statements": 1
+        },
+        {
+          "span": "193.33,196.6",
+          "statements": 2
+        },
+        {
+          "span": "199.44,201.6",
+          "statements": 1
+        },
+        {
+          "span": "73.16,76.3",
+          "statements": 2
+        }
+      ]
+    },
+    {
+      "file": "github.com/pterodactyl/wings/router/router_system.go",
+      "statements": 93,
+      "covered": 74,
+      "uncoveredBlocks": [
+        {
+          "span": "109.31,111.4",
+          "statements": 1
+        },
+        {
+          "span": "120.37,121.69",
+          "statements": 1
+        },
+        {
+          "span": "121.69,123.5",
+          "statements": 1
+        },
+        {
+          "span": "124.4,124.10",
+          "statements": 1
+        },
+        {
+          "span": "128.32,130.5",
+          "statements": 1
+        },
+        {
+          "span": "133.49,135.6",
+          "statements": 1
+        },
+        {
+          "span": "177.47,180.3",
+          "statements": 2
+        },
+        {
+          "span": "183.49,186.3",
+          "statements": 2
+        },
+        {
+          "span": "192.48,195.3",
+          "statements": 2
+        },
+        {
+          "span": "22.16,25.3",
+          "statements": 2
+        },
+        {
+          "span": "90.3,91.9",
+          "statements": 2
+        },
+        {
+          "span": "96.45,102.3",
+          "statements": 3
+        }
+      ]
+    },
+    {
+      "file": "github.com/pterodactyl/wings/router/router_transfer.go",
+      "statements": 137,
+      "covered": 113,
+      "uncoveredBlocks": [
+        {
+          "span": "109.39,110.51",
+          "statements": 1
+        },
+        {
+          "span": "110.51,110.81",
+          "statements": 1
+        },
+        {
+          "span": "111.4,115.10",
+          "statements": 3
+        },
+        {
+          "span": "155.21,156.13",
+          "statements": 1
+        },
+        {
+          "span": "162.18,165.5",
+          "statements": 2
+        },
+        {
+          "span": "172.69,175.6",
+          "statements": 2
+        },
+        {
+          "span": "178.80,181.6",
+          "statements": 2
+        },
+        {
+          "span": "196.19,199.6",
+          "statements": 2
+        },
+        {
+          "span": "232.23,235.3",
+          "statements": 2
+        },
+        {
+          "span": "249.2,253.29",
+          "statements": 2
+        },
+        {
+          "span": "270.61,272.4",
+          "statements": 1
+        },
+        {
+          "span": "273.96,275.4",
+          "statements": 1
+        },
+        {
+          "span": "91.102,93.5",
+          "statements": 1
+        },
+        {
+          "span": "99.40,105.4",
+          "statements": 3
+        }
+      ]
+    },
+    {
+      "file": "github.com/pterodactyl/wings/router/tokens/backup.go",
+      "statements": 3,
+      "covered": 3,
+      "uncoveredBlocks": []
+    },
+    {
+      "file": "github.com/pterodactyl/wings/router/tokens/file.go",
+      "statements": 3,
+      "covered": 3,
+      "uncoveredBlocks": []
+    },
+    {
+      "file": "github.com/pterodactyl/wings/router/tokens/parser.go",
+      "statements": 7,
+      "covered": 7,
+      "uncoveredBlocks": []
+    },
+    {
+      "file": "github.com/pterodactyl/wings/router/tokens/token.go",
+      "statements": 5,
+      "covered": 5,
+      "uncoveredBlocks": []
+    },
+    {
+      "file": "github.com/pterodactyl/wings/router/tokens/token_store.go",
+      "statements": 13,
+      "covered": 13,
+      "uncoveredBlocks": []
+    },
+    {
+      "file": "github.com/pterodactyl/wings/router/tokens/transfer.go",
+      "statements": 1,
+      "covered": 1,
+      "uncoveredBlocks": []
+    },
+    {
+      "file": "github.com/pterodactyl/wings/router/tokens/upload.go",
+      "statements": 3,
+      "covered": 3,
+      "uncoveredBlocks": []
+    },
+    {
+      "file": "github.com/pterodactyl/wings/router/tokens/websocket.go",
+      "statements": 28,
+      "covered": 28,
+      "uncoveredBlocks": []
+    },
+    {
+      "file": "github.com/pterodactyl/wings/router/websocket/limiter.go",
+      "statements": 33,
+      "covered": 33,
+      "uncoveredBlocks": []
+    },
+    {
+      "file": "github.com/pterodactyl/wings/router/websocket/listeners.go",
+      "statements": 57,
+      "covered": 50,
+      "uncoveredBlocks": [
+        {
+          "span": "114.24,115.13",
+          "statements": 1
+        },
+        {
+          "span": "54.19,56.18",
+          "statements": 2
+        },
+        {
+          "span": "56.18,57.57",
+          "statements": 1
+        },
+        {
+          "span": "57.57,59.6",
+          "statements": 1
+        },
+        {
+          "span": "59.11,59.65",
+          "statements": 1
+        },
+        {
+          "span": "59.65,61.6",
+          "statements": 1
+        }
+      ]
+    },
+    {
+      "file": "github.com/pterodactyl/wings/router/websocket/message.go",
+      "statements": 10,
+      "covered": 10,
+      "uncoveredBlocks": []
+    },
+    {
+      "file": "github.com/pterodactyl/wings/router/websocket/websocket.go",
+      "statements": 187,
+      "covered": 176,
+      "uncoveredBlocks": [
+        {
+          "span": "120.16,122.3",
+          "statements": 1
+        },
+        {
+          "span": "423.48,424.63",
+          "statements": 1
+        },
+        {
+          "span": "424.63,432.6",
+          "statements": 3
+        },
+        {
+          "span": "455.46,464.5",
+          "statements": 3
+        },
+        {
+          "span": "515.72,516.64",
+          "statements": 1
+        },
+        {
+          "span": "516.64,517.25",
+          "statements": 1
+        },
+        {
+          "span": "517.25,519.7",
+          "statements": 1
+        }
+      ]
+    },
+    {
+      "file": "github.com/pterodactyl/wings/server/activity.go",
+      "statements": 11,
+      "covered": 11,
+      "uncoveredBlocks": []
+    },
+    {
+      "file": "github.com/pterodactyl/wings/server/backup.go",
+      "statements": 73,
+      "covered": 71,
+      "uncoveredBlocks": [
+        {
+          "span": "156.63,158.4",
+          "statements": 1
+        },
+        {
+          "span": "54.16,56.3",
+          "statements": 1
+        }
+      ]
+    },
+    {
+      "file": "github.com/pterodactyl/wings/server/backup/backup.go",
+      "statements": 52,
+      "covered": 51,
+      "uncoveredBlocks": [
+        {
+          "span": "145.52,147.3",
+          "statements": 1
+        }
+      ]
+    },
+    {
+      "file": "github.com/pterodactyl/wings/server/backup/backup_local.go",
+      "statements": 42,
+      "covered": 40,
+      "uncoveredBlocks": [
+        {
+          "span": "110.17,112.4",
+          "statements": 1
+        },
+        {
+          "span": "84.16,86.3",
+          "statements": 1
+        }
+      ]
+    },
+    {
+      "file": "github.com/pterodactyl/wings/server/backup/backup_s3.go",
+      "statements": 96,
+      "covered": 87,
+      "uncoveredBlocks": [
+        {
+          "span": "108.17,110.4",
+          "statements": 1
+        },
+        {
+          "span": "126.16,128.3",
+          "statements": 1
+        },
+        {
+          "span": "153.17,156.4",
+          "statements": 2
+        },
+        {
+          "span": "223.4,223.61",
+          "statements": 1
+        },
+        {
+          "span": "245.49,247.4",
+          "statements": 1
+        },
+        {
+          "span": "59.71,61.4",
+          "statements": 1
+        },
+        {
+          "span": "76.16,78.3",
+          "statements": 1
+        },
+        {
+          "span": "86.16,88.3",
+          "statements": 1
+        }
+      ]
+    },
+    {
+      "file": "github.com/pterodactyl/wings/server/config_parser.go",
+      "statements": 26,
+      "covered": 24,
+      "uncoveredBlocks": [
+        {
+          "span": "49.39,51.5",
+          "statements": 1
+        },
+        {
+          "span": "52.59,54.5",
+          "statements": 1
+        }
+      ]
+    },
+    {
+      "file": "github.com/pterodactyl/wings/server/configuration.go",
+      "statements": 18,
+      "covered": 18,
+      "uncoveredBlocks": []
+    },
+    {
+      "file": "github.com/pterodactyl/wings/server/connections.go",
+      "statements": 5,
+      "covered": 5,
+      "uncoveredBlocks": []
+    },
+    {
+      "file": "github.com/pterodactyl/wings/server/console.go",
+      "statements": 19,
+      "covered": 19,
+      "uncoveredBlocks": []
+    },
+    {
+      "file": "github.com/pterodactyl/wings/server/crash.go",
+      "statements": 27,
+      "covered": 27,
+      "uncoveredBlocks": []
+    },
+    {
+      "file": "github.com/pterodactyl/wings/server/errors.go",
+      "statements": 6,
+      "covered": 6,
+      "uncoveredBlocks": []
+    },
+    {
+      "file": "github.com/pterodactyl/wings/server/events.go",
+      "statements": 12,
+      "covered": 11,
+      "uncoveredBlocks": [
+        {
+          "span": "40.9,42.3",
+          "statements": 1
+        }
+      ]
+    },
+    {
+      "file": "github.com/pterodactyl/wings/server/filesystem/archive.go",
+      "statements": 121,
+      "covered": 112,
+      "uncoveredBlocks": [
+        {
+          "span": "148.58,150.5",
+          "statements": 1
+        },
+        {
+          "span": "298.17,300.40",
+          "statements": 1
+        },
+        {
+          "span": "300.40,302.5",
+          "statements": 1
+        },
+        {
+          "span": "303.4,303.14",
+          "statements": 1
+        },
+        {
+          "span": "309.16,311.3",
+          "statements": 1
+        },
+        {
+          "span": "331.16,332.25",
+          "statements": 1
+        },
+        {
+          "span": "332.25,334.4",
+          "statements": 1
+        },
+        {
+          "span": "335.3,335.77",
+          "statements": 1
+        },
+        {
+          "span": "340.83,342.3",
+          "statements": 1
+        }
+      ]
+    },
+    {
+      "file": "github.com/pterodactyl/wings/server/filesystem/compress.go",
+      "statements": 127,
+      "covered": 109,
+      "uncoveredBlocks": [
+        {
+          "span": "103.51,105.3",
+          "statements": 1
+        },
+        {
+          "span": "107.16,109.3",
+          "statements": 1
+        },
+        {
+          "span": "114.21,115.20",
+          "statements": 1
+        },
+        {
+          "span": "124.29,126.4",
+          "statements": 1
+        },
+        {
+          "span": "142.44,144.5",
+          "statements": 1
+        },
+        {
+          "span": "180.3,180.13",
+          "statements": 1
+        },
+        {
+          "span": "197.39,199.4",
+          "statements": 1
+        },
+        {
+          "span": "243.17,245.4",
+          "statements": 1
+        },
+        {
+          "span": "268.48,270.5",
+          "statements": 1
+        },
+        {
+          "span": "277.62,279.5",
+          "statements": 1
+        },
+        {
+          "span": "280.87,282.5",
+          "statements": 1
+        },
+        {
+          "span": "293.17,295.4",
+          "statements": 1
+        },
+        {
+          "span": "297.60,299.4",
+          "statements": 1
+        },
+        {
+          "span": "301.65,303.4",
+          "statements": 1
+        },
+        {
+          "span": "66.16,69.3",
+          "statements": 2
+        },
+        {
+          "span": "70.35,72.3",
+          "statements": 1
+        },
+        {
+          "span": "99.53,101.3",
+          "statements": 1
+        }
+      ]
+    },
+    {
+      "file": "github.com/pterodactyl/wings/server/filesystem/disk_space.go",
+      "statements": 104,
+      "covered": 99,
+      "uncoveredBlocks": [
+        {
+          "span": "117.52,119.6",
+          "statements": 1
+        },
+        {
+          "span": "211.17,213.4",
+          "statements": 1
+        },
+        {
+          "span": "221.38,223.4",
+          "statements": 1
+        },
+        {
+          "span": "224.17,226.4",
+          "statements": 1
+        },
+        {
+          "span": "67.16,69.3",
+          "statements": 1
+        }
+      ]
+    },
+    {
+      "file": "github.com/pterodactyl/wings/server/filesystem/errors.go",
+      "statements": 32,
+      "covered": 32,
+      "uncoveredBlocks": []
+    },
+    {
+      "file": "github.com/pterodactyl/wings/server/filesystem/filesystem.go",
+      "statements": 231,
+      "covered": 203,
+      "uncoveredBlocks": [
+        {
+          "span": "100.16,103.3",
+          "statements": 2
+        },
+        {
+          "span": "133.16,136.3",
+          "statements": 2
+        },
+        {
+          "span": "142.42,145.4",
+          "statements": 2
+        },
+        {
+          "span": "184.40,186.3",
+          "statements": 1
+        },
+        {
+          "span": "231.41,233.3",
+          "statements": 1
+        },
+        {
+          "span": "247.40,249.3",
+          "statements": 1
+        },
+        {
+          "span": "263.60,265.3",
+          "statements": 1
+        },
+        {
+          "span": "268.16,270.3",
+          "statements": 1
+        },
+        {
+          "span": "318.43,320.4",
+          "statements": 1
+        },
+        {
+          "span": "339.16,341.3",
+          "statements": 1
+        },
+        {
+          "span": "344.66,346.3",
+          "statements": 1
+        },
+        {
+          "span": "360.17,362.4",
+          "statements": 1
+        },
+        {
+          "span": "363.67,365.4",
+          "statements": 1
+        },
+        {
+          "span": "367.17,369.3",
+          "statements": 1
+        },
+        {
+          "span": "398.40,400.5",
+          "statements": 1
+        },
+        {
+          "span": "404.14,406.4",
+          "statements": 1
+        },
+        {
+          "span": "426.16,428.3",
+          "statements": 1
+        },
+        {
+          "span": "471.3,471.47",
+          "statements": 1
+        },
+        {
+          "span": "471.47,473.4",
+          "statements": 1
+        },
+        {
+          "span": "483.120,485.4",
+          "statements": 1
+        },
+        {
+          "span": "495.54,497.3",
+          "statements": 1
+        },
+        {
+          "span": "548.17,550.4",
+          "statements": 1
+        },
+        {
+          "span": "55.16,57.3",
+          "statements": 1
+        },
+        {
+          "span": "564.19,566.6",
+          "statements": 1
+        },
+        {
+          "span": "568.19,570.6",
+          "statements": 1
+        }
+      ]
+    },
+    {
+      "file": "github.com/pterodactyl/wings/server/filesystem/ignore.go",
+      "statements": 54,
+      "covered": 54,
+      "uncoveredBlocks": []
+    },
+    {
+      "file": "github.com/pterodactyl/wings/server/filesystem/mime.go",
+      "statements": 7,
+      "covered": 7,
+      "uncoveredBlocks": []
+    },
+    {
+      "file": "github.com/pterodactyl/wings/server/filesystem/path.go",
+      "statements": 7,
+      "covered": 7,
+      "uncoveredBlocks": []
+    },
+    {
+      "file": "github.com/pterodactyl/wings/server/filesystem/quota_file.go",
+      "statements": 55,
+      "covered": 55,
+      "uncoveredBlocks": []
+    },
+    {
+      "file": "github.com/pterodactyl/wings/server/filesystem/stat.go",
+      "statements": 24,
+      "covered": 20,
+      "uncoveredBlocks": [
+        {
+          "span": "58.16,60.3",
+          "statements": 1
+        },
+        {
+          "span": "64.17,66.4",
+          "statements": 1
+        },
+        {
+          "span": "67.52,69.4",
+          "statements": 1
+        },
+        {
+          "span": "90.16,92.3",
+          "statements": 1
+        }
+      ]
+    },
+    {
+      "file": "github.com/pterodactyl/wings/server/filesystem/stat_linux.go",
+      "statements": 5,
+      "covered": 5,
+      "uncoveredBlocks": []
+    },
+    {
+      "file": "github.com/pterodactyl/wings/server/install.go",
+      "statements": 200,
+      "covered": 189,
+      "uncoveredBlocks": [
+        {
+          "span": "110.16,112.3",
+          "statements": 1
+        },
+        {
+          "span": "119.2,120.12",
+          "statements": 2
+        },
+        {
+          "span": "138.48,140.3",
+          "statements": 1
+        },
+        {
+          "span": "264.109,266.3",
+          "statements": 1
+        },
+        {
+          "span": "281.17,283.4",
+          "statements": 1
+        },
+        {
+          "span": "407.16,409.3",
+          "statements": 1
+        },
+        {
+          "span": "411.44,413.3",
+          "statements": 1
+        },
+        {
+          "span": "493.52,494.27",
+          "statements": 1
+        },
+        {
+          "span": "494.27,496.5",
+          "statements": 1
+        },
+        {
+          "span": "528.17,530.4",
+          "statements": 1
+        }
+      ]
+    },
+    {
+      "file": "github.com/pterodactyl/wings/server/installer/errors.go",
+      "statements": 4,
+      "covered": 4,
+      "uncoveredBlocks": []
+    },
+    {
+      "file": "github.com/pterodactyl/wings/server/installer/installer.go",
+      "statements": 13,
+      "covered": 13,
+      "uncoveredBlocks": []
+    },
+    {
+      "file": "github.com/pterodactyl/wings/server/listeners.go",
+      "statements": 62,
+      "covered": 62,
+      "uncoveredBlocks": []
+    },
+    {
+      "file": "github.com/pterodactyl/wings/server/manager.go",
+      "statements": 137,
+      "covered": 134,
+      "uncoveredBlocks": [
+        {
+          "span": "194.16,196.3",
+          "statements": 1
+        },
+        {
+          "span": "229.16,231.3",
+          "statements": 1
+        },
+        {
+          "span": "262.63,264.3",
+          "statements": 1
+        }
+      ]
+    },
+    {
+      "file": "github.com/pterodactyl/wings/server/mounts.go",
+      "statements": 81,
+      "covered": 78,
+      "uncoveredBlocks": [
+        {
+          "span": "172.39,174.5",
+          "statements": 1
+        },
+        {
+          "span": "198.39,200.5",
+          "statements": 1
+        },
+        {
+          "span": "203.11,205.5",
+          "statements": 1
+        }
+      ]
+    },
+    {
+      "file": "github.com/pterodactyl/wings/server/power.go",
+      "statements": 71,
+      "covered": 70,
+      "uncoveredBlocks": [
+        {
+          "span": "214.51,216.4",
+          "statements": 1
+        }
+      ]
+    },
+    {
+      "file": "github.com/pterodactyl/wings/server/resources.go",
+      "statements": 14,
+      "covered": 14,
+      "uncoveredBlocks": []
+    },
+    {
+      "file": "github.com/pterodactyl/wings/server/server.go",
+      "statements": 100,
+      "covered": 95,
+      "uncoveredBlocks": [
+        {
+          "span": "100.45,102.3",
+          "statements": 1
+        },
+        {
+          "span": "266.54,268.3",
+          "statements": 1
+        },
+        {
+          "span": "308.58,310.5",
+          "statements": 1
+        },
+        {
+          "span": "311.42,313.5",
+          "statements": 1
+        },
+        {
+          "span": "97.41,99.3",
+          "statements": 1
+        }
+      ]
+    },
+    {
+      "file": "github.com/pterodactyl/wings/server/transfer/archive.go",
+      "statements": 9,
+      "covered": 8,
+      "uncoveredBlocks": [
+        {
+          "span": "18.17,20.4",
+          "statements": 1
+        }
+      ]
+    },
+    {
+      "file": "github.com/pterodactyl/wings/server/transfer/manager.go",
+      "statements": 16,
+      "covered": 16,
+      "uncoveredBlocks": []
+    },
+    {
+      "file": "github.com/pterodactyl/wings/server/transfer/source.go",
+      "statements": 111,
+      "covered": 99,
+      "uncoveredBlocks": [
+        {
+          "span": "158.30,161.4",
+          "statements": 2
+        },
+        {
+          "span": "163.83,166.4",
+          "statements": 2
+        },
+        {
+          "span": "171.36,173.4",
+          "statements": 1
+        },
+        {
+          "span": "200.41,202.5",
+          "statements": 1
+        },
+        {
+          "span": "39.57,41.3",
+          "statements": 1
+        },
+        {
+          "span": "57.16,59.3",
+          "statements": 1
+        },
+        {
+          "span": "68.16,71.3",
+          "statements": 2
+        },
+        {
+          "span": "85.16,86.49",
+          "statements": 1
+        },
+        {
+          "span": "96.16,98.3",
+          "statements": 1
+        }
+      ]
+    },
+    {
+      "file": "github.com/pterodactyl/wings/server/transfer/transfer.go",
+      "statements": 23,
+      "covered": 23,
+      "uncoveredBlocks": []
+    },
+    {
+      "file": "github.com/pterodactyl/wings/server/update.go",
+      "statements": 17,
+      "covered": 17,
+      "uncoveredBlocks": []
+    },
+    {
+      "file": "github.com/pterodactyl/wings/server/websockets.go",
+      "statements": 36,
+      "covered": 36,
+      "uncoveredBlocks": []
+    },
+    {
+      "file": "github.com/pterodactyl/wings/sftp/event.go",
+      "statements": 9,
+      "covered": 7,
+      "uncoveredBlocks": [
+        {
+          "span": "47.75,49.3",
+          "statements": 1
+        },
+        {
+          "span": "56.38,58.3",
+          "statements": 1
+        }
+      ]
+    },
+    {
+      "file": "github.com/pterodactyl/wings/sftp/handler.go",
+      "statements": 167,
+      "covered": 165,
+      "uncoveredBlocks": [
+        {
+          "span": "324.38,326.5",
+          "statements": 1
+        },
+        {
+          "span": "343.43,345.3",
+          "statements": 1
+        }
+      ]
+    },
+    {
+      "file": "github.com/pterodactyl/wings/sftp/server.go",
+      "statements": 185,
+      "covered": 170,
+      "uncoveredBlocks": [
+        {
+          "span": "189.55,191.4",
+          "statements": 1
+        },
+        {
+          "span": "222.92,224.4",
+          "statements": 1
+        },
+        {
+          "span": "225.95,227.4",
+          "statements": 1
+        },
+        {
+          "span": "261.27,263.5",
+          "statements": 1
+        },
+        {
+          "span": "292.55,294.5",
+          "statements": 1
+        },
+        {
+          "span": "320.54,323.3",
+          "statements": 2
+        },
+        {
+          "span": "335.2,335.37",
+          "statements": 1
+        },
+        {
+          "span": "358.17,359.12",
+          "statements": 1
+        },
+        {
+          "span": "372.55,374.4",
+          "statements": 1
+        },
+        {
+          "span": "397.21,399.18",
+          "statements": 2
+        },
+        {
+          "span": "415.16,417.3",
+          "statements": 1
+        },
+        {
+          "span": "428.16,430.3",
+          "statements": 1
+        },
+        {
+          "span": "431.81,433.3",
+          "statements": 1
+        }
+      ]
+    },
+    {
+      "file": "github.com/pterodactyl/wings/sftp/utils.go",
+      "statements": 17,
+      "covered": 17,
+      "uncoveredBlocks": []
+    },
+    {
+      "file": "github.com/pterodactyl/wings/system/context_bag.go",
+      "statements": 17,
+      "covered": 17,
+      "uncoveredBlocks": []
+    },
+    {
+      "file": "github.com/pterodactyl/wings/system/locker.go",
+      "statements": 37,
+      "covered": 36,
+      "uncoveredBlocks": [
+        {
+          "span": "83.3,83.13",
+          "statements": 1
+        }
+      ]
+    },
+    {
+      "file": "github.com/pterodactyl/wings/system/rate.go",
+      "statements": 15,
+      "covered": 15,
+      "uncoveredBlocks": []
+    },
+    {
+      "file": "github.com/pterodactyl/wings/system/sink_pool.go",
+      "statements": 44,
+      "covered": 44,
+      "uncoveredBlocks": []
+    },
+    {
+      "file": "github.com/pterodactyl/wings/system/system.go",
+      "statements": 33,
+      "covered": 23,
+      "uncoveredBlocks": [
+        {
+          "span": "130.16,132.3",
+          "statements": 1
+        },
+        {
+          "span": "141.16,143.3",
+          "statements": 1
+        },
+        {
+          "span": "61.16,63.3",
+          "statements": 1
+        },
+        {
+          "span": "66.16,68.3",
+          "statements": 1
+        },
+        {
+          "span": "71.16,73.3",
+          "statements": 1
+        },
+        {
+          "span": "78.34,80.3",
+          "statements": 1
+        },
+        {
+          "span": "78.8,78.34",
+          "statements": 1
+        },
+        {
+          "span": "80.8,82.3",
+          "statements": 1
+        },
+        {
+          "span": "89.3,90.8",
+          "statements": 2
+        }
+      ]
+    },
+    {
+      "file": "github.com/pterodactyl/wings/system/url.go",
+      "statements": 9,
+      "covered": 9,
+      "uncoveredBlocks": []
+    },
+    {
+      "file": "github.com/pterodactyl/wings/system/usage_linux.go",
+      "statements": 59,
+      "covered": 58,
+      "uncoveredBlocks": [
+        {
+          "span": "34.16,36.3",
+          "statements": 1
+        }
+      ]
+    },
+    {
+      "file": "github.com/pterodactyl/wings/system/utils.go",
+      "statements": 80,
+      "covered": 80,
+      "uncoveredBlocks": []
+    },
+    {
+      "file": "github.com/pterodactyl/wings/wings.go",
+      "statements": 1,
+      "covered": 1,
+      "uncoveredBlocks": []
+    }
+  ]
+}

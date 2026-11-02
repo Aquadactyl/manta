@@ -1,0 +1,93 @@
+package docker
+
+import (
+	"context"
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"sync"
+	"testing"
+
+	"github.com/docker/docker/client"
+	"github.com/stretchr/testify/require"
+
+	"github.com/pterodactyl/wings/config"
+	"github.com/pterodactyl/wings/environment"
+)
+
+func TestFastInspectRejectsMalformedAndTruncatedResponses(t *testing.T) {
+	previousSettings, previousEnabled := cli, fastEnabled
+	t.Cleanup(func() {
+		o = sync.Once{}
+		cli, fastEnabled = previousSettings, previousEnabled
+	})
+	for _, test := range []struct {
+		name      string
+		body      string
+		truncated bool
+		want      string
+	}{
+		{name: "malformed JSON", body: `{"State":`, want: "unexpected end"},
+		{name: "invalid field type", body: `{"State":{"Running":"yes"}}`, want: "cannot unmarshal"},
+		{name: "truncated body", body: `{}`, truncated: true, want: "failed to read response body"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				if test.truncated {
+					w.Header().Set("Content-Length", "100")
+				}
+				_, _ = io.WriteString(w, test.body)
+			}))
+			defer ts.Close()
+			c, err := client.NewClientWithOpts(client.WithHost(ts.URL), client.WithVersion("1.51"))
+			require.NoError(t, err)
+			defer c.Close()
+			config.Set(&config.Configuration{AuthenticationToken: "test-token", Docker: config.DockerConfiguration{UsePerformantInspect: true}})
+			o = sync.Once{}
+			e := &Environment{Id: "inspect-response", client: c}
+			_, err = e.ContainerInspect(context.Background())
+			require.ErrorContains(t, err, test.want)
+		})
+	}
+}
+
+func TestFastInspectRejectsInvalidRequestPath(t *testing.T) {
+	previousSettings, previousEnabled := cli, fastEnabled
+	t.Cleanup(func() { o = sync.Once{}; cli, fastEnabled = previousSettings, previousEnabled })
+	c, err := client.NewClientWithOpts(client.WithHost("http://127.0.0.1:1"), client.WithVersion("1.51"))
+	require.NoError(t, err)
+	defer c.Close()
+	config.Set(&config.Configuration{AuthenticationToken: "test-token", Docker: config.DockerConfiguration{UsePerformantInspect: true}})
+	o = sync.Once{}
+	_, err = (&Environment{Id: "invalid\nidentifier", client: c}).ContainerInspect(context.Background())
+	require.ErrorContains(t, err, "invalid control character")
+}
+
+func TestUptimeRejectsMalformedStartTimeAndReturnsZeroWhenStopped(t *testing.T) {
+	previousSettings, previousEnabled := cli, fastEnabled
+	t.Cleanup(func() { o = sync.Once{}; cli, fastEnabled = previousSettings, previousEnabled })
+	for _, test := range []struct {
+		body      string
+		wantError bool
+	}{
+		{body: `{"State":{"Running":true,"StartedAt":"invalid"}}`, wantError: true},
+		{body: `{"State":{"Running":false}}`},
+	} {
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { _, _ = io.Copy(w, strings.NewReader(test.body)) }))
+		c, err := client.NewClientWithOpts(client.WithHost(ts.URL), client.WithVersion("1.51"))
+		require.NoError(t, err)
+		config.Set(&config.Configuration{AuthenticationToken: "test-token", Docker: config.DockerConfiguration{UsePerformantInspect: true}})
+		o = sync.Once{}
+		e := &Environment{Id: "uptime-response", client: c, Configuration: environment.NewConfiguration(environment.Settings{}, nil)}
+		uptime, err := e.Uptime(context.Background())
+		if test.wantError {
+			require.ErrorContains(t, err, "failed to parse container start time")
+		} else {
+			require.NoError(t, err)
+		}
+		require.Zero(t, uptime)
+		require.NoError(t, c.Close())
+		ts.Close()
+	}
+}
