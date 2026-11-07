@@ -325,6 +325,14 @@ func (e *Environment) Create() error {
 		NetworkMode: networkMode,
 		UsernsMode:  container.UsernsMode(cfg.Docker.UsernsMode),
 	}
+	if mode := cfg.Docker.SELinuxRelabel; mode != "" {
+		binds, err := environment.SELinuxBinds(e.Configuration.Mounts(), mode)
+		if err != nil {
+			return errors.Wrap(err, "environment/docker: invalid SELinux relabel mode")
+		}
+		hostConf.Mounts = nil
+		hostConf.Binds = binds
+	}
 
 	if _, err := e.client.ContainerCreate(ctx, conf, hostConf, nil, nil, e.Id); err != nil {
 		return errors.Wrap(err, "environment/docker: failed to create container")

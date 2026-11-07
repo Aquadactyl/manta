@@ -47,6 +47,11 @@ type DockerNetworkConfiguration struct {
 // DockerConfiguration defines the docker configuration used by the daemon when
 // interacting with containers and networks on the system.
 type DockerConfiguration struct {
+	// SELinuxRelabel controls SELinux labeling for bind mounts. "shared" lets
+	// multiple containers use a source path; "private" assigns it to one
+	// container at a time. Leave empty when SELinux relabeling is not needed.
+	SELinuxRelabel string `default:"" json:"selinux_relabel" yaml:"selinux_relabel"`
+
 	// Network configuration that should be used when creating a new network
 	// for containers run through the daemon.
 	Network DockerNetworkConfiguration `json:"network" yaml:"network"`

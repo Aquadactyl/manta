@@ -32,6 +32,30 @@ type Mount struct {
 	ReadOnly bool `json:"read_only"`
 }
 
+// SELinuxBinds converts the configured mounts into Docker bind specifications
+// with shared or private SELinux relabeling enabled.
+func SELinuxBinds(mounts []Mount, mode string) ([]string, error) {
+	label := ""
+	switch mode {
+	case "shared":
+		label = "z"
+	case "private":
+		label = "Z"
+	default:
+		return nil, fmt.Errorf("unsupported SELinux relabel mode %q (expected shared or private)", mode)
+	}
+
+	out := make([]string, len(mounts))
+	for i, m := range mounts {
+		options := label
+		if m.ReadOnly {
+			options = "ro," + options
+		}
+		out[i] = fmt.Sprintf("%s:%s:%s", m.Source, m.Target, options)
+	}
+	return out, nil
+}
+
 // Limits is the build settings for a given server that impact docker container
 // creation and resource limits for a server instance.
 type Limits struct {

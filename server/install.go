@@ -446,23 +446,24 @@ func (ip *InstallationProcess) Execute() (string, error) {
 
 	cfg := config.Get()
 	tmpfsSize := strconv.Itoa(int(cfg.Docker.TmpfsSize))
-	hostConf := &container.HostConfig{
-		Mounts: []mount.Mount{
-			{
-				Target:   "/mnt/server",
-				Source:   ip.Server.Filesystem().Path(),
-				Type:     mount.TypeBind,
-				ReadOnly: false,
-			},
-			{
-				// The script only needs to be read, and must not be changed while
-				// it is running.
-				Target:   "/mnt/install",
-				Source:   ip.tempDir(),
-				Type:     mount.TypeBind,
-				ReadOnly: true,
-			},
+	installMounts := []mount.Mount{
+		{
+			Target:   "/mnt/server",
+			Source:   ip.Server.Filesystem().Path(),
+			Type:     mount.TypeBind,
+			ReadOnly: false,
 		},
+		{
+			// The script only needs to be read, and must not be changed while
+			// it is running.
+			Target:   "/mnt/install",
+			Source:   ip.tempDir(),
+			Type:     mount.TypeBind,
+			ReadOnly: true,
+		},
+	}
+	hostConf := &container.HostConfig{
+		Mounts:    installMounts,
 		Resources: ip.resourceLimits(),
 		Tmpfs: map[string]string{
 			"/tmp": "rw,exec,nosuid,size=" + tmpfsSize + "M",
@@ -477,6 +478,17 @@ func (ip *InstallationProcess) Execute() (string, error) {
 		CapDrop: []string{
 			"setpcap", "mknod", "audit_write", "net_raw", "sys_chroot",
 		},
+	}
+	if mode := cfg.Docker.SELinuxRelabel; mode != "" {
+		binds, err := environment.SELinuxBinds([]environment.Mount{
+			{Source: ip.Server.Filesystem().Path(), Target: "/mnt/server"},
+			{Source: ip.tempDir(), Target: "/mnt/install", ReadOnly: true},
+		}, mode)
+		if err != nil {
+			return "", errors.Wrap(err, "install: invalid SELinux relabel mode")
+		}
+		hostConf.Mounts = nil
+		hostConf.Binds = binds
 	}
 
 	// Ensure the root directory for the server exists properly before attempting

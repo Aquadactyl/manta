@@ -56,6 +56,10 @@ Run with the existing node configuration:
 
 The Dockerfile also builds the daemon. Existing deployment assets retain the `wings` executable name.
 
+For Rocky Linux, AlmaLinux, and other Red Hat based hosts, see the
+[Red Hat based Linux deployment notes](docs/red-hat-based-linux.md), including
+Docker Engine setup and SELinux bind mount configuration.
+
 To run Manta alongside your existing local Aquadactyl Panel, see the [local Docker setup](docker/README.md).
 
 Measured Paper/Bedrock results against stock Wings, live security checks, and reproduction instructions are in the [local benchmark report](benchmarks/REPORT.md).
