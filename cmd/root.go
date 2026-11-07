@@ -46,14 +46,14 @@ var (
 )
 
 var rootCommand = &cobra.Command{
-	Use:   "wings",
-	Short: "Runs the API server allowing programmatic control of game servers for Pterodactyl Panel.",
+	Use:   "manta",
+	Short: "Runs the API server allowing programmatic control of game servers for Aquadactyl Panel.",
 	PreRun: func(cmd *cobra.Command, args []string) {
 		initConfig()
 		initLogging()
 		if tls, _ := cmd.Flags().GetBool("auto-tls"); tls {
 			if host, _ := cmd.Flags().GetString("tls-hostname"); host == "" {
-				fmt.Println("A TLS hostname must be provided when running wings with automatic TLS, e.g.:\n\n    ./wings --auto-tls --tls-hostname my.example.com")
+				fmt.Println("A TLS hostname must be provided when running manta with automatic TLS, e.g.:\n\n    ./manta --auto-tls --tls-hostname my.example.com")
 				os.Exit(1)
 			}
 		}
@@ -65,7 +65,7 @@ var versionCommand = &cobra.Command{
 	Use:   "version",
 	Short: "Prints the current executable version and exits.",
 	Run: func(cmd *cobra.Command, _ []string) {
-		fmt.Printf("wings v%s\nCopyright © 2018 - %d Dane Everitt & Contributors\n", system.Version, time.Now().Year())
+		fmt.Printf("manta v%s\nCopyright © 2018 - %d Dane Everitt & Contributors\n", system.Version, time.Now().Year())
 	},
 }
 
@@ -77,13 +77,13 @@ func Execute() {
 
 func init() {
 	rootCommand.PersistentFlags().StringVar(&configPath, "config", config.DefaultLocation, "set the location for the configuration file")
-	rootCommand.PersistentFlags().BoolVar(&debug, "debug", false, "pass in order to run wings in debug mode")
+	rootCommand.PersistentFlags().BoolVar(&debug, "debug", false, "pass in order to run manta in debug mode")
 
 	// Flags specifically used when running the API.
 	rootCommand.Flags().Bool("pprof", false, "if the pprof profiler should be enabled. The profiler will bind to localhost:6060 by default")
 	rootCommand.Flags().Int("pprof-block-rate", 0, "enables block profile support, may have performance impacts")
 	rootCommand.Flags().Int("pprof-port", 6060, "If provided with --pprof, the port it will run on")
-	rootCommand.Flags().Bool("auto-tls", false, "pass in order to have wings generate and manage its own SSL certificates using Let's Encrypt")
+	rootCommand.Flags().Bool("auto-tls", false, "pass in order to have manta generate and manage its own SSL certificates using Let's Encrypt")
 	rootCommand.Flags().String("tls-hostname", "", "required with --auto-tls, the FQDN for the generated SSL certificate")
 	rootCommand.Flags().Bool("ignore-certificate-errors", false, "ignore certificate verification errors when executing API calls (deprecated)")
 	_ = rootCommand.Flags().MarkDeprecated("ignore-certificate-errors", "insecure certificate error bypass is no longer supported; configure a valid TLS certificate chain instead")
@@ -107,13 +107,13 @@ func rootCmdRun(cmd *cobra.Command, _ []string) {
 		log.WithField("error", err).Fatal("failed to detect system timezone or use supplied configuration value")
 		return
 	}
-	log.WithField("timezone", config.Get().System.Timezone).Info("configured wings with system timezone")
+	log.WithField("timezone", config.Get().System.Timezone).Info("configured manta with system timezone")
 	if err := config.ConfigureDirectories(); err != nil {
-		log.WithField("error", err).Fatal("failed to configure system directories for pterodactyl")
+		log.WithField("error", err).Fatal("failed to configure system directories for manta")
 		return
 	}
 	if err := config.EnsurePterodactylUser(); err != nil {
-		log.WithField("error", err).Fatal("failed to create pterodactyl system user")
+		log.WithField("error", err).Fatal("failed to create manta system user")
 		return
 	}
 	if err := config.ConfigurePasswd(); err != nil {
@@ -487,15 +487,15 @@ func initLogging() {
 	log.WithField("path", p).Info("writing log files to disk")
 }
 
-// Prints the wings logo, nothing special here!
+// Prints the Manta logo.
 func printLogo() {
 	fmt.Printf(colorstring.Color(`
-                     ____
-__ [blue][bold]Pterodactyl[reset] _____/___/_______ _______ ______
-\_____\    \/\/    /   /       /  __   /   ___/
-   \___\          /   /   /   /  /_/  /___   /
-        \___/\___/___/___/___/___    /______/
-                            /_______/ [bold]%s[reset]
+ __  __             _
+|  \/  | __ _ _ __ | |_ __ _
+| |\/| |/ _`+"`"+` | '_ \| __/ _`+"`"+` |
+| |  | | (_| | | | | || (_| |
+|_|  |_|\__,_|_| |_|\__\__,_|
+          [blue][bold]Aquadactyl[reset] [bold]%s[reset]
 
 Copyright © 2018 - %d Dane Everitt & Contributors
 
@@ -512,7 +512,7 @@ func exitWithConfigurationNotice() {
 	fmt.Printf(colorstring.Color(`
 [_red_][white][bold]Error: Configuration File Not Found[reset]
 
-Wings was not able to locate your configuration file, and therefore is not
+Manta was not able to locate your configuration file, and therefore is not
 able to complete its boot process. Please ensure you have copied your instance
 configuration file into the default location below.
 
