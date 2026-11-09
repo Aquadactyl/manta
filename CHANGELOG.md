@@ -8,6 +8,35 @@ This project follows [Semantic Versioning](http://semver.org) guidelines.
 
 ## Unreleased (Manta)
 
+## v0.3-beta
+
+### Added
+
+- Add SELinux relabeling support for Docker bind mounts via the new `docker.selinux_relabel` configuration option (`shared` applies the `z` label for paths used by multiple containers, `private` applies `Z` for a single container). When set, server containers (`environment/docker/container.go`) and installation containers (`server/install.go`) receive their mounts as bind specifications through the new `environment.SELinuxBinds` helper, preserving read-only flags, and unsupported values are rejected with an explicit error. Leaving the option empty keeps the existing mount behavior.
+- Add an isolated Docker verification workflow (`benchmarks/Run-Verification.ps1`) and an exact coverage auditing tool (`benchmarks/coverage_report.py`) that records every uncovered source block and fails explicitly until the 100% target is reached, documented in `benchmarks/COVERAGE.md`.
+- Add regression tests for malformed and truncated Docker inspect responses, invalid inspect request paths, malformed container start times, atomic JSON handling, quota file close failures after `Stat()` errors, and transfer response body lifetime.
+- Add Red Hat based Linux deployment notes to the README covering Rocky Linux, AlmaLinux, Docker Engine setup, and SELinux bind mount configuration.
+
+### Changed
+
+- Rename remaining project references from Wings to Manta across the CLI in `cmd/root.go`, including the command name, help text, version output, debug and `--auto-tls` flag descriptions, log messages, and the missing configuration notice, and reference Aquadactyl Panel instead of Pterodactyl Panel.
+- Replace the Pterodactyl startup banner with a Manta logo and update the website, source, and license links to `aquadactyl.uk` and the `Aquadactyl/manta` repository.
+- Run CI coverage collection with `-coverpkg=./...` so coverage is measured across the complete module rather than per package.
+- Refresh the Paper/Bedrock benchmark comparison against stock Wings v1.13.4 and retain the results under `benchmarks/results/verification-20261102`, with all 14400 timed API requests completing without errors.
+
+### Fixed
+
+- Resolve a response body leak in `PushArchiveToTarget` (`server/transfer/source.go`) by closing the destination response body immediately after the request completes, instead of deferring the close inside the multipart branch.
+- Eliminate a timing-dependent failure in the outgoing transfer route test by using a controlled HTTP receiver that keeps the first transfer active while duplicate rejection and cancellation are checked, and by waiting for transfer completion before cleanup.
+- Resolve races and collisions in existing router and lifecycle tests, including an explicit Docker network name for the root command lifecycle test.
+
+### Validation
+
+- 823 race-detector test cases pass across 28 packages, with `go vet` passing.
+- Complete module statement coverage of 7565/8250 statements (91.70%); the 100% coverage target remains unmet and its gate fails explicitly.
+- 16 live Manta checks pass, and the isolated benchmark suite completes 31 cases with five samples each.
+- The outgoing transfer route test passed 1000 consecutive runs under race detection and full-module coverage instrumentation at a two-core quota.
+
 ## v0.2-beta
 
 ### Added
