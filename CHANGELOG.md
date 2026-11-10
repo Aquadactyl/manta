@@ -20,7 +20,7 @@ This project follows [Semantic Versioning](http://semver.org) guidelines.
 
 - Split the Linux specific parts of `internal/ufs` into platform files. macOS opens paths with `openat` and verifies the canonical path of the resulting descriptor with `fcntl(F_GETPATH)` against the canonical base path, in place of `/proc/self/fd`, and refuses any path it cannot resolve. `openat2` stays Linux only and is never enabled elsewhere, including when `system.openat_mode` asks for it.
 - Use macOS locations for the default configuration, data, archive, backup, temporary, log and generated passwd directories. Defaults on Linux are unchanged and values set in the configuration file still take priority.
-- Report the macOS version and Darwin kernel version from `GET /api/system` without `/etc/os-release` or `system_profiler`, so the panel can reach the node.
+- Report the macOS version, build number and Darwin kernel version (for example `macOS 15.1 (24B83)`) from `GET /api/system` using `sysctl`, without `/etc/os-release` or `system_profiler`, so the panel can reach the node. The Darwin version from `uname` is used if the product version is unavailable.
 - Detect the system timezone on macOS from `/etc/localtime`.
 - Create the directory of the configuration file when it is missing before writing it.
 - Skip the Linux only CPU burst cgroup update on other platforms instead of logging a warning for every container.
