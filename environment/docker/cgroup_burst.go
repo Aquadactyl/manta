@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -63,7 +64,9 @@ func resolveCgroupCpuFile(procCgroup string, v2 bool) (string, error) {
 // given process. This is expected to fail on kernels older than 5.14 or when the
 // cgroup hierarchy is not writable by Wings, so failures are only logged.
 func writeCpuBurst(l *log.Entry, pid int, burst int64) {
-	if pid <= 0 {
+	// Only Linux has the cgroup hierarchy. Elsewhere the container runs in a
+	// virtual machine whose processes can not be reached through the host.
+	if pid <= 0 || runtime.GOOS != "linux" {
 		return
 	}
 	if err := writeBurstFile(pid, burst); err != nil {

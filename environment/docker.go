@@ -12,6 +12,7 @@ import (
 	"github.com/docker/docker/client"
 
 	"github.com/pterodactyl/wings/config"
+	"github.com/pterodactyl/wings/system"
 )
 
 var (
@@ -25,7 +26,7 @@ var (
 func Docker() (*client.Client, error) {
 	var err error
 	_conce.Do(func() {
-		_client, err = client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+		_client, err = client.NewClientWithOpts(system.DockerClientOpts()...)
 	})
 	return _client, errors.Wrap(err, "environment/docker: could not create client")
 }

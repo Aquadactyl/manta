@@ -61,7 +61,7 @@ func TestUFSRemainingCoverage(t *testing.T) {
 	}
 	for _, rawMode := range modes {
 		var st fileStat
-		st.sys.Mode = rawMode
+		st.sys.Mode = toSysMode(rawMode)
 		fillFileStatFromSys(&st, "test")
 		assert.Equal(t, "test", st.Name())
 	}

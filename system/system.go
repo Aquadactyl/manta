@@ -4,11 +4,9 @@ import (
 	"context"
 	"runtime"
 
-	"github.com/acobaugh/osrelease"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/system"
 	"github.com/docker/docker/client"
-	"github.com/docker/docker/pkg/parsers/kernel"
 )
 
 type Information struct {
@@ -57,7 +55,7 @@ type System struct {
 }
 
 func GetSystemInformation() (*Information, error) {
-	k, err := kernel.GetKernelVersion()
+	kernelVersion, err := hostKernelVersion()
 	if err != nil {
 		return nil, err
 	}
@@ -67,18 +65,9 @@ func GetSystemInformation() (*Information, error) {
 		return nil, err
 	}
 
-	release, err := osrelease.Read()
+	os, err := hostOSName(info)
 	if err != nil {
 		return nil, err
-	}
-
-	var os string
-	if release["PRETTY_NAME"] != "" {
-		os = release["PRETTY_NAME"]
-	} else if release["NAME"] != "" {
-		os = release["NAME"]
-	} else {
-		os = info.OperatingSystem
 	}
 
 	var filesystem string
@@ -117,7 +106,7 @@ func GetSystemInformation() (*Information, error) {
 			Architecture:  runtime.GOARCH,
 			CPUThreads:    runtime.NumCPU(),
 			MemoryBytes:   info.MemTotal,
-			KernelVersion: k.String(),
+			KernelVersion: kernelVersion,
 			OS:            os,
 			OSType:        runtime.GOOS,
 		},
@@ -126,7 +115,7 @@ func GetSystemInformation() (*Information, error) {
 
 // GetDockerInfo returns the version and system info from the host Docker daemon.
 func GetDockerInfo(ctx context.Context) (types.Version, system.Info, error) {
-	c, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+	c, err := client.NewClientWithOpts(DockerClientOpts()...)
 	if err != nil {
 		return types.Version{}, system.Info{}, err
 	}

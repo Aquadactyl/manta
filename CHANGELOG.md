@@ -8,6 +8,27 @@ This project follows [Semantic Versioning](http://semver.org) guidelines.
 
 ## Unreleased (Manta)
 
+### Added
+
+- Add native macOS support for Apple Silicon (`arm64`) and Intel (`amd64`). Manta manages containers through Docker Desktop, OrbStack, Colima or Rancher Desktop and runs unprivileged as the logged-in user. See [Running Manta on macOS](docs/macos.md).
+- Add `wings_darwin_arm64` and `wings_darwin_amd64` binaries to the release workflow and include them in `checksums.txt`.
+- Add a macOS CI job that builds and vets both architectures, runs the filesystem, configuration and macOS specific tests under the race detector on a macOS runner, and smoke tests the binary.
+- Add a launchd LaunchAgent (`macos/uk.aquadactyl.manta.plist`) to start Manta at login and restart it if it stops.
+- Discover the Docker socket on macOS when `DOCKER_HOST` is unset and `/var/run/docker.sock` is missing, checking Docker Desktop, OrbStack, Colima and Rancher Desktop in order.
+
+### Changed
+
+- Split the Linux specific parts of `internal/ufs` into platform files. macOS opens paths with `openat` and verifies the canonical path of the resulting descriptor with `fcntl(F_GETPATH)` against the canonical base path, in place of `/proc/self/fd`, and refuses any path it cannot resolve. `openat2` stays Linux only and is never enabled elsewhere, including when `system.openat_mode` asks for it.
+- Use macOS locations for the default configuration, data, archive, backup, temporary, log and generated passwd directories. Defaults on Linux are unchanged and values set in the configuration file still take priority.
+- Report the macOS version and Darwin kernel version from `GET /api/system` without `/etc/os-release` or `system_profiler`, so the panel can reach the node.
+- Detect the system timezone on macOS from `/etc/localtime`.
+- Create the directory of the configuration file when it is missing before writing it.
+- Skip the Linux only CPU burst cgroup update on other platforms instead of logging a warning for every container.
+
+### Fixed
+
+- Run the descriptor leak regression test on every Unix platform by counting descriptors with `fcntl` instead of reading `/proc/self/fd`.
+
 ## v0.3-beta
 
 ### Added

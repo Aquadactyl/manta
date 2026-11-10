@@ -72,7 +72,11 @@ jobs:
           chmod 755 dist/wings_linux_amd64
           GOARCH=arm64 go build -o dist/wings_linux_arm64 -v -trimpath -ldflags="-s -w -X github.com/pterodactyl/wings/system.Version=${RELEASE_TAG}" github.com/pterodactyl/wings
           chmod 755 dist/wings_linux_arm64
-          cd dist && sha256sum wings_linux_* > checksums.txt && cd ..
+          GOOS=darwin GOARCH=amd64 go build -o dist/wings_darwin_amd64 -v -trimpath -ldflags="-s -w -X github.com/pterodactyl/wings/system.Version=${RELEASE_TAG}" github.com/pterodactyl/wings
+          chmod 755 dist/wings_darwin_amd64
+          GOOS=darwin GOARCH=arm64 go build -o dist/wings_darwin_arm64 -v -trimpath -ldflags="-s -w -X github.com/pterodactyl/wings/system.Version=${RELEASE_TAG}" github.com/pterodactyl/wings
+          chmod 755 dist/wings_darwin_arm64
+          cd dist && sha256sum wings_linux_* wings_darwin_* > checksums.txt && cd ..
 
       - name: create release branch and bump version
         run: |
