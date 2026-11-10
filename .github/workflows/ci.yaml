@@ -85,10 +85,18 @@ jobs:
           path: dist/wings_debug
 
   macos:
-    name: Tests (macOS)
-    runs-on: macos-latest
+    name: Tests (macOS ${{ matrix.goarch }}, Go ${{ matrix.go }})
+    # Apple Silicon runs on macos-latest and Intel on its own runner, so both
+    # architectures build and run natively instead of being cross-compiled.
+    runs-on: ${{ matrix.goarch == 'arm64' && 'macos-latest' || 'macos-15-intel' }}
     permissions:
       contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        go: ["1.26.9", "1.27.2"]
+        goos: [darwin]
+        goarch: [amd64, arm64]
     steps:
       - name: Code checkout
         uses: actions/checkout@v7
@@ -96,23 +104,24 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v7
         with:
-          go-version: "1.27.2"
+          go-version: ${{ matrix.go }}
 
       - name: Download dependencies
+        env:
+          CGO_ENABLED: 0
         run: |
           go mod download
 
-      # Everything is built and vetted for both macOS architectures. Compiling
-      # the Intel build on an Apple Silicon runner only checks that it builds,
-      # it is not run.
       - name: Build
         env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
           CGO_ENABLED: 0
           SRC_PATH: github.com/pterodactyl/wings
         run: |
           mkdir -p dist
-          GOARCH=arm64 go build -v -trimpath -ldflags="-s -w -X ${SRC_PATH}/system.Version=dev-${GITHUB_SHA:0:7}" -o dist/wings_darwin_arm64 ${SRC_PATH}
-          GOARCH=amd64 go build -v -trimpath -ldflags="-s -w -X ${SRC_PATH}/system.Version=dev-${GITHUB_SHA:0:7}" -o dist/wings_darwin_amd64 ${SRC_PATH}
+          go build -v -trimpath -ldflags="-s -w -X ${SRC_PATH}/system.Version=dev-${GITHUB_SHA:0:7}" -o dist/wings ${SRC_PATH}
+          go build -v -trimpath -ldflags="-X ${SRC_PATH}/system.Version=dev-${GITHUB_SHA:0:7}" -o dist/wings_debug ${SRC_PATH}
           chmod 755 dist/*
           go vet ./...
 
@@ -121,19 +130,33 @@ jobs:
       # macOS support itself is covered here.
       - name: Run tests
         env:
+          CGO_ENABLED: 0
+        run: |
+          go test ./internal/... ./config/... ./server/filesystem/...
+          go test -run 'Darwin|MemoryUsed' ./system/...
+
+      - name: Run tests with race detector
+        env:
           CGO_ENABLED: 1
         run: |
           go test -race ./internal/... ./config/... ./server/filesystem/...
-          go test -race -run 'Darwin' ./system/...
+          go test -race -run 'Darwin|MemoryUsed' ./system/...
 
       - name: Smoke test the binary
         run: |
-          ./dist/wings_darwin_arm64 version
-          ./dist/wings_darwin_arm64 --help > /dev/null
+          ./dist/wings version
+          ./dist/wings --help > /dev/null
 
       - name: Upload Release Artifact
         uses: actions/upload-artifact@v7
-        if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'pull_request' }}
+        if: ${{ (github.ref == 'refs/heads/main' || github.event_name == 'pull_request') && matrix.go == '1.27.2' }}
         with:
-          name: wings_darwin
-          path: dist/wings_darwin_*
+          name: wings_darwin_${{ matrix.goarch }}
+          path: dist/wings
+
+      - name: Upload Debug Artifact
+        uses: actions/upload-artifact@v7
+        if: ${{ (github.ref == 'refs/heads/main' || github.event_name == 'pull_request') && matrix.go == '1.27.2' }}
+        with:
+          name: wings_darwin_${{ matrix.goarch }}_debug
+          path: dist/wings_debug

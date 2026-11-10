@@ -12,7 +12,7 @@ This project follows [Semantic Versioning](http://semver.org) guidelines.
 
 - Add native macOS support for Apple Silicon (`arm64`) and Intel (`amd64`). Manta manages containers through Docker Desktop, OrbStack, Colima or Rancher Desktop and runs unprivileged as the logged-in user. See [Running Manta on macOS](docs/macos.md).
 - Add `wings_darwin_arm64` and `wings_darwin_amd64` binaries to the release workflow and include them in `checksums.txt`.
-- Add a macOS CI job that builds and vets both architectures, runs the filesystem, configuration and macOS specific tests under the race detector on a macOS runner, and smoke tests the binary.
+- Add a macOS CI job that mirrors the Linux one: Go 1.26.9 and 1.27.2 on both architectures, each built, vetted and tested natively (Apple Silicon on `macos-latest`, Intel on `macos-15-intel`). It runs the filesystem, configuration and macOS specific tests, also under the race detector, smoke tests the binary and uploads the binaries as artifacts.
 - Add built-in size based log rotation for macOS, which has no logrotate. `wings.log` rotates at 10 MiB and seven old files are kept, unless `system.enable_log_rotate` is `false`. Linux keeps using logrotate and reopening on `SIGHUP`.
 - Add host RAM and disk metrics to `GET /api/system/usage` on macOS and advertise `system_usage` there. RAM comes from `hw.memsize` and the available share the kernel reports in `kern.memorystatus_level`, disk from the volume holding the server data. CPU stays `null`, as macOS only exposes it through Mach calls that need cgo.
 - Add a launchd LaunchAgent (`macos/uk.aquadactyl.manta.plist`) to start Manta at login and restart it if it stops.
