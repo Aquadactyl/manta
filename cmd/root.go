@@ -17,7 +17,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/NYTimes/logrotate"
 	"github.com/apex/log"
 	"github.com/apex/log/handlers/multi"
 	cerrdefs "github.com/containerd/errdefs"
@@ -475,7 +474,7 @@ func initLogging() {
 		log2.Fatalf("cmd/root: failed to create install directory path: %s", err)
 	}
 	p := filepath.Join(dir, "/wings.log")
-	w, err := logrotate.NewFile(p)
+	w, err := openLogFile(p)
 	if err != nil {
 		log2.Fatalf("cmd/root: failed to create wings log: %s", err)
 	}

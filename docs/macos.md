@@ -21,7 +21,7 @@ and the kernel and remains the recommended platform.
 | Server user     | A `pterodactyl` system user   | The user Manta runs as, nothing is created           |
 | Service manager | systemd                       | launchd                                              |
 | Docker socket   | `/var/run/docker.sock`        | `/var/run/docker.sock`, or the socket of the runtime |
-| Host metrics    | `/api/system/usage`           | Not available, the capability is reported as `false` |
+| Host metrics    | CPU, RAM and disk             | RAM and disk. CPU is always `null`                   |
 
 Every path can still be set in the configuration file, and values set there
 always win over the defaults above.
@@ -132,9 +132,11 @@ that user and start the Docker runtime at login too.
 - **Case-insensitive volumes.** The default macOS volume ignores case in file
   names. The containment check compares exactly what the kernel returns, which
   can only refuse a path, never allow one it should not.
-- **Log rotation.** Manta reopens its log file on `SIGHUP`, but macOS has no
-  logrotate. Rotate `~/Library/Logs/Manta/wings.log` yourself and send the
-  signal afterwards with `launchctl kill SIGHUP "gui/$(id -u)/uk.aquadactyl.manta"`.
+- **Log rotation.** Manta rotates `~/Library/Logs/Manta/wings.log` itself at
+  10 MiB and keeps seven old files (`wings.log.1` to `wings.log.7`). Set
+  `system.enable_log_rotate: false` to turn this off. Manta then reopens the file
+  on `SIGHUP` for a tool that rotates it from the outside, which you can send
+  with `launchctl kill SIGHUP "gui/$(id -u)/uk.aquadactyl.manta"`.
 - **CPU burst** and the other cgroup based features only apply on Linux.
 - **Gatekeeper.** Binaries downloaded with `curl` are not quarantined and need
   no approval. If you download one with a browser, run

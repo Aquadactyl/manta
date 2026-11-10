@@ -32,6 +32,10 @@ and total RAM, and used and total space on the configured server-data filesystem
 counters are `null`; idle usage remains zero. CPU uses a cancellable 200 ms sample,
 and RAM usage excludes memory reported as available by the kernel.
 
+On macOS the endpoint returns RAM and disk. RAM used is derived from the share of
+memory the kernel reports as available (`kern.memorystatus_level`), and CPU is
+always `null` because macOS only exposes it through Mach calls that need cgo.
+
 These counters describe the Linux host and filesystem visible to Manta, including
 when it runs in Docker. They are distinct from game-container usage and assigned
 server limits. The endpoint uses the same node-token authentication as the other
