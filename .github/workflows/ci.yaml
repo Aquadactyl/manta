@@ -86,9 +86,9 @@ jobs:
 
   macos:
     name: Tests (macOS ${{ matrix.goarch }}, Go ${{ matrix.go }})
-    # Apple Silicon runs on macos-latest and Intel on its own runner, so both
+    # Apple Silicon runs on macos-26 and Intel on macos-26-intel, so both
     # architectures build and run natively instead of being cross-compiled.
-    runs-on: ${{ matrix.goarch == 'arm64' && 'macos-latest' || 'macos-15-intel' }}
+    runs-on: ${{ matrix.goarch == 'arm64' && 'macos-26' || 'macos-26-intel' }}
     permissions:
       contents: read
     strategy:
