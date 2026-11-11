@@ -38,10 +38,6 @@ const (
 	utimeOmit = -2
 )
 
-// platformState holds the state UnixFS needs on top of its common fields. macOS
-// needs none.
-type platformState struct{}
-
 // minimumScratchBufferSize is the smallest buffer used to read directory
 // entries. getdirentries(2) fails if the buffer is smaller than the block size
 // of the filesystem, so be generous.

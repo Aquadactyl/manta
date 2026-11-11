@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/apex/log"
+	cerrdefs "github.com/containerd/errdefs"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/api/types/mount"
@@ -157,7 +158,7 @@ func CheckMount(ctx context.Context, mc mountChecker, dir string, uid, gid int) 
 		return MountCheckResult{Status: MountNotWritable, Err: fmt.Errorf("the check exited with status %d", code)}
 	}
 
-	got, err := os.ReadFile(marker)
+	got, err := os.ReadFile(marker) //nolint:gosec // marker is a random file in the data directory being checked
 	if err != nil || strings.TrimSpace(string(got)) != token {
 		return MountCheckResult{Status: MountNotShared, Err: err}
 	}
@@ -171,7 +172,7 @@ type dockerMountChecker struct {
 
 func (d *dockerMountChecker) HasImage(ctx context.Context, ref string) (bool, error) {
 	if _, err := d.cli.ImageInspect(ctx, ref); err != nil {
-		if client.IsErrNotFound(err) {
+		if cerrdefs.IsNotFound(err) {
 			return false, nil
 		}
 		return false, err

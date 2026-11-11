@@ -47,10 +47,6 @@ func (fs *UnixFS) openBeneath(dirfd int, name string, flag, mode uint64) (int, e
 	return fs._openat2(dirfd, name, flag, mode)
 }
 
-// platformState holds the state UnixFS needs on top of its common fields. Linux
-// verifies paths through openat2 or /proc, neither of which needs any.
-type platformState struct{}
-
 // minimumScratchBufferSize is the smallest buffer used to read directory
 // entries.
 var minimumScratchBufferSize = os.Getpagesize()

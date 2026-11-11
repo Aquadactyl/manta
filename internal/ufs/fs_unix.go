@@ -20,8 +20,6 @@ import (
 // This is used for proper sand-boxing and full control over the exact syscalls
 // being performed.
 type UnixFS struct {
-	platformState
-
 	// basePath is the base path for file operations to take place in.
 	basePath string
 
