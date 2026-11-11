@@ -409,8 +409,14 @@ func TestEnsurePterodactylUserAndPasswd(t *testing.T) {
 	cfg.System.Username = "root"
 	Set(&cfg)
 	require.NoError(t, EnsurePterodactylUser())
-	assert.Equal(t, 0, Get().System.User.Uid)
-	assert.Equal(t, 0, Get().System.User.Gid)
+	if runtime.GOOS == "darwin" {
+		u, _ := user.Current()
+		assert.Equal(t, system.MustInt(u.Uid), Get().System.User.Uid)
+		assert.Equal(t, system.MustInt(u.Gid), Get().System.User.Gid)
+	} else {
+		assert.Equal(t, 0, Get().System.User.Uid)
+		assert.Equal(t, 0, Get().System.User.Gid)
+	}
 
 	// 5. Load tests
 	loaded, err := Load(filepath.Join(tmp, "passwd"))
