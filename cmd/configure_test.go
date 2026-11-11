@@ -133,5 +133,7 @@ func TestConfigureGetRequestAndMore(t *testing.T) {
 	require.Error(t, writePanelConfiguration(filepath.Join(tmp, "conf.yml"), "http://panel.test", []byte("invalid-json")))
 
 	// writePanelConfiguration with unwritable path
-	require.Error(t, writePanelConfiguration("/unwritable-dir-xyz/conf.yml", "http://panel.test", []byte(`{"token_id":"id","token":"tok"}`)))
+	unwritableFile := filepath.Join(tmp, "regular_file")
+	require.NoError(t, os.WriteFile(unwritableFile, []byte("x"), 0o644))
+	require.Error(t, writePanelConfiguration(filepath.Join(unwritableFile, "conf.yml"), "http://panel.test", []byte(`{"token_id":"id","token":"tok"}`)))
 }
