@@ -481,7 +481,6 @@ func (e *Environment) ensureImageExists(img string) error {
 	e.Events().Publish(environment.DockerImagePullStarted, "")
 	defer e.Events().Publish(environment.DockerImagePullCompleted, "")
 
-
 	registry, registryAuth := config.Get().Docker.RegistryCredentialsForImage(img)
 	if registryAuth != nil {
 		log.WithField("registry", registry).Debug("using authentication for registry")
@@ -568,7 +567,6 @@ func ImageExistsLocally(ctx context.Context, client *client.Client, img string) 
 	}
 	return false, nil
 }
-
 
 func (e *Environment) convertMounts() []mount.Mount {
 	mounts := e.Configuration.Mounts()
