@@ -5,10 +5,13 @@
 package ufs
 
 import (
+	"bytes"
 	"errors"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
+	"unsafe"
 
 	"golang.org/x/sys/unix"
 )
@@ -54,10 +57,67 @@ func (fs *UnixFS) openBeneath(dirfd int, name string, flag, mode uint64) (int, e
 	return fs.userspaceOpenat2(dirfd, name, flag, mode)
 }
 
-// checkOpenedPath is never reached, as paths are always resolved beneath their
-// directory and there is nothing left to verify afterwards.
-func (fs *UnixFS) checkOpenedPath(_ int, name string) error {
-	return ensurePathError(errors.New("path verification after opening is not used on macOS"), "openat", name)
+// checkOpenedPath returns an error if the file opened as fd, without the
+// protection of openat2, resolved to a path outside of the filesystem.
+func (fs *UnixFS) checkOpenedPath(fd int, name string) error {
+	op := "openat"
+	if fs.useOpenat2 {
+		op = "openat2"
+	}
+	finalPath, err := fdPath(fd)
+	if err != nil {
+		if errors.Is(err, unix.ENOENT) && fs.unsafeIsPathInsideOfBase(filepath.Join(fs.basePath, name)) {
+			return &PathError{
+				Op:   op,
+				Path: name,
+				Err:  ErrNotExist,
+			}
+		}
+		return &PathError{
+			Op:   op,
+			Path: name,
+			Err:  ErrBadPathResolution,
+		}
+	}
+	realBase, err := filepath.EvalSymlinks(fs.basePath)
+	if err != nil {
+		realBase = fs.basePath
+	}
+	if !isPathInside(finalPath, realBase) && !fs.unsafeIsPathInsideOfBase(finalPath) {
+		return &PathError{
+			Op:   op,
+			Path: name,
+			Err:  ErrBadPathResolution,
+		}
+	}
+	if _, err := os.Stat(finalPath); err != nil && errors.Is(err, os.ErrNotExist) {
+		return &PathError{
+			Op:   op,
+			Path: name,
+			Err:  ErrNotExist,
+		}
+	}
+	return nil
+}
+
+// isPathInside reports whether p is base or a path beneath it.
+func isPathInside(p, base string) bool {
+	return strings.HasPrefix(strings.TrimSuffix(p, "/")+"/", strings.TrimSuffix(base, "/")+"/")
+}
+
+// fdPath returns the canonical path of the file open as fd, with symbolic links
+// resolved. It fails for paths longer than PATH_MAX and for files that no longer
+// have a path.
+func fdPath(fd int) (string, error) {
+	var buf [unix.PathMax]byte
+	if _, _, errno := unix.Syscall(unix.SYS_FCNTL, uintptr(fd), uintptr(unix.F_GETPATH), uintptr(unsafe.Pointer(&buf[0]))); errno != 0 { //nolint:gosec // F_GETPATH writes the path into the PATH_MAX sized buffer
+		return "", errno
+	}
+	n := bytes.IndexByte(buf[:], 0)
+	if n < 0 {
+		n = len(buf)
+	}
+	return string(buf[:n]), nil
 }
 
 // readDirent reads directory entries from fd into buf.

@@ -2,11 +2,15 @@ package config
 
 import (
 	"os"
+	"os/user"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/pterodactyl/wings/system"
 )
 
 func TestConfigOperations(t *testing.T) {
@@ -292,7 +296,12 @@ func TestConfigMoreOperations(t *testing.T) {
 	cfg.System.Username = "root"
 	Set(cfg)
 	assert.NoError(t, EnsurePterodactylUser())
-	assert.Equal(t, 0, Get().System.User.Uid)
+	if runtime.GOOS == "darwin" {
+		u, _ := user.Current()
+		assert.Equal(t, system.MustInt(u.Uid), Get().System.User.Uid)
+	} else {
+		assert.Equal(t, 0, Get().System.User.Uid)
+	}
 
 	// 9. ConfigureTimezone invalid
 	cfg.System.Timezone = "Invalid/Zone/Nonexistent"
@@ -321,7 +330,11 @@ func TestConfigMoreOperations(t *testing.T) {
 	openat2Set.Store(false)
 	cfg.System.OpenatMode = "openat2"
 	Set(cfg)
-	assert.True(t, UseOpenat2())
+	if openat2Supported {
+		assert.True(t, UseOpenat2())
+	} else {
+		assert.False(t, UseOpenat2())
+	}
 
 	openat2Set.Store(false)
 	cfg.System.OpenatMode = "openat"

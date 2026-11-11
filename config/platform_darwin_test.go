@@ -52,6 +52,7 @@ func TestDarwinEnsurePlatformUserUsesTheCurrentUser(t *testing.T) {
 
 	c, err := NewAtPath(filepath.Join(t.TempDir(), "config.yml"))
 	require.NoError(t, err)
+	c.AuthenticationToken = "test-token"
 	Set(c)
 
 	require.NoError(t, EnsurePterodactylUser())

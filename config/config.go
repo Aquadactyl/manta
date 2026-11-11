@@ -476,8 +476,10 @@ func Set(c *Configuration) {
 		c.Token.Token = c.AuthenticationToken
 		token = c.Token.Token
 	}
-	if _config == nil || _config.Token.Token != token {
+	if token != "" && (_config == nil || _config.Token.Token != token) {
 		_jwtAlgo = jwt.NewHS256([]byte(token))
+	} else if token == "" {
+		_jwtAlgo = nil
 	}
 	_config = c
 }
