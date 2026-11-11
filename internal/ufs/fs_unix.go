@@ -36,11 +36,9 @@ type UnixFS struct {
 // checked and prevented from enabling an escape in a non-raceable manor.
 func NewUnixFS(basePath string, useOpenat2 bool) (*UnixFS, error) {
 	basePath = strings.TrimSuffix(basePath, "/")
-	if !openat2Available {
-		// openat2 only exists on Linux, every other platform resolves paths
-		// with openat and verifies the result.
-		useOpenat2 = false
-	}
+	// Platforms without openat2 resolve paths themselves, which is what
+	// useOpenat2 stands for from here on.
+	useOpenat2 = normalizeOpenat2(useOpenat2)
 	fs := &UnixFS{
 		basePath:   basePath,
 		useOpenat2: useOpenat2,
@@ -728,7 +726,7 @@ func (fs *UnixFS) openatResolvedType(dirfd int, name string, flag int, mode File
 	for {
 		var err error
 		if fs.useOpenat2 {
-			fd, err = fs._openat2(dirfd, name, uint64(flag), uint64(syscallMode(mode)))
+			fd, err = fs.openBeneath(dirfd, name, uint64(flag), uint64(syscallMode(mode)))
 		} else {
 			fd, err = fs._openat(dirfd, name, flag, uint32(syscallMode(mode)))
 		}

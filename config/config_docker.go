@@ -52,6 +52,13 @@ type DockerConfiguration struct {
 	// container at a time. Leave empty when SELinux relabeling is not needed.
 	SELinuxRelabel string `default:"" json:"selinux_relabel" yaml:"selinux_relabel"`
 
+	// MountCheck makes the daemon check at startup that containers can write to
+	// the server data directory, by running a short lived container that writes
+	// a file into it and looking for that file on the host. It only runs on macOS,
+	// where the containers reach the files through the file sharing of a virtual
+	// machine that is easy to configure in a way that silently loses data.
+	MountCheck bool `default:"true" json:"mount_check" yaml:"mount_check"`
+
 	// Network configuration that should be used when creating a new network
 	// for containers run through the daemon.
 	Network DockerNetworkConfiguration `json:"network" yaml:"network"`

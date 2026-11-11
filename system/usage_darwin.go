@@ -9,17 +9,16 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-// HostUsageSupported reports that host counters are available. On macOS memory
-// and disk are, CPU is not: it is only exposed through Mach calls, which need
-// cgo, so it is always reported as unavailable.
+// HostUsageSupported reports that host counters are available.
 const HostUsageSupported = true
 
 // ReadResourceUsage returns the host counters.
 //
 // Memory is the physical memory of the Mac and the share of it the kernel
 // reports as available, the same figure the memory pressure graph of Activity
-// Monitor is based on. Disk is the volume holding the server data.
-func ReadResourceUsage(_ context.Context, dataPath string) ResourceUsage {
+// Monitor is based on. Disk is the volume holding the server data. CPU is the
+// utilization of all CPUs over a 200 ms sample, as on Linux.
+func ReadResourceUsage(ctx context.Context, dataPath string) ResourceUsage {
 	usage := ResourceUsage{SampledAt: time.Now().UTC()}
 
 	if total, err := unix.SysctlUint64("hw.memsize"); err == nil {
@@ -36,6 +35,24 @@ func ReadResourceUsage(_ context.Context, dataPath string) ResourceUsage {
 		used := (disk.Blocks - min(disk.Bfree, disk.Blocks)) * uint64(disk.Bsize)
 		usage.DiskTotalBytes, usage.DiskUsedBytes = &total, &used
 	}
+
+	before, err := readCPUTicks()
+	if err != nil {
+		return usage
+	}
+	timer := time.NewTimer(200 * time.Millisecond)
+	defer timer.Stop()
+	select {
+	case <-ctx.Done():
+		return usage
+	case <-timer.C:
+	}
+	if after, err := readCPUTicks(); err == nil {
+		if percent, err := cpuPercentFromTicks(before, after); err == nil {
+			usage.CPUPercent = &percent
+		}
+	}
+	usage.SampledAt = time.Now().UTC()
 
 	return usage
 }

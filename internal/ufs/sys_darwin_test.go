@@ -4,73 +4,15 @@ package ufs
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"golang.org/x/sys/unix"
 )
-
-// The base path is resolved to the path the kernel reports for descriptors
-// beneath it, which differs when it contains symbolic links. /var is one on
-// macOS, and so is the temporary directory of every test.
-func TestDarwinRealBaseResolvesSymlinks(t *testing.T) {
-	real := t.TempDir()
-	resolved, err := filepath.EvalSymlinks(real)
-	require.NoError(t, err)
-
-	link := filepath.Join(t.TempDir(), "base")
-	require.NoError(t, os.Symlink(real, link))
-
-	fs, err := NewUnixFS(link, false)
-	require.NoError(t, err)
-
-	got, err := fs.realBase()
-	require.NoError(t, err)
-	assert.Equal(t, resolved, got)
-
-	// Files are reachable and reported beneath it, so are not mistaken for an
-	// escape.
-	require.NoError(t, os.WriteFile(filepath.Join(real, "file.txt"), []byte("data"), 0o644))
-	f, err := fs.Open("file.txt")
-	require.NoError(t, err)
-	_ = f.Close()
-}
-
-func TestDarwinFdPath(t *testing.T) {
-	dir := t.TempDir()
-	resolved, err := filepath.EvalSymlinks(dir)
-	require.NoError(t, err)
-
-	fd, err := unix.Open(dir, unix.O_RDONLY|unix.O_DIRECTORY, 0)
-	require.NoError(t, err)
-	defer unix.Close(fd)
-
-	got, err := fdPath(fd)
-	require.NoError(t, err)
-	assert.Equal(t, resolved, got)
-
-	_, err = fdPath(-1)
-	assert.Error(t, err)
-}
-
-func TestDarwinIsPathInside(t *testing.T) {
-	for _, tt := range []struct {
-		path, base string
-		want       bool
-	}{
-		{"/a/b", "/a/b", true},
-		{"/a/b/", "/a/b", true},
-		{"/a/b/c", "/a/b", true},
-		{"/a/bc", "/a/b", false},
-		{"/a", "/a/b", false},
-		{"/other/a/b", "/a/b", false},
-	} {
-		assert.Equal(t, tt.want, isPathInside(tt.path, tt.base), "%s in %s", tt.path, tt.base)
-	}
-}
 
 // A file that can not be read can still be described, but not through a
 // symbolic link, whose target can not be checked without opening it.
@@ -114,8 +56,65 @@ func TestDarwinReadDirLargeDirectory(t *testing.T) {
 	assert.Len(t, entries, total)
 }
 
-func TestDarwinOpenat2IsNeverEnabled(t *testing.T) {
-	fs, err := NewUnixFS(t.TempDir(), true)
+// Paths are always resolved by UnixFS itself on macOS, whatever was asked for.
+func TestDarwinAlwaysResolvesBeneath(t *testing.T) {
+	for _, asked := range []bool{false, true} {
+		fs, err := NewUnixFS(t.TempDir(), asked)
+		require.NoError(t, err)
+		assert.True(t, fs.useOpenat2)
+	}
+}
+
+// A path longer than PATH_MAX is reachable, as nothing needs the whole path at
+// once, and a link out of the base is still refused.
+func TestDarwinDeepPaths(t *testing.T) {
+	root := t.TempDir()
+	outside := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(outside, "secret.txt"), []byte("secret"), 0o644))
+
+	fs, err := NewUnixFS(root, false)
 	require.NoError(t, err)
-	assert.False(t, fs.useOpenat2)
+
+	// Build a path of about 2 KiB one directory at a time, as it can not be
+	// created in one call.
+	rel := ""
+	for range 40 {
+		rel = filepath.Join(rel, strings.Repeat("d", 50))
+		require.NoError(t, fs.Mkdir(rel, 0o755))
+	}
+	deep := filepath.Join(rel, "file.txt")
+	f, err := fs.Create(deep)
+	require.NoError(t, err)
+	_, err = f.Write([]byte("deep"))
+	require.NoError(t, err)
+	require.NoError(t, f.Close())
+
+	f, err = fs.Open(deep)
+	require.NoError(t, err)
+	b, err := io.ReadAll(f)
+	require.NoError(t, err)
+	_ = f.Close()
+	assert.Equal(t, "deep", string(b))
+
+	require.NoError(t, fs.Symlink(outside, filepath.Join(rel, "escape")))
+	_, err = fs.Open(filepath.Join(rel, "escape", "secret.txt"))
+	assert.ErrorIs(t, err, ErrBadPathResolution)
+}
+
+// The spelling of the base does not matter, which it did when paths were
+// compared. Opening it through a link, or through a different case on a volume
+// that ignores case, works.
+func TestDarwinBaseSpelling(t *testing.T) {
+	real := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(real, "file.txt"), []byte("data"), 0o644))
+
+	link := filepath.Join(t.TempDir(), "base")
+	require.NoError(t, os.Symlink(real, link))
+
+	fs, err := NewUnixFS(link, false)
+	require.NoError(t, err)
+
+	f, err := fs.Open("file.txt")
+	require.NoError(t, err)
+	_ = f.Close()
 }

@@ -5,23 +5,18 @@
 package ufs
 
 import (
-	"bytes"
 	"errors"
 	"os"
 	"path"
 	"strings"
-	"sync/atomic"
-	"unsafe"
 
 	"golang.org/x/sys/unix"
 )
 
-// macOS has no openat2 and no /proc. Containment of every path is instead
-// enforced by opening the path with openat and asking the kernel for the
-// canonical path of the resulting descriptor (fcntl F_GETPATH), which is then
-// required to be beneath the canonical path of the filesystem's base. The
-// parent directory of every operation is verified this way before anything is
-// created, so nothing outside of the base can be written to.
+// macOS has no openat2 and no /proc. Paths are instead resolved by
+// userspaceOpenBeneath, which walks them one component at a time and never lets
+// the kernel follow a link, so nothing outside of the base can be reached, and
+// nothing depends on the length or the spelling of a path.
 
 const (
 	// O_LARGEFILE does not exist on macOS, file offsets are always 64-bit.
@@ -41,22 +36,33 @@ const (
 	// utimeOmit leaves a timestamp unchanged when passed to utimensat, the value
 	// of UTIME_OMIT in <sys/stat.h>.
 	utimeOmit = -2
-
-	// openat2Available reports whether the openat2 syscall can exist on this
-	// platform.
-	openat2Available = false
 )
 
-// platformState holds the state UnixFS needs on top of its common fields.
-type platformState struct {
-	// realBasePath caches the canonical path of the base path, see realBase.
-	realBasePath atomic.Pointer[string]
-}
+// platformState holds the state UnixFS needs on top of its common fields. macOS
+// needs none.
+type platformState struct{}
 
 // minimumScratchBufferSize is the smallest buffer used to read directory
 // entries. getdirentries(2) fails if the buffer is smaller than the block size
 // of the filesystem, so be generous.
 var minimumScratchBufferSize = max(os.Getpagesize(), 64*1024)
+
+// normalizeOpenat2 returns whether paths are resolved beneath a directory by
+// UnixFS itself, which is always the case on macOS.
+func normalizeOpenat2(_ bool) bool {
+	return true
+}
+
+// openBeneath opens name beneath dirfd without leaving it.
+func (fs *UnixFS) openBeneath(dirfd int, name string, flag, mode uint64) (int, error) {
+	return fs.userspaceOpenat2(dirfd, name, flag, mode)
+}
+
+// checkOpenedPath is never reached, as paths are always resolved beneath their
+// directory and there is nothing left to verify afterwards.
+func (fs *UnixFS) checkOpenedPath(_ int, name string) error {
+	return ensurePathError(errors.New("path verification after opening is not used on macOS"), "openat", name)
+}
 
 // readDirent reads directory entries from fd into buf.
 func readDirent(fd int, buf []byte) (int, error) {
@@ -110,7 +116,7 @@ func (fs *UnixFS) statResolved(rootfd int, rel, name string, st *unix.Stat_t) er
 
 	// The file exists but can not be opened for reading. It can still be
 	// described when it is not a symbolic link, as nothing is followed that
-	// could lead outside of the base. The parent directory is verified like any
+	// could lead outside of the base. The parent directory is resolved like any
 	// other path before the entry is looked at.
 	dir, base := path.Split(rel)
 	if dir == "" {
@@ -128,78 +134,4 @@ func (fs *UnixFS) statResolved(rootfd int, rel, name string, st *unix.Stat_t) er
 		return err
 	}
 	return nil
-}
-
-// checkOpenedPath returns an error if the file opened as fd, without the
-// protection of openat2, resolved to a path outside of the filesystem.
-func (fs *UnixFS) checkOpenedPath(fd int, name string) error {
-	base, err := fs.realBase()
-	if err != nil {
-		return ensurePathError(err, "openat", name)
-	}
-	// Failing to resolve the path, for example because the file was removed
-	// after it was opened, is treated as a failure, never as success.
-	finalPath, err := fdPath(fd)
-	if err != nil {
-		return ensurePathError(err, "openat", name)
-	}
-	if !isPathInside(finalPath, base) {
-		return &PathError{
-			Op:   "openat",
-			Path: name,
-			Err:  ErrBadPathResolution,
-		}
-	}
-	return nil
-}
-
-// realBase returns the canonical path of the filesystem's base path, which is
-// what fdPath reports for descriptors beneath it. It differs from the base path
-// when the base path contains symbolic links, which is the case for the common
-// locations /tmp, /var and /etc as they are links into /private on macOS.
-func (fs *UnixFS) realBase() (string, error) {
-	if p := fs.realBasePath.Load(); p != nil {
-		return *p, nil
-	}
-	fd, err := fs._openat(AT_EMPTY_PATH, fs.basePath, O_DIRECTORY|O_RDONLY, 0)
-	if err != nil {
-		return "", err
-	}
-	defer unix.Close(fd)
-
-	p, err := fdPath(fd)
-	if err != nil {
-		return "", err
-	}
-	p = strings.TrimSuffix(p, "/")
-	fs.realBasePath.Store(&p)
-	return p, nil
-}
-
-// isPathInside reports whether p is base or a path beneath it. The comparison
-// is exact, so it is deliberately case-sensitive even on case-insensitive
-// volumes: both sides come from the kernel, and a mismatch only ever fails
-// closed.
-func isPathInside(p, base string) bool {
-	return strings.HasPrefix(strings.TrimSuffix(p, "/")+"/", base+"/")
-}
-
-// fdPath returns the canonical path of the file open as fd, with symbolic links
-// resolved. It fails for paths longer than PATH_MAX and for files that no longer
-// have a path.
-func fdPath(fd int) (string, error) {
-	var buf [unix.PathMax]byte
-	if _, _, errno := unix.Syscall(unix.SYS_FCNTL, uintptr(fd), uintptr(unix.F_GETPATH), uintptr(unsafe.Pointer(&buf[0]))); errno != 0 { //nolint:gosec // F_GETPATH writes the path into the PATH_MAX sized buffer
-		return "", errno
-	}
-	n := bytes.IndexByte(buf[:], 0)
-	if n < 0 {
-		n = len(buf)
-	}
-	return string(buf[:n]), nil
-}
-
-// _openat2 is never used on macOS as UnixFS never enables openat2 there.
-func (fs *UnixFS) _openat2(_ int, name string, _, _ uint64) (int, error) {
-	return -1, ensurePathError(unix.ENOSYS, "openat2", name)
 }

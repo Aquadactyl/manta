@@ -30,11 +30,22 @@ const (
 
 	// utimeOmit leaves a timestamp unchanged when passed to utimensat.
 	utimeOmit = unix.UTIME_OMIT
-
-	// openat2Available reports whether the openat2 syscall can exist on this
-	// platform.
-	openat2Available = true
 )
+
+// normalizeOpenat2 returns whether paths are resolved with openat2. On Linux
+// that is whatever was asked for, apart from tests that exercise the resolver of
+// other platforms.
+func normalizeOpenat2(use bool) bool {
+	return use || forceUserspaceResolve
+}
+
+// openBeneath opens name beneath dirfd without leaving it.
+func (fs *UnixFS) openBeneath(dirfd int, name string, flag, mode uint64) (int, error) {
+	if forceUserspaceResolve {
+		return fs.userspaceOpenat2(dirfd, name, flag, mode)
+	}
+	return fs._openat2(dirfd, name, flag, mode)
+}
 
 // platformState holds the state UnixFS needs on top of its common fields. Linux
 // verifies paths through openat2 or /proc, neither of which needs any.

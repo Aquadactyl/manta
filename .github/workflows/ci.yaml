@@ -55,6 +55,17 @@ jobs:
         run: |
           go test $(go list ./...)
 
+      # macOS resolves paths with the resolver in internal/ufs/resolve_unix.go
+      # instead of openat2. Running the whole filesystem suite on it here holds it
+      # to everything the kernel's openat2 is.
+      - name: Run filesystem tests on the userspace path resolver
+        if: ${{ matrix.goarch == 'amd64' }}
+        env:
+          CGO_ENABLED: 0
+          UFS_TEST_USERSPACE_RESOLVE: "1"
+        run: |
+          go test -count=1 ./internal/ufs/...
+
       - name: Run tests with race detector and coverage
         if: ${{ matrix.goarch == 'amd64' }}
         env:
@@ -133,14 +144,16 @@ jobs:
           CGO_ENABLED: 0
         run: |
           go test ./internal/... ./config/... ./server/filesystem/...
-          go test -run 'Darwin|MemoryUsed' ./system/...
+          go test -run 'Darwin|MemoryUsed|CPUPercent' ./system/...
+          go test -run 'CheckMount|MountCheck' ./environment/
 
       - name: Run tests with race detector
         env:
           CGO_ENABLED: 1
         run: |
           go test -race ./internal/... ./config/... ./server/filesystem/...
-          go test -race -run 'Darwin|MemoryUsed' ./system/...
+          go test -race -run 'Darwin|MemoryUsed|CPUPercent' ./system/...
+          go test -race -run 'CheckMount|MountCheck' ./environment/
 
       - name: Smoke test the binary
         run: |
