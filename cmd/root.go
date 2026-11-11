@@ -64,7 +64,7 @@ var versionCommand = &cobra.Command{
 	Use:   "version",
 	Short: "Prints the current executable version and exits.",
 	Run: func(cmd *cobra.Command, _ []string) {
-		fmt.Printf("manta v%s\nCopyright © 2018 - %d Dane Everitt & Contributors\n", system.Version, time.Now().Year())
+		fmt.Printf("manta %s\nCopyright © 2018 - %d Dane Everitt & Contributors\n", system.Version, time.Now().Year())
 	},
 }
 

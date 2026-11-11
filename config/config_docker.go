@@ -20,6 +20,7 @@ type dockerNetworkInterfaces struct {
 	V6 struct {
 		Subnet  string `default:"fdba:17c8:6c94::/64"`
 		Gateway string `default:"fdba:17c8:6c94::1011"`
+		Enabled bool   `default:"true"`
 	}
 }
 
@@ -129,6 +130,11 @@ type DockerConfiguration struct {
 		Type   string            `default:"local" json:"type" yaml:"type"`
 		Config map[string]string `default:"{\"max-size\":\"5m\",\"max-file\":\"1\",\"compress\":\"false\",\"mode\":\"non-blocking\"}" json:"config" yaml:"config"`
 	} `json:"log_config" yaml:"log_config"`
+
+
+	// ImagePullPolicy controls when images are pulled before a container is created.
+	// Always: pull every time. IfNotPresent: pull only if missing locally. Never: require a local image.
+	ImagePullPolicy ImagePullPolicy `default:"Always" json:"image_pull_policy" yaml:"image_pull_policy"`
 }
 
 // CpuPeriodMicroseconds returns the configured CFS period clamped to the range
@@ -313,3 +319,12 @@ func (o Overhead) GetMultiplier(memoryLimit int64) float64 {
 
 	return o.DefaultMultiplier
 }
+
+// ImagePullPolicy controls when wings should pull a container image
+type ImagePullPolicy string
+
+const (
+	ImagePullPolicyAlways       ImagePullPolicy = "Always"
+	ImagePullPolicyIfNotPresent ImagePullPolicy = "IfNotPresent"
+	ImagePullPolicyNever        ImagePullPolicy = "Never"
+)

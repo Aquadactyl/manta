@@ -223,21 +223,17 @@ func TestS3BackupOperations(t *testing.T) {
 }
 
 func TestS3FileUploaderErrors(t *testing.T) {
-	// Reader closer
-	r := Reader{Reader: bytes.NewReader([]byte("test"))}
-	assert.NoError(t, r.Close())
-
 	// S3 mock returning 400 error
 	errServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 	}))
 	defer errServer.Close()
 
-	uploader := newS3FileUploader(io.NopCloser(bytes.NewReader([]byte("data"))))
+	uploader := newS3FileUploader(bytes.NewReader([]byte("data")))
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
-	_, err := uploader.uploadPart(ctx, errServer.URL+"/part", 4)
+	_, err := uploader.uploadPart(ctx, errServer.URL+"/part", 0, 4)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "400")
 }
