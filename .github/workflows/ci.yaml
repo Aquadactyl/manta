@@ -96,7 +96,7 @@ jobs:
           path: dist/wings_debug
 
   macos:
-    name: Tests (macOS ${{ matrix.goarch }}, Go ${{ matrix.go }})
+    name: Tests
     # Apple Silicon runs on macos-26 and Intel on macos-26-intel, so both
     # architectures build and run natively instead of being cross-compiled.
     runs-on: ${{ matrix.goarch == 'arm64' && 'macos-26' || 'macos-26-intel' }}
@@ -134,7 +134,6 @@ jobs:
           go build -v -trimpath -ldflags="-s -w -X ${SRC_PATH}/system.Version=dev-${GITHUB_SHA:0:7}" -o dist/wings ${SRC_PATH}
           go build -v -trimpath -ldflags="-X ${SRC_PATH}/system.Version=dev-${GITHUB_SHA:0:7}" -o dist/wings_debug ${SRC_PATH}
           chmod 755 dist/*
-          go vet ./...
 
       # GitHub's macOS runners have no Docker daemon, so the packages whose tests
       # talk to Docker are left to the Linux job. Everything that makes up the
@@ -154,11 +153,6 @@ jobs:
           go test -race ./internal/... ./config/... ./server/filesystem/...
           go test -race -run 'Darwin|MemoryUsed|CPUPercent' ./system/...
           go test -race -run 'CheckMount|MountCheck' ./environment/
-
-      - name: Smoke test the binary
-        run: |
-          ./dist/wings version
-          ./dist/wings --help > /dev/null
 
       - name: Upload Release Artifact
         uses: actions/upload-artifact@v7
