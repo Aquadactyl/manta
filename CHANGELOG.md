@@ -37,6 +37,7 @@ This project follows [Semantic Versioning](http://semver.org) guidelines.
 
 ### Fixed
 
+- Fix every installation and reinstallation failing with `install: cannot obtain installation lock`. Since v0.2-beta `Install` and `Reinstall` set the installing state before starting the installation process, which then could not take the lock that was already held. The server is now marked as busy for the whole installation through a separate flag, so power actions are still refused while it stops, syncs and installs, and the installing state stays the lock of the installation process alone. A second installation that begins while one is running is rejected.
 - Run the descriptor leak regression test on every Unix platform by counting descriptors with `fcntl` instead of reading `/proc/self/fd`.
 - Fix S3 backup part uploads sending a truncated body when a retry was needed. Every attempt now reads the part again from its own offset in the file, where a retry used to continue with what was left of the body of the failed attempt.
 - Report a failure to notify the Panel of a successful backup with its own error, instead of returning an unrelated earlier error value.

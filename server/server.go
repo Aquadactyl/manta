@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 
 	"emperror.dev/errors"
 	"github.com/apex/log"
@@ -64,6 +65,11 @@ type Server struct {
 	installing   *system.AtomicBool
 	transferring *system.AtomicBool
 	restoring    *system.AtomicBool
+
+	// Set for the whole of an installation, including the work done before the
+	// installer container runs. Unlike installing it is not the lock of the
+	// installation process, see beginInstall.
+	installPending atomic.Bool
 
 	// The console throttler instance used to control outputs.
 	throttler    *ConsoleThrottle

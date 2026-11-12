@@ -33,9 +33,31 @@ import (
 // Pass true as the first argument in order to execute a server sync before the
 // process to ensure the latest information is used.
 func (s *Server) Install() error {
-	s.SetInstalling(true)
-	defer s.SetInstalling(false)
+	release, err := s.beginInstall()
+	if err != nil {
+		return err
+	}
+	defer release()
+
 	return s.install(false)
+}
+
+// beginInstall marks the server as busy for the whole installation, including
+// the work done before the installer container runs, such as stopping the server
+// and syncing it with the Panel, so that power actions are refused while it
+// happens. It cancels the open SFTP sessions of the server and fails if another
+// installation has already begun.
+//
+// It deliberately does not take the installing state. That state is the lock of
+// InstallationProcess.Run, which fails when it is already held, so holding it
+// here would make every installation fail.
+func (s *Server) beginInstall() (func(), error) {
+	if !s.installPending.CompareAndSwap(false, true) {
+		return nil, errors.New("install: cannot obtain installation lock")
+	}
+	s.Sftp().CancelAll()
+
+	return func() { s.installPending.Store(false) }, nil
 }
 
 func (s *Server) install(reinstall bool) error {
@@ -82,8 +104,11 @@ func (s *Server) install(reinstall bool) error {
 // for the server egg. This does not touch any existing files for the server,
 // other than what the script modifies.
 func (s *Server) Reinstall() error {
-	s.SetInstalling(true)
-	defer s.SetInstalling(false)
+	release, err := s.beginInstall()
+	if err != nil {
+		return err
+	}
+	defer release()
 
 	if s.Environment.State() != environment.ProcessOfflineState {
 		s.Log().Debug("waiting for server instance to enter a stopped state")
@@ -144,10 +169,10 @@ func NewInstallationProcess(s *Server, script *remote.InstallationScript) (*Inst
 	return proc, nil
 }
 
-// IsInstalling returns if the server is actively running the installation
-// process by checking the status of the installer lock.
+// IsInstalling returns if the server is installing, either running the
+// installation process, which holds the installer lock, or preparing for it.
 func (s *Server) IsInstalling() bool {
-	return s.installing.Load()
+	return s.installing.Load() || s.installPending.Load()
 }
 
 func (s *Server) SetInstalling(state bool) {
