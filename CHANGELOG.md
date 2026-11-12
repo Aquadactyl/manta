@@ -18,6 +18,9 @@ This project follows [Semantic Versioning](http://semver.org) guidelines.
 - Add a launchd LaunchAgent (`macos/uk.aquadactyl.manta.plist`) to start Manta at login and restart it if it stops, and a LaunchDaemon (`macos/uk.aquadactyl.manta.daemon.plist`) that starts it at boot as an ordinary user.
 - Add a startup check on macOS (`docker.mount_check`, on by default) that runs a short container as the server user to find out whether the data directory is shared with the Docker runtime and writable, and says what to change when it is not, for example for the read-only home directory mount of Colima.
 - Discover the Docker socket on macOS when `DOCKER_HOST` is unset and `/var/run/docker.sock` is missing, checking Docker Desktop, OrbStack, Colima and Rancher Desktop in order.
+- Add `docker.image_pull_policy` to control when images are pulled for server containers and installation containers. `Always` (the default) keeps the current behavior of pulling every time and carrying on with a local copy if the pull fails, `IfNotPresent` pulls only when no local image has that exact tag, and `Never` fails with a clear error when the image is not present locally. Images prefixed with `~` are never pulled, as before.
+- Add `docker.network.interfaces.v6.enabled` (default `true`) to turn IPv6 off on the Docker network Manta creates. IPv6 was always enabled before. It applies when the network is created, an existing network is left as it is.
+- Take `allowed_mounts` from the Panel response when running `wings configure`. The data directory stays local, so a stale daemon base in the Panel can not move existing servers.
 
 ### Changed
 
@@ -27,10 +30,17 @@ This project follows [Semantic Versioning](http://semver.org) guidelines.
 - Detect the system timezone on macOS from `/etc/localtime`.
 - Create the directory of the configuration file when it is missing before writing it.
 - Skip the Linux only CPU burst cgroup update on other platforms instead of logging a warning for every container.
+- Handle the SFTP sessions of a connection concurrently instead of one after another, and keep the connection open until all of them have finished. A failing session is logged and no longer ends the others.
+- Print the version as `manta <version>` from `wings version`, without a second `v` in front of a version that already has one.
+- Return an error from the configuration file parser for an unknown parser type instead of silently doing nothing.
+- Stop building the JWT signer from an empty token in `config.Set`, and clear it when the token is removed.
 
 ### Fixed
 
 - Run the descriptor leak regression test on every Unix platform by counting descriptors with `fcntl` instead of reading `/proc/self/fd`.
+- Fix S3 backup part uploads sending a truncated body when a retry was needed. Every attempt now reads the part again from its own offset in the file, where a retry used to continue with what was left of the body of the failed attempt.
+- Report a failure to notify the Panel of a successful backup with its own error, instead of returning an unrelated earlier error value.
+- Honor exclusive create requests (`SSH_FXF_CREAT` with `SSH_FXF_EXCL`) over SFTP, so they fail with an error when the file exists instead of truncating it.
 
 ## v0.3-beta
 
