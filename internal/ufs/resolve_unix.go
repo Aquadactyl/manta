@@ -166,6 +166,10 @@ func userspaceOpenBeneath(dirfd int, name string, flag int, mode uint32) (int, e
 			return fd, nil
 		}
 		if !userNoFollow && (err == unix.ELOOP || err == unix.ENOTDIR) {
+			if flag&unix.O_CREAT != 0 && flag&unix.O_EXCL != 0 {
+				closeOwned()
+				return -1, unix.EEXIST
+			}
 			isLink, lerr := followLink(comp)
 			if lerr != nil {
 				closeOwned()
