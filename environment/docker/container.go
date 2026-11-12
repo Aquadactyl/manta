@@ -552,20 +552,15 @@ func (e *Environment) ensureImageExists(img string) error {
 	return nil
 }
 
-// ImageExistsLocally checks if the provided image tag already exists locally
+// ImageExistsLocally checks if the provided image reference already exists locally.
 func ImageExistsLocally(ctx context.Context, client *client.Client, img string) (bool, error) {
-	images, err := client.ImageList(ctx, image.ListOptions{})
-	if err != nil {
-		return false, errors.Wrap(err, "environment/docker: failed to list images")
+	if _, err := client.ImageInspect(ctx, img); err == nil {
+		return true, nil
+	} else if cerrdefs.IsNotFound(err) {
+		return false, nil
+	} else {
+		return false, errors.Wrap(err, "environment/docker: failed to inspect image")
 	}
-	for _, img2 := range images {
-		for _, t := range img2.RepoTags {
-			if t == img {
-				return true, nil
-			}
-		}
-	}
-	return false, nil
 }
 
 func (e *Environment) convertMounts() []mount.Mount {
