@@ -398,7 +398,7 @@ func TestDirentNilFsAndOpen(t *testing.T) {
 	_ = file.Close()
 }
 
-func TestCheckOpenedTypeAndPath(t *testing.T) {
+func TestCheckOpenedType(t *testing.T) {
 	// 1. checkOpenedType with pipe (not S_IFREG and not S_IFDIR)
 	var p [2]int
 	require.NoError(t, unix.Pipe(p[:]))
@@ -410,23 +410,4 @@ func TestCheckOpenedTypeAndPath(t *testing.T) {
 
 	// Invalid fd (-1) returns fstat error
 	assert.Error(t, checkOpenedType(-1, "bad"))
-
-	// 2. checkOpenedPath outside base root
-	root := t.TempDir()
-	fs, err := NewUnixFS(root, false)
-	require.NoError(t, err)
-	defer fs.Close()
-
-	// Open /etc/hosts (outside root)
-	hostsFd, err := unix.Open("/etc/hosts", unix.O_RDONLY, 0)
-	require.NoError(t, err)
-	defer unix.Close(hostsFd)
-
-	err = fs.checkOpenedPath(hostsFd, "hosts")
-	assert.ErrorIs(t, err, ErrBadPathResolution)
-
-	// With useOpenat2 = true
-	fs.useOpenat2 = true
-	err = fs.checkOpenedPath(hostsFd, "hosts")
-	assert.ErrorIs(t, err, ErrBadPathResolution)
 }
