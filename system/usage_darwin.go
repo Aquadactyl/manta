@@ -14,16 +14,16 @@ const HostUsageSupported = true
 
 // ReadResourceUsage returns the host counters.
 //
-// Memory is the physical memory of the Mac and the share of it the kernel
-// reports as available, the same figure the memory pressure graph of Activity
-// Monitor is based on. Disk is the volume holding the server data. CPU is the
+// Memory is the physical memory of the Mac and what is in use, which is added up
+// from the Mach virtual memory counters the way Activity Monitor does it, see
+// memoryUsedFromVMStats. Disk is the volume holding the server data. CPU is the
 // utilization of all CPUs over a 200 ms sample, as on Linux.
 func ReadResourceUsage(ctx context.Context, dataPath string) ResourceUsage {
 	usage := ResourceUsage{SampledAt: time.Now().UTC()}
 
 	if total, err := unix.SysctlUint64("hw.memsize"); err == nil {
-		if free, err := unix.SysctlUint32("kern.memorystatus_level"); err == nil {
-			if used, err := memoryUsedFromFreePercent(total, free); err == nil {
+		if vm, pageSize, err := readVMStats(); err == nil {
+			if used, err := memoryUsedFromVMStats(vm, pageSize, total); err == nil {
 				usage.MemoryTotalBytes, usage.MemoryUsedBytes = &total, &used
 			}
 		}
