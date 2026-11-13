@@ -169,12 +169,17 @@ func TestConfigureSystemDirectoriesAndTimezone(t *testing.T) {
 	// Symlinked data directory
 	realData := filepath.Join(tmp, "real_data")
 	require.NoError(t, os.MkdirAll(realData, 0700))
+	// The directory is resolved to the path it really has, and the temporary
+	// directory of the system can itself be a link: /var is one to /private/var
+	// on macOS.
+	resolvedData, err := filepath.EvalSymlinks(realData)
+	require.NoError(t, err)
 	symData := filepath.Join(tmp, "sym_data")
 	require.NoError(t, os.Symlink(realData, symData))
 	cfg.System.Data = symData
 	Set(cfg)
 	require.NoError(t, ConfigureDirectories())
-	assert.Equal(t, realData, Get().System.Data)
+	assert.Equal(t, resolvedData, Get().System.Data)
 
 	// ConfigurePasswd enabled
 	require.NoError(t, ConfigurePasswd())

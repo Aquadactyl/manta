@@ -251,3 +251,39 @@ func TestForceUserspaceResolveIsHonored(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, fs.useOpenat2, "the resolver is used for every filesystem")
 }
+
+// A link out of the base is refused whichever way paths are resolved, with the
+// error for what it is in the path: a bad resolution when something is opened
+// through it, and "not a directory" when it is itself the directory that is
+// opened, as it is never followed there. Both resolvers have to agree on this.
+func TestLinkOutOfTheBaseInAPath(t *testing.T) {
+	for _, userspace := range []bool{false, true} {
+		forceUserspaceResolve = userspace
+		defer func() { forceUserspaceResolve = false }()
+
+		root := t.TempDir()
+		outside := t.TempDir()
+		require.NoError(t, os.MkdirAll(filepath.Join(outside, "sub"), 0o755))
+		require.NoError(t, os.WriteFile(filepath.Join(outside, "secret.txt"), []byte("secret"), 0o644))
+		require.NoError(t, os.WriteFile(filepath.Join(outside, "sub", "secret.txt"), []byte("secret"), 0o644))
+
+		fs, err := NewUnixFS(root, false)
+		require.NoError(t, err)
+		require.NoError(t, fs.Mkdir("d", 0o755))
+		require.NoError(t, fs.Symlink(outside, "d/escape"))
+
+		// The link is in the middle of the directory that holds the file.
+		_, err = fs.Open("d/escape/sub/secret.txt")
+		assert.ErrorIs(t, err, ErrBadPathResolution, "userspace=%v", userspace)
+
+		// The link is the directory that holds the file.
+		_, err = fs.Open("d/escape/secret.txt")
+		assert.ErrorIs(t, err, ErrNotDirectory, "userspace=%v", userspace)
+
+		// Nothing was created or changed outside of the base through the link.
+		_, err = fs.Create("d/escape/sub/new.txt")
+		assert.Error(t, err, "userspace=%v", userspace)
+		_, err = os.Stat(filepath.Join(outside, "sub", "new.txt"))
+		assert.ErrorIs(t, err, os.ErrNotExist, "userspace=%v", userspace)
+	}
+}

@@ -143,11 +143,20 @@ func TestIgnore(t *testing.T) {
 				}
 				i, err := compileIgnore(strings.Join(ordinary, "\n"))
 				g.Assert(err).IsNil()
-				start := time.Now()
-				for n := 0; n < 20; n++ {
-					i.MatchesPath("plugins/Essentials/userdata/0123456789abcdef.yml")
+
+				// Take the fastest of several rounds. A single round measures the
+				// load of the machine as much as the matching, which shared CI
+				// runners, macOS ones especially, have plenty of, and the fastest
+				// round is the one that was disturbed least.
+				c := time.Duration(1<<63 - 1)
+				for round := 0; round < 7; round++ {
+					start := time.Now()
+					for n := 0; n < 20; n++ {
+						i.MatchesPath("plugins/Essentials/userdata/0123456789abcdef.yml")
+					}
+					c = min(c, time.Since(start)/20)
 				}
-				if c, budget := time.Since(start)/20, newIgnoreMatchBudget(len(ordinary)).perFile; c > budget {
+				if budget := newIgnoreMatchBudget(len(ordinary)).perFile; c > budget {
 					g.Failf("the longest ordinary list costs %s per file, over its budget of %s", c, budget)
 				}
 			}

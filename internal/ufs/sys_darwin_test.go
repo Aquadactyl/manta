@@ -66,11 +66,12 @@ func TestDarwinAlwaysResolvesBeneath(t *testing.T) {
 }
 
 // A path longer than PATH_MAX is reachable, as nothing needs the whole path at
-// once, and a link out of the base is still refused.
+// once, and a link out of the base is still refused deep inside of it.
 func TestDarwinDeepPaths(t *testing.T) {
 	root := t.TempDir()
 	outside := t.TempDir()
-	require.NoError(t, os.WriteFile(filepath.Join(outside, "secret.txt"), []byte("secret"), 0o644))
+	require.NoError(t, os.MkdirAll(filepath.Join(outside, "sub"), 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(outside, "sub", "secret.txt"), []byte("secret"), 0o644))
 
 	fs, err := NewUnixFS(root, false)
 	require.NoError(t, err)
@@ -96,9 +97,14 @@ func TestDarwinDeepPaths(t *testing.T) {
 	_ = f.Close()
 	assert.Equal(t, "deep", string(b))
 
+	// A link out of the base in the middle of the path is a bad resolution.
 	require.NoError(t, fs.Symlink(outside, filepath.Join(rel, "escape")))
-	_, err = fs.Open(filepath.Join(rel, "escape", "secret.txt"))
+	_, err = fs.Open(filepath.Join(rel, "escape", "sub", "secret.txt"))
 	assert.ErrorIs(t, err, ErrBadPathResolution)
+
+	// As the last directory of the path it is not followed at all.
+	_, err = fs.Open(filepath.Join(rel, "escape", "secret.txt"))
+	assert.Error(t, err)
 }
 
 // The spelling of the base does not matter, which it did when paths were
