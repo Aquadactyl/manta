@@ -315,7 +315,11 @@ func TestConfigMoreOperations(t *testing.T) {
 
 	// 10. getSystemName and UseOpenat2
 	name, _ := getSystemName()
-	assert.NotEmpty(t, name)
+	if runtime.GOOS != "darwin" {
+		// macOS has no /etc/os-release, and does not need the name, as it never
+		// creates a user.
+		assert.NotEmpty(t, name)
+	}
 	_ = UseOpenat2()
 
 	// 11. StatesPath and LogRotation
@@ -683,14 +687,23 @@ func TestConfigRemainingBranches(t *testing.T) {
 	uCfg.System.Username = "nonexistent_wings_test_user_999"
 	Set(&uCfg)
 
-	// useradd fails
 	useraddScript := filepath.Join(binDir, "useradd")
 	require.NoError(t, os.WriteFile(useraddScript, []byte("#!/bin/sh\nexit 1\n"), 0o755))
-	assert.Error(t, EnsurePterodactylUser())
+	if runtime.GOOS == "darwin" {
+		// macOS runs servers as the user Manta runs as and never creates one, so
+		// neither a missing user nor a failing useradd matter.
+		current, err := user.Current()
+		require.NoError(t, err)
+		assert.NoError(t, EnsurePterodactylUser())
+		assert.Equal(t, current.Username, Get().System.Username)
+	} else {
+		// useradd fails
+		assert.Error(t, EnsurePterodactylUser())
 
-	// useradd succeeds (exit 0) but user still doesn't exist on lookup
-	require.NoError(t, os.WriteFile(useraddScript, []byte("#!/bin/sh\nexit 0\n"), 0o755))
-	assert.Error(t, EnsurePterodactylUser())
+		// useradd succeeds (exit 0) but user still doesn't exist on lookup
+		require.NoError(t, os.WriteFile(useraddScript, []byte("#!/bin/sh\nexit 0\n"), 0o755))
+		assert.Error(t, EnsurePterodactylUser())
+	}
 
 	// 6. Docker registry helpers edge cases
 	dCfg := DockerConfiguration{}
@@ -708,19 +721,29 @@ func TestConfigRemainingBranches(t *testing.T) {
 }
 
 func TestUseOpenat2Modes(t *testing.T) {
-	c := Get()
-	origMode := c.System.OpenatMode
+	// Work on a copy, and do not rely on another test having set the global
+	// configuration, which it has not when this one is run on its own.
+	mu.RLock()
+	orig := _config
+	mu.RUnlock()
+	c := &Configuration{}
+	if orig != nil {
+		cp := *orig
+		c = &cp
+	}
 	defer func() {
-		c.System.OpenatMode = origMode
-		Set(c)
+		if orig != nil {
+			Set(orig)
+		}
+		openat2Set.Store(false)
 	}()
 
-	// mode: openat2
+	// mode: openat2, which only platforms that have it can honor
 	c.System.OpenatMode = "openat2"
 	Set(c)
 	openat2Set.Store(false)
-	assert.True(t, UseOpenat2())
-	assert.True(t, UseOpenat2()) // cached
+	assert.Equal(t, openat2Supported, UseOpenat2())
+	assert.Equal(t, openat2Supported, UseOpenat2()) // cached
 
 	// mode: openat
 	c.System.OpenatMode = "openat"
@@ -733,5 +756,9 @@ func TestUseOpenat2Modes(t *testing.T) {
 	c.System.OpenatMode = ""
 	Set(c)
 	openat2Set.Store(false)
-	_ = UseOpenat2()
+	got := UseOpenat2()
+	if !openat2Supported {
+		// The kernel is only probed on Linux, which may be too old for it.
+		assert.False(t, got)
+	}
 }
