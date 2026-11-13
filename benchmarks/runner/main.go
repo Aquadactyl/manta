@@ -59,6 +59,8 @@ type harness struct {
 	mu     sync.Mutex
 }
 
+var lifecycleDelay = time.Sleep
+
 func must(err error) {
 	if err != nil {
 		panic(err)
@@ -251,7 +253,7 @@ func (h *harness) lifecycle() {
 					h.power(n, s, "stop")
 				}
 				started := h.power(n, s, "start")
-				time.Sleep(2 * time.Second)
+				lifecycleDelay(2 * time.Second)
 				stopped := h.power(n, s, "stop")
 				h.add(map[string]any{"type": "measurement", "test": "lifecycle", "variant": k, "game": kind, "round": round, "cold": round == 0, "start_ms": float64(started.Microseconds()) / 1000, "stop_ms": float64(stopped.Microseconds()) / 1000})
 			}

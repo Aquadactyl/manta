@@ -2,14 +2,86 @@ package websocket
 
 import (
 	"context"
+	"net"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/gbrlsnchs/jwt/v3"
+	"github.com/stretchr/testify/require"
 
 	"github.com/pterodactyl/wings/server"
 )
+
+func TestListenForExpirationMessages(t *testing.T) {
+	oldInterval := expirationPollInterval
+	expirationPollInterval = 5 * time.Millisecond
+	t.Cleanup(func() { expirationPollInterval = oldInterval })
+
+	for _, tc := range []struct {
+		name string
+		exp  time.Duration
+		want Event
+	}{
+		{name: "expiring", exp: 30 * time.Second, want: TokenExpiringEvent},
+		{name: "expired", exp: -time.Second, want: JwtErrorEvent},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			h, _, client := setupHandlerClient(t)
+			_, payload := signToken(t, serverUuid, PermissionConnect)
+			payload.ExpirationTime = jwt.NumericDate(time.Now().Add(tc.exp))
+			h.setJwt(payload)
+
+			ctx, cancel := context.WithCancel(context.Background())
+			done := make(chan struct{})
+			go func() {
+				defer close(done)
+				h.listenForExpiration(ctx)
+			}()
+			t.Cleanup(func() {
+				cancel()
+				select {
+				case <-done:
+				case <-time.After(time.Second):
+					t.Error("expiration listener did not stop")
+				}
+			})
+
+			require.NoError(t, client.SetReadDeadline(time.Now().Add(time.Second)))
+			var message Message
+			require.NoError(t, client.ReadJSON(&message))
+			require.Equal(t, tc.want, message.Event)
+		})
+	}
+}
+
+func TestListenForExpirationDoesNothingWithoutToken(t *testing.T) {
+	oldInterval := expirationPollInterval
+	expirationPollInterval = 5 * time.Millisecond
+	t.Cleanup(func() { expirationPollInterval = oldInterval })
+
+	h, _, client := setupHandlerClient(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		h.listenForExpiration(ctx)
+	}()
+	time.Sleep(20 * time.Millisecond)
+	cancel()
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("expiration listener did not stop")
+	}
+	require.NoError(t, client.SetReadDeadline(time.Now().Add(20*time.Millisecond)))
+	var message Message
+	err := client.ReadJSON(&message)
+	require.Error(t, err)
+	var netErr net.Error
+	require.ErrorAs(t, err, &netErr)
+	require.True(t, netErr.Timeout())
+}
 
 // Exercise the bus, listener, authorization gate and actual WebSocket wire.
 func TestBusEventsRetainWebsocketAuthorization(t *testing.T) {

@@ -12,6 +12,8 @@ import (
 	"github.com/pterodactyl/wings/server"
 )
 
+var expirationPollInterval = 30 * time.Second
+
 // RegisterListenerEvents will setup the server event listeners and expiration
 // timers. This is only triggered on first authentication with the websocket,
 // reconnections will not call it.
@@ -44,7 +46,7 @@ func (h *Handler) registerListenerEvents(ctx context.Context) {
 func (h *Handler) listenForExpiration(ctx context.Context) {
 	// Make a ticker and completion channel that is used to continuously poll the
 	// JWT stored in the session to send events to the socket when it is expiring.
-	ticker := time.NewTicker(time.Second * 30)
+	ticker := time.NewTicker(expirationPollInterval)
 	defer ticker.Stop()
 
 	for {

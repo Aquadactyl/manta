@@ -17,6 +17,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/assert"
@@ -241,6 +242,70 @@ func TestHarnessStartAll(t *testing.T) {
 
 	h.startAll()
 	assert.Equal(t, "running", currentState)
+}
+
+func TestHarnessLifecycle(t *testing.T) {
+	oldDelay := lifecycleDelay
+	lifecycleDelay = func(time.Duration) {}
+	t.Cleanup(func() { lifecycleDelay = oldDelay })
+
+	states := map[string]string{
+		"manta-paper": "running", "manta-bedrock": "offline",
+		"wings-paper": "offline", "wings-bedrock": "offline",
+	}
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
+		if len(parts) < 3 || parts[0] != "api" || parts[1] != "servers" {
+			http.NotFound(w, r)
+			return
+		}
+		id := parts[2]
+		switch {
+		case len(parts) == 3 && r.Method == http.MethodGet:
+			_ = json.NewEncoder(w).Encode(map[string]string{"state": states[id]})
+		case len(parts) == 4 && parts[3] == "power" && r.Method == http.MethodPost:
+			var body struct {
+				Action string `json:"action"`
+			}
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			if body.Action == "start" {
+				states[id] = "running"
+			} else {
+				states[id] = "offline"
+			}
+			w.WriteHeader(http.StatusAccepted)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer ts.Close()
+
+	var nodes = make(map[string]node)
+	for _, variant := range []string{"manta", "wings"} {
+		nodes[variant] = node{
+			Base:  ts.URL,
+			Token: "token",
+			Servers: []server{
+				{UUID: variant + "-paper", Name: "Benchmark Paper", Kind: "paper"},
+				{UUID: variant + "-bedrock", Name: "Benchmark Bedrock", Kind: "bedrock"},
+			},
+		}
+	}
+	h := &harness{
+		manifest: manifest{Nodes: nodes},
+		http:     ts.Client(),
+		output:   filepath.Join(t.TempDir(), "lifecycle.json"),
+	}
+
+	h.lifecycle()
+
+	assert.Len(t, h.rows, 16)
+	for id, state := range states {
+		assert.Equal(t, "running", state, id)
+	}
 }
 
 func TestHarnessMetadata(t *testing.T) {

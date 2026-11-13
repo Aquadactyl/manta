@@ -12,7 +12,7 @@ on:
 jobs:
   tests:
     name: Tests
-    runs-on: ubuntu-24.04
+    runs-on: ${{ matrix.goarch == 'arm64' && 'ubuntu-26.04-arm' || 'ubuntu-26.04' }}
     permissions:
       contents: read
     strategy:
@@ -49,7 +49,6 @@ jobs:
           chmod 755 dist/*
 
       - name: Run tests
-        if: ${{ matrix.goarch == 'amd64' }}
         env:
           CGO_ENABLED: 0
         run: |
@@ -59,7 +58,6 @@ jobs:
       # instead of openat2. Running the whole filesystem suite on it here holds it
       # to everything the kernel's openat2 is.
       - name: Run filesystem tests on the userspace path resolver
-        if: ${{ matrix.goarch == 'amd64' }}
         env:
           CGO_ENABLED: 0
           UFS_TEST_USERSPACE_RESOLVE: "1"
@@ -67,7 +65,6 @@ jobs:
           go test -count=1 ./internal/ufs/...
 
       - name: Run tests with race detector and coverage
-        if: ${{ matrix.goarch == 'amd64' }}
         env:
           CGO_ENABLED: 1
         run: |
