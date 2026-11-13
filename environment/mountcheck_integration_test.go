@@ -49,8 +49,7 @@ func TestCheckDataMountLogsOutcomes(t *testing.T) {
 			dir := t.TempDir()
 			t.Setenv("DOCKER_HOST", "")
 			markerWritten := false
-			var srv *httptest.Server
-			srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				path := strings.TrimPrefix(r.URL.Path, "/v1.51")
 				switch {
 				case path == "/_ping":

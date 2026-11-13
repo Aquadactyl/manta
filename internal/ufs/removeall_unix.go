@@ -27,6 +27,11 @@ type unixFS interface {
 }
 
 var removeAllFstatat = unix.Fstatat
+var removeAllContentsFrom func(unixFS, File, string) error
+
+func init() {
+	removeAllContentsFrom = removeContentsFrom
+}
 
 func (fs *UnixFS) removeAll(path string) error {
 	return removeAll(fs, path)
@@ -223,7 +228,7 @@ func removeAllFrom(fs unixFS, parent File, base string) error {
 	//
 	// It was split out of this function to allow the deletion of the
 	// contents of a directory, without deleting the directory itself.
-	recurseErr := removeContentsFrom(fs, parent, base)
+	recurseErr := removeAllContentsFrom(fs, parent, base)
 
 	// Remove the directory itself.
 	unlinkErr := fs.unlinkat(parentFd, base, AT_REMOVEDIR)

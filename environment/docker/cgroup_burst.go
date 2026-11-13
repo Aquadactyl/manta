@@ -24,6 +24,9 @@ var cgroupV2 = sync.OnceValue(func() bool {
 
 var burstWarning sync.Once
 
+var readCgroupFile = os.ReadFile
+var writeCgroupBurstFile = os.WriteFile
+
 // cpuBurstMicroseconds returns the burst allowance in microseconds for the given
 // CFS quota and configured percentage. The kernel rejects a burst larger than the
 // quota, so the value is clamped to it.
@@ -77,7 +80,7 @@ func writeCpuBurst(l *log.Entry, pid int, burst int64) {
 }
 
 func writeBurstFile(pid int, burst int64) error {
-	b, err := os.ReadFile("/proc/" + strconv.Itoa(pid) + "/cgroup")
+	b, err := readCgroupFile("/proc/" + strconv.Itoa(pid) + "/cgroup")
 	if err != nil {
 		return err
 	}
@@ -85,7 +88,7 @@ func writeBurstFile(pid int, burst int64) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(f, []byte(strconv.FormatInt(burst, 10)), 0o644) //nolint:gosec // an existing cgroupfs file, the mode is never applied
+	return writeCgroupBurstFile(f, []byte(strconv.FormatInt(burst, 10)), 0o644) //nolint:gosec // an existing cgroupfs file, the mode is never applied
 }
 
 // logBurstFailure warns the first time a burst cannot be applied and stays at

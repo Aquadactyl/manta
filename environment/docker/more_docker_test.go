@@ -4,18 +4,26 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"net/http/httptest"
+	"os"
+	"strings"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/apex/log"
 	cerrdefs "github.com/containerd/errdefs"
+	containertypes "github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/client"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/pterodactyl/wings/config"
 	"github.com/pterodactyl/wings/environment"
+	"github.com/pterodactyl/wings/events"
 	"github.com/pterodactyl/wings/remote"
+	"github.com/pterodactyl/wings/system"
 )
 
 func TestDockerHttpStatusErrorAndApi(t *testing.T) {
@@ -403,6 +411,245 @@ func TestDockerCgroupBurstMore(t *testing.T) {
 	v2Path, err := resolveCgroupCpuFile("0::/docker.slice/docker-123.scope", true)
 	assert.NoError(t, err)
 	assert.Equal(t, "/sys/fs/cgroup/docker.slice/docker-123.scope/cpu.max.burst", v2Path)
+}
+
+func TestWriteBurstFileReadAndWritePaths(t *testing.T) {
+	oldRead, oldWrite := readCgroupFile, writeCgroupBurstFile
+	t.Cleanup(func() {
+		readCgroupFile = oldRead
+		writeCgroupBurstFile = oldWrite
+	})
+
+	readErr := errors.New("cannot read cgroup")
+	readCgroupFile = func(string) ([]byte, error) { return nil, readErr }
+	require.ErrorIs(t, writeBurstFile(123, 500), readErr)
+
+	readCgroupFile = func(string) ([]byte, error) { return []byte("invalid cgroup data"), nil }
+	require.Error(t, writeBurstFile(123, 500))
+
+	v2 := cgroupV2()
+	procCgroup := "1:cpu:/docker/test\n"
+	expectedPath := "/sys/fs/cgroup/cpu/docker/test/cpu.cfs_burst_us"
+	if v2 {
+		procCgroup = "0::/docker/test\n"
+		expectedPath = "/sys/fs/cgroup/docker/test/cpu.max.burst"
+	}
+	readCgroupFile = func(path string) ([]byte, error) {
+		assert.Equal(t, "/proc/123/cgroup", path)
+		return []byte(procCgroup), nil
+	}
+	writeCalled := false
+	writeCgroupBurstFile = func(path string, content []byte, mode os.FileMode) error {
+		writeCalled = true
+		assert.Equal(t, expectedPath, path)
+		assert.Equal(t, []byte("500"), content)
+		assert.Equal(t, os.FileMode(0o644), mode)
+		return nil
+	}
+	require.NoError(t, writeBurstFile(123, 500))
+	assert.True(t, writeCalled)
+}
+
+func TestSetCpuBurstWithInspectedContainer(t *testing.T) {
+	requestedPath := make(chan string, 1)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestedPath <- r.URL.Path
+		_, _ = w.Write([]byte(`{"State":{"Pid":1}}`))
+	}))
+	defer server.Close()
+
+	cli, err := client.NewClientWithOpts(client.WithHost(server.URL), client.WithVersion("1.51"))
+	require.NoError(t, err)
+	defer cli.Close()
+
+	configuration := &config.Configuration{}
+	configuration.Docker.CpuBurst.Enabled = true
+	configuration.Docker.CpuBurst.Percent = 50
+	config.Set(configuration)
+	SetCpuBurst(context.Background(), cli, "container-id", 1000)
+	require.Contains(t, <-requestedPath, "/containers/container-id/json")
+}
+
+func TestWaitForStopWaitErrorAndForcedTermination(t *testing.T) {
+	config.Set(&config.Configuration{AuthenticationToken: "test-token"})
+	previousCLI, previousFastEnabled := cli, fastEnabled
+	t.Cleanup(func() {
+		o = sync.Once{}
+		cli, fastEnabled = previousCLI, previousFastEnabled
+	})
+	killCalled := false
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case strings.HasSuffix(r.URL.Path, "/containers/container-id/stop"):
+			w.WriteHeader(http.StatusNoContent)
+		case strings.HasSuffix(r.URL.Path, "/containers/container-id/wait"):
+			w.WriteHeader(http.StatusInternalServerError)
+			_, _ = w.Write([]byte(`{"message":"wait failed"}`))
+		case strings.HasSuffix(r.URL.Path, "/containers/container-id/json"):
+			_, _ = w.Write([]byte(`{"State":{"Running":true}}`))
+		case strings.HasSuffix(r.URL.Path, "/containers/container-id/kill"):
+			killCalled = true
+			w.WriteHeader(http.StatusNoContent)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+
+	cli, err := client.NewClientWithOpts(client.WithHost(server.URL), client.WithVersion("1.51"))
+	require.NoError(t, err)
+	defer cli.Close()
+
+	newEnvironment := func() *Environment {
+		return &Environment{
+			Id:      "container-id",
+			meta:    &Metadata{},
+			client:  cli,
+			st:      system.NewAtomicString(environment.ProcessOfflineState),
+			emitter: events.NewBus(),
+		}
+	}
+
+	err = newEnvironment().WaitForStop(context.Background(), time.Second, false)
+	require.ErrorContains(t, err, "wait failed")
+
+	err = newEnvironment().WaitForStop(context.Background(), time.Second, true)
+	require.NoError(t, err)
+	require.True(t, killCalled)
+}
+
+func TestWaitForStopParentCancellationAfterStop(t *testing.T) {
+	config.Set(&config.Configuration{AuthenticationToken: "test-token"})
+	previousCLI, previousFastEnabled := cli, fastEnabled
+	t.Cleanup(func() {
+		o = sync.Once{}
+		cli, fastEnabled = previousCLI, previousFastEnabled
+	})
+	oldWaitForContainer := waitForContainer
+	waitStarted := make(chan struct{}, 2)
+	waitForContainer = func(*client.Client, context.Context, string) (<-chan containertypes.WaitResponse, <-chan error) {
+		waitStarted <- struct{}{}
+		return make(chan containertypes.WaitResponse), make(chan error)
+	}
+	t.Cleanup(func() { waitForContainer = oldWaitForContainer })
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case strings.HasSuffix(r.URL.Path, "/containers/container-id/stop"):
+			w.WriteHeader(http.StatusNoContent)
+		case strings.HasSuffix(r.URL.Path, "/containers/container-id/json"):
+			_, _ = w.Write([]byte(`{"State":{"Running":true}}`))
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+
+	cli, err := client.NewClientWithOpts(client.WithHost(server.URL), client.WithVersion("1.51"))
+	require.NoError(t, err)
+	defer cli.Close()
+	newEnvironment := func() *Environment {
+		return &Environment{
+			Id:      "container-id",
+			meta:    &Metadata{},
+			client:  cli,
+			st:      system.NewAtomicString(environment.ProcessOfflineState),
+			emitter: events.NewBus(),
+		}
+	}
+	for _, terminate := range []bool{false, true} {
+		shouldTerminate := terminate
+		ctx, cancel := context.WithCancel(context.Background())
+		done := make(chan error, 1)
+		go func() { done <- newEnvironment().WaitForStop(ctx, time.Hour, shouldTerminate) }()
+		<-waitStarted
+		cancel()
+		require.ErrorIs(t, <-done, context.Canceled)
+	}
+}
+
+func TestEnsureImageExistsPullPolicies(t *testing.T) {
+	inspectStatus := http.StatusNotFound
+	pullStatus := http.StatusOK
+	pullBody := "{}\n"
+	listStatus := http.StatusOK
+	listBody := "[]"
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasPrefix(r.URL.Path, "/v1.51/images/") && strings.HasSuffix(r.URL.Path, "/json") && r.URL.Path != "/v1.51/images/json" {
+			w.WriteHeader(inspectStatus)
+			if inspectStatus != http.StatusOK {
+				_, _ = w.Write([]byte(`{"message":"image unavailable"}`))
+			} else {
+				_, _ = w.Write([]byte(`{}`))
+			}
+			return
+		}
+		if r.URL.Path == "/v1.51/images/create" {
+			w.WriteHeader(pullStatus)
+			if pullStatus != http.StatusOK {
+				_, _ = w.Write([]byte(`{"message":"pull failed"}`))
+			} else {
+				_, _ = w.Write([]byte(pullBody))
+			}
+			return
+		}
+		if r.URL.Path == "/v1.51/images/json" {
+			w.WriteHeader(listStatus)
+			_, _ = w.Write([]byte(listBody))
+			return
+		}
+		http.NotFound(w, r)
+	}))
+	defer server.Close()
+	cli, err := client.NewClientWithOpts(client.WithHost(server.URL), client.WithVersion("1.51"))
+	require.NoError(t, err)
+	defer cli.Close()
+	e := &Environment{client: cli, emitter: events.NewBus()}
+
+	setPolicy := func(policy config.ImagePullPolicy) {
+		cfg := &config.Configuration{AuthenticationToken: "test-token"}
+		cfg.Docker.ImagePullPolicy = policy
+		config.Set(cfg)
+	}
+
+	setPolicy(config.ImagePullPolicyNever)
+	require.ErrorContains(t, e.ensureImageExists("example.test/image:tag"), "not present locally")
+	inspectStatus = http.StatusOK
+	require.NoError(t, e.ensureImageExists("example.test/image:tag"))
+	inspectStatus = http.StatusInternalServerError
+	require.ErrorContains(t, e.ensureImageExists("example.test/image:tag"), "failed to inspect image")
+
+	setPolicy(config.ImagePullPolicyIfNotPresent)
+	inspectStatus = http.StatusOK
+	require.NoError(t, e.ensureImageExists("example.test/image:tag"))
+	inspectStatus = http.StatusInternalServerError
+	require.ErrorContains(t, e.ensureImageExists("example.test/image:tag"), "failed to inspect image")
+
+	setPolicy(config.ImagePullPolicyAlways)
+	inspectStatus = http.StatusNotFound
+	require.NoError(t, e.ensureImageExists("example.test/image:tag"))
+	pullBody = strings.Repeat("x", 70*1024)
+	require.Error(t, e.ensureImageExists("example.test/image:tag"))
+	pullBody = "{}\n"
+	credentialsConfig := &config.Configuration{AuthenticationToken: "test-token"}
+	credentialsConfig.Docker.Registries = map[string]config.RegistryConfiguration{
+		"example.test": {Username: "user", Password: "password"},
+	}
+	config.Set(credentialsConfig)
+	oldBase64 := registryAuthBase64
+	t.Cleanup(func() { registryAuthBase64 = oldBase64 })
+	registryAuthBase64 = func(*config.RegistryConfiguration) (string, error) {
+		return "", errors.New("auth marshal failed")
+	}
+	require.NoError(t, e.ensureImageExists("example.test/image:tag"))
+
+	pullStatus = http.StatusInternalServerError
+	listStatus = http.StatusInternalServerError
+	require.ErrorContains(t, e.ensureImageExists("example.test/image:tag"), "failed to list images")
+	listStatus = http.StatusOK
+	listBody = "[]"
+	require.ErrorContains(t, e.ensureImageExists("example.test/image:tag"), "failed to pull")
+	listBody = `[{"RepoTags":["example.test/image:tag"]}]`
+	require.NoError(t, e.ensureImageExists("example.test/image:tag"))
 }
 
 func TestDockerRunningContainerOperations(t *testing.T) {

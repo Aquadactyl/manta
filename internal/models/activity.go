@@ -1,6 +1,7 @@
 package models
 
 import (
+	"database/sql"
 	"net"
 	"strings"
 	"time"
@@ -39,17 +40,7 @@ type Activity struct {
 // SetUser sets the current user that performed the action. If an empty string is provided
 // it is cast into a null value when stored.
 func (a Activity) SetUser(u string) *Activity {
-	var ns JsonNullString
-	if u == "" {
-		if err := ns.Scan(nil); err != nil {
-			panic(err)
-		}
-	} else {
-		if err := ns.Scan(u); err != nil {
-			panic(err)
-		}
-	}
-	a.User = ns
+	a.User = JsonNullString{NullString: sql.NullString{String: u, Valid: u != ""}}
 	return &a
 }
 

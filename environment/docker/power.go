@@ -10,10 +10,15 @@ import (
 	"github.com/apex/log"
 	cerrdefs "github.com/containerd/errdefs"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/client"
 
 	"github.com/pterodactyl/wings/environment"
 	"github.com/pterodactyl/wings/remote"
 )
+
+var waitForContainer = func(cli *client.Client, ctx context.Context, id string) (<-chan container.WaitResponse, <-chan error) {
+	return cli.ContainerWait(ctx, id, container.WaitConditionNotRunning)
+}
 
 // OnBeforeStart run before the container starts and get the process
 // configuration from the Panel. This is important since we use this to check
@@ -250,7 +255,7 @@ func (e *Environment) WaitForStop(ctx context.Context, duration time.Duration, t
 	// Block the return of this function until the container as been marked as no
 	// longer running. If this wait does not end by the time seconds have passed,
 	// attempt to terminate the container, or return an error.
-	ok, errChan := e.client.ContainerWait(tctx, e.Id, container.WaitConditionNotRunning)
+	ok, errChan := waitForContainer(e.client, tctx, e.Id)
 	select {
 	case <-ctx.Done():
 		if err := ctx.Err(); err != nil {

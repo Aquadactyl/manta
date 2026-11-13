@@ -24,6 +24,10 @@ import (
 	"github.com/pterodactyl/wings/system"
 )
 
+var registryAuthBase64 = func(credentials *config.RegistryConfiguration) (string, error) {
+	return credentials.Base64()
+}
+
 var ErrNotAttached = errors.Sentinel("not attached to instance")
 
 // commandWriteTimeout is the amount of time allowed for a command to be written
@@ -489,7 +493,7 @@ func (e *Environment) ensureImageExists(img string) error {
 	// Get the ImagePullOptions.
 	imagePullOptions := image.PullOptions{All: false}
 	if registryAuth != nil {
-		b64, err := registryAuth.Base64()
+		b64, err := registryAuthBase64(registryAuth)
 		if err != nil {
 			log.WithError(err).Error("failed to get registry auth credentials")
 		}

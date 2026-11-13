@@ -30,7 +30,7 @@ type logFile interface {
 }
 
 var openLogFile = func(path string, flag int, perm os.FileMode) (logFile, error) {
-	return os.OpenFile(path, flag, perm)
+	return os.OpenFile(path, flag, perm) //nolint:gosec // path is the log file selected by the operator
 }
 
 var renameLogFile = os.Rename

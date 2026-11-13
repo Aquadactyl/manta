@@ -19,18 +19,18 @@ func withDockerServer(t *testing.T, statusPath string, status int) *httptest.Ser
 	t.Helper()
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		path := r.URL.Path
-		switch {
-		case path == "/_ping":
+		switch path {
+		case "/_ping":
 			w.Header().Set("API-Version", "1.51")
 			_, _ = fmt.Fprint(w, "OK")
-		case path == "/version" || path == "/v1.51/version":
+		case "/version", "/v1.51/version":
 			if statusPath == "version" {
 				http.Error(w, `{"message":"version unavailable"}`, status)
 				return
 			}
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = fmt.Fprint(w, `{"Version":"test-docker"}`)
-		case path == "/info" || path == "/v1.51/info":
+		case "/info", "/v1.51/info":
 			if statusPath == "info" {
 				http.Error(w, `{"message":"info unavailable"}`, status)
 				return
