@@ -15,7 +15,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"syscall"
 	"testing"
 	"time"
 
@@ -462,7 +461,7 @@ type syscallFileInfo struct {
 }
 
 func (s *syscallFileInfo) Sys() any {
-	return &syscall.Stat_t{Ctim: syscall.Timespec{Sec: 123456789, Nsec: 0}}
+	return statWithCtime()
 }
 
 func TestFilesystemWriteAndCopyEdgeCases(t *testing.T) {

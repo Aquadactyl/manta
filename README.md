@@ -1,6 +1,6 @@
 # Manta
 
-Manta is a Linux server daemon for Aquadactyl Panel, based on Pterodactyl Wings. It manages Docker game servers, exposes the Wings HTTP and WebSocket APIs, provides SFTP access, and handles files, backups, installations, and transfers.
+Manta is a server daemon for Aquadactyl Panel, based on Pterodactyl Wings. It runs on Linux and, for development and small hosts, natively on macOS. It manages Docker game servers, exposes the Wings HTTP and WebSocket APIs, provides SFTP access, and handles files, backups, installations, and transfers.
 
 The existing Go module path, API routes, authentication format, and configuration paths are retained for compatibility. Aquadactyl integration should be verified against your Panel version before replacing a running daemon.
 
@@ -32,6 +32,12 @@ and total RAM, and used and total space on the configured server-data filesystem
 counters are `null`; idle usage remains zero. CPU uses a cancellable 200 ms sample,
 and RAM usage excludes memory reported as available by the kernel.
 
+On macOS the endpoint returns the same counters. RAM used is added up from the
+Mach virtual memory counters the way Activity Monitor does (application memory
+without purgeable pages, wired memory and compressed memory, so cached files are
+not counted), and CPU is read from the Mach host statistics with a 200 ms sample,
+the same as on Linux.
+
 These counters describe the Linux host and filesystem visible to Manta, including
 when it runs in Docker. They are distinct from game-container usage and assigned
 server limits. The endpoint uses the same node-token authentication as the other
@@ -39,7 +45,7 @@ daemon APIs and does not return configuration, credentials or filesystem paths.
 
 ## Build and verify
 
-Use Linux and the Go toolchain selected by `go.mod`:
+Use Linux or macOS and the Go toolchain selected by `go.mod`:
 
 ```sh
 go build -trimpath -o build/manta .
@@ -56,9 +62,7 @@ Run with the existing node configuration:
 
 The Dockerfile also builds the daemon. Existing deployment assets retain the `wings` executable name.
 
-For Rocky Linux, AlmaLinux, and other Red Hat based hosts, see the
-[Red Hat based Linux deployment notes](docs/red-hat-based-linux.md), including
-Docker Engine setup and SELinux bind mount configuration.
+For macOS (Apple Silicon and Intel), see [Running Manta on macOS](docs/macos.md).
 
 To run Manta alongside your existing local Aquadactyl Panel, see the [local Docker setup](docker/README.md).
 

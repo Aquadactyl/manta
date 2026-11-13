@@ -55,6 +55,17 @@ jobs:
         run: |
           go test $(go list ./...)
 
+      # macOS resolves paths with the resolver in internal/ufs/resolve_unix.go
+      # instead of openat2. Running the whole filesystem suite on it here holds it
+      # to everything the kernel's openat2 is.
+      - name: Run filesystem tests on the userspace path resolver
+        if: ${{ matrix.goarch == 'amd64' }}
+        env:
+          CGO_ENABLED: 0
+          UFS_TEST_USERSPACE_RESOLVE: "1"
+        run: |
+          go test -count=1 ./internal/ufs/...
+
       - name: Run tests with race detector and coverage
         if: ${{ matrix.goarch == 'amd64' }}
         env:
@@ -82,4 +93,85 @@ jobs:
         if: ${{ (github.ref == 'refs/heads/main' || github.event_name == 'pull_request') && matrix.go == '1.27.2' }}
         with:
           name: wings_linux_${{ matrix.goarch }}_debug
+          path: dist/wings_debug
+
+  macos:
+    name: Tests
+    # Apple Silicon runs on macos-26 and Intel on macos-26-intel, so both
+    # architectures build and run natively instead of being cross-compiled.
+    runs-on: ${{ matrix.goarch == 'arm64' && 'macos-26' || 'macos-26-intel' }}
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        go: ["1.26.9", "1.27.2"]
+        goos: [darwin]
+        goarch: [amd64, arm64]
+    steps:
+      - name: Code checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Go
+        uses: actions/setup-go@v7
+        with:
+          go-version: ${{ matrix.go }}
+
+      - name: Download dependencies
+        env:
+          CGO_ENABLED: 0
+        run: |
+          go mod download
+
+      - name: Build
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: 0
+          SRC_PATH: github.com/pterodactyl/wings
+        run: |
+          mkdir -p dist
+          go build -v -trimpath -ldflags="-s -w -X ${SRC_PATH}/system.Version=dev-${GITHUB_SHA:0:7}" -o dist/wings ${SRC_PATH}
+          go build -v -trimpath -ldflags="-X ${SRC_PATH}/system.Version=dev-${GITHUB_SHA:0:7}" -o dist/wings_debug ${SRC_PATH}
+          chmod 755 dist/*
+
+      # GitHub's macOS runners have no Docker daemon, so the packages whose tests
+      # talk to Docker are left to the Linux job. Everything that makes up the
+      # macOS support itself is covered here.
+      - name: Run tests
+        env:
+          CGO_ENABLED: 0
+        run: |
+          go test -coverprofile=coverage-darwin-core.out ./internal/... ./config/... ./server/filesystem/...
+          go test -coverprofile=coverage-darwin-system.out -run 'Darwin|MemoryUsed|CPUPercent|VMStat' ./system/...
+          go test -coverprofile=coverage-darwin-environment.out -run 'CheckMount|MountCheck' ./environment/
+
+      - name: Upload Darwin coverage
+        if: always() && matrix.goarch == 'arm64' && matrix.go == '1.27.2'
+        uses: actions/upload-artifact@v7
+        with:
+          name: go-coverage-darwin
+          path: coverage-darwin-*.out
+          if-no-files-found: ignore
+
+      - name: Run tests with race detector
+        env:
+          CGO_ENABLED: 1
+        run: |
+          go test -race ./internal/... ./config/... ./server/filesystem/...
+          go test -race -run 'Darwin|MemoryUsed|CPUPercent|VMStat' ./system/...
+          go test -race -run 'CheckMount|MountCheck' ./environment/
+
+      - name: Upload Release Artifact
+        uses: actions/upload-artifact@v7
+        if: ${{ (github.ref == 'refs/heads/main' || github.event_name == 'pull_request') && matrix.go == '1.27.2' }}
+        with:
+          name: wings_darwin_${{ matrix.goarch }}
+          path: dist/wings
+
+      - name: Upload Debug Artifact
+        uses: actions/upload-artifact@v7
+        if: ${{ (github.ref == 'refs/heads/main' || github.event_name == 'pull_request') && matrix.go == '1.27.2' }}
+        with:
+          name: wings_darwin_${{ matrix.goarch }}_debug
           path: dist/wings_debug

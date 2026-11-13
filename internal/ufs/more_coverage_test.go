@@ -61,7 +61,7 @@ func TestUFSRemainingCoverage(t *testing.T) {
 	}
 	for _, rawMode := range modes {
 		var st fileStat
-		st.sys.Mode = rawMode
+		st.sys.Mode = toSysMode(rawMode)
 		fillFileStatFromSys(&st, "test")
 		assert.Equal(t, "test", st.Name())
 	}
@@ -374,28 +374,7 @@ func TestUFSUnixAndRemoveAllBranches(t *testing.T) {
 	_, err = ufs.Touch("reg.txt/sub/file.txt", O_RDWR, 0o644)
 	assert.Error(t, err)
 
-	// checkOpenedPath & checkOpenedType
-	outsideFile, err := os.CreateTemp(t.TempDir(), "out")
-	require.NoError(t, err)
-	defer outsideFile.Close()
-	assert.ErrorIs(t, ufs.checkOpenedPath(int(outsideFile.Fd()), "out"), ErrBadPathResolution)
-	ufs.useOpenat2 = true
-	assert.ErrorIs(t, ufs.checkOpenedPath(int(outsideFile.Fd()), "out"), ErrBadPathResolution)
-	ufs.useOpenat2 = false
-
-	// checkOpenedPath with deleted files (EvalSymlinks returns ErrNotExist)
-	delOut, err := os.CreateTemp(t.TempDir(), "del_out")
-	require.NoError(t, err)
-	defer delOut.Close()
-	_ = os.Remove(delOut.Name())
-	assert.ErrorIs(t, ufs.checkOpenedPath(int(delOut.Fd()), "del_out"), ErrBadPathResolution)
-
-	delIn, err := os.CreateTemp(ufs.BasePath(), "del_in")
-	require.NoError(t, err)
-	defer delIn.Close()
-	_ = os.Remove(delIn.Name())
-	assert.ErrorIs(t, ufs.checkOpenedPath(int(delIn.Fd()), "del_in"), ErrNotExist)
-
+	// checkOpenedType, checkOpenedPath is covered in check_opened_path_linux_test.go
 	assert.Error(t, checkOpenedType(-1, "badfd"))
 	devNull, err := os.Open("/dev/null")
 	require.NoError(t, err)

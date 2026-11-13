@@ -116,7 +116,7 @@ func escapeIgnorePattern(line string) (string, int) {
 const (
 	ignoreMatchBaseBudget       = 5 * time.Second
 	ignoreMatchPerFileBudget    = 250 * time.Microsecond
-	ignoreMatchPerPatternBudget = 4 * time.Microsecond
+	ignoreMatchPerPatternBudget = 5 * time.Microsecond
 )
 
 // ignoreMatchBudget tracks the time an archive has spent evaluating its ignore patterns.

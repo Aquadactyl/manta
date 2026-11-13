@@ -12,6 +12,7 @@ import (
 	"github.com/docker/docker/client"
 
 	"github.com/pterodactyl/wings/config"
+	"github.com/pterodactyl/wings/system"
 )
 
 var (
@@ -25,7 +26,7 @@ var (
 func Docker() (*client.Client, error) {
 	var err error
 	_conce.Do(func() {
-		_client, err = client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+		_client, err = client.NewClientWithOpts(system.DockerClientOpts()...)
 	})
 	return _client, errors.Wrap(err, "environment/docker: could not create client")
 }
@@ -72,7 +73,7 @@ func ConfigureDocker(ctx context.Context) error {
 // Creates a new network on the machine if one does not exist already.
 func createDockerNetwork(ctx context.Context, cli *client.Client) error {
 	nw := config.Get().Docker.Network
-	enableIPv6 := true
+	enableIPv6 := nw.Interfaces.V6.Enabled
 	_, err := cli.NetworkCreate(ctx, nw.Name, network.CreateOptions{
 		Driver:     nw.Driver,
 		EnableIPv6: &enableIPv6,

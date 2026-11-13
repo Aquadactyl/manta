@@ -17,6 +17,7 @@ import (
 	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
+	"github.com/docker/docker/client"
 
 	"github.com/pterodactyl/wings/config"
 	"github.com/pterodactyl/wings/environment"
@@ -426,21 +427,24 @@ func (e *Environment) Readlog(lines int) ([]string, error) {
 	return out, nil
 }
 
-// Pulls the image from Docker. If there is an error while pulling the image
-// from the source but the image already exists locally, we will report that
-// error to the logger but continue with the process.
+// Pulls the image from Docker when docker.image_pull_policy requires it. If
+// there is an error while pulling the image from the source but the image
+// already exists locally, we will report that error to the logger but continue
+// with the process.
 //
 // The reasoning behind this is that Quay has had some serious outages as of
 // late, and we don't need to block all the servers from booting just because
 // of that. I'd imagine in a lot of cases an outage shouldn't affect users too
 // badly. It'll at least keep existing servers working correctly if anything.
 func (e *Environment) ensureImageExists(img string) error {
-	e.Events().Publish(environment.DockerImagePullStarted, "")
-	defer e.Events().Publish(environment.DockerImagePullCompleted, "")
-
 	// Images prefixed with a ~ are local images that we do not need to try and pull.
 	if strings.HasPrefix(img, "~") {
 		return nil
+	}
+
+	policy := config.Get().Docker.ImagePullPolicy
+	if policy == "" {
+		policy = config.ImagePullPolicyAlways
 	}
 
 	// Give it up to 15 minutes to pull the image. I think this should cover 99.8% of cases where an
@@ -448,6 +452,34 @@ func (e *Environment) ensureImageExists(img string) error {
 	// an image. Let me know when I am inevitably wrong here...
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
 	defer cancel()
+
+	switch policy {
+	case config.ImagePullPolicyNever:
+		// check if the image exists and if not return an error
+		exists, err := ImageExistsLocally(ctx, e.client, img)
+		if err != nil {
+			return err
+		}
+		if !exists {
+			// The image doesn't exist locally so return an error
+			return errors.Errorf("environment/docker: image %q is not present locally (docker.image_pull_policy is Never)", img)
+		}
+		return nil
+	case config.ImagePullPolicyIfNotPresent:
+		// check if the image exists and if not pull it
+		exists, err := ImageExistsLocally(ctx, e.client, img)
+		if err != nil {
+			return err
+		}
+		if exists {
+			// The image is already pulled so return
+			return nil
+		}
+		// the image doesn't exist yet so proceed to pull it
+	}
+
+	e.Events().Publish(environment.DockerImagePullStarted, "")
+	defer e.Events().Publish(environment.DockerImagePullCompleted, "")
 
 	registry, registryAuth := config.Get().Docker.RegistryCredentialsForImage(img)
 	if registryAuth != nil {
@@ -518,6 +550,17 @@ func (e *Environment) ensureImageExists(img string) error {
 	log.WithField("image", img).Debug("completed docker image pull")
 
 	return nil
+}
+
+// ImageExistsLocally checks if the provided image reference already exists locally.
+func ImageExistsLocally(ctx context.Context, client *client.Client, img string) (bool, error) {
+	if _, err := client.ImageInspect(ctx, img); err == nil {
+		return true, nil
+	} else if cerrdefs.IsNotFound(err) {
+		return false, nil
+	} else {
+		return false, errors.Wrap(err, "environment/docker: failed to inspect image")
+	}
 }
 
 func (e *Environment) convertMounts() []mount.Mount {

@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"golang.org/x/sys/unix"
 
 	"github.com/pterodactyl/wings/internal/ufs"
 )
@@ -33,13 +34,23 @@ func newLinkedRoot(t *testing.T, openat2 bool) (*ufs.UnixFS, string) {
 }
 
 // openDescriptorCount returns the number of file descriptors this process holds.
+//
+// Descriptors are probed instead of listed, as /proc/self/fd only exists on
+// Linux.
 func openDescriptorCount(t *testing.T) int {
 	t.Helper()
 
-	entries, err := os.ReadDir("/proc/self/fd")
-	require.NoError(t, err)
+	var rl unix.Rlimit
+	require.NoError(t, unix.Getrlimit(unix.RLIMIT_NOFILE, &rl))
 
-	return len(entries)
+	count := 0
+	for fd := 0; uint64(fd) < min(uint64(rl.Cur), 4096); fd++ {
+		if _, err := unix.FcntlInt(uintptr(fd), unix.F_GETFD, 0); err == nil {
+			count++
+		}
+	}
+
+	return count
 }
 
 // Stat does not describe a file outside the root that a symlink points at.

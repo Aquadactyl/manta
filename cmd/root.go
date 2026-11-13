@@ -17,7 +17,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/NYTimes/logrotate"
 	"github.com/apex/log"
 	"github.com/apex/log/handlers/multi"
 	cerrdefs "github.com/containerd/errdefs"
@@ -65,7 +64,7 @@ var versionCommand = &cobra.Command{
 	Use:   "version",
 	Short: "Prints the current executable version and exits.",
 	Run: func(cmd *cobra.Command, _ []string) {
-		fmt.Printf("manta v%s\nCopyright © 2018 - %d Dane Everitt & Contributors\n", system.Version, time.Now().Year())
+		fmt.Printf("manta %s\nCopyright © 2018 - %d Dane Everitt & Contributors\n", system.Version, time.Now().Year())
 	},
 }
 
@@ -154,6 +153,7 @@ func rootCmdRun(cmd *cobra.Command, _ []string) {
 		log.WithField("error", err).Fatal("failed to configure docker environment")
 		return
 	}
+	startMountCheck(cmd.Context())
 
 	if err := config.WriteToDisk(config.Get()); err != nil {
 		if !errors.Is(err, syscall.EROFS) {
@@ -475,7 +475,7 @@ func initLogging() {
 		log2.Fatalf("cmd/root: failed to create install directory path: %s", err)
 	}
 	p := filepath.Join(dir, "/wings.log")
-	w, err := logrotate.NewFile(p)
+	w, err := openLogFile(p)
 	if err != nil {
 		log2.Fatalf("cmd/root: failed to create wings log: %s", err)
 	}

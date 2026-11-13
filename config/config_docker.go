@@ -20,6 +20,7 @@ type dockerNetworkInterfaces struct {
 	V6 struct {
 		Subnet  string `default:"fdba:17c8:6c94::/64"`
 		Gateway string `default:"fdba:17c8:6c94::1011"`
+		Enabled bool   `default:"true"`
 	}
 }
 
@@ -51,6 +52,13 @@ type DockerConfiguration struct {
 	// multiple containers use a source path; "private" assigns it to one
 	// container at a time. Leave empty when SELinux relabeling is not needed.
 	SELinuxRelabel string `default:"" json:"selinux_relabel" yaml:"selinux_relabel"`
+
+	// MountCheck makes the daemon check at startup that containers can write to
+	// the server data directory, by running a short lived container that writes
+	// a file into it and looking for that file on the host. It only runs on macOS,
+	// where the containers reach the files through the file sharing of a virtual
+	// machine that is easy to configure in a way that silently loses data.
+	MountCheck bool `default:"true" json:"mount_check" yaml:"mount_check"`
 
 	// Network configuration that should be used when creating a new network
 	// for containers run through the daemon.
@@ -122,6 +130,10 @@ type DockerConfiguration struct {
 		Type   string            `default:"local" json:"type" yaml:"type"`
 		Config map[string]string `default:"{\"max-size\":\"5m\",\"max-file\":\"1\",\"compress\":\"false\",\"mode\":\"non-blocking\"}" json:"config" yaml:"config"`
 	} `json:"log_config" yaml:"log_config"`
+
+	// ImagePullPolicy controls when images are pulled before a container is created.
+	// Always: pull every time. IfNotPresent: pull only if missing locally. Never: require a local image.
+	ImagePullPolicy ImagePullPolicy `default:"Always" json:"image_pull_policy" yaml:"image_pull_policy"`
 }
 
 // CpuPeriodMicroseconds returns the configured CFS period clamped to the range
@@ -306,3 +318,12 @@ func (o Overhead) GetMultiplier(memoryLimit int64) float64 {
 
 	return o.DefaultMultiplier
 }
+
+// ImagePullPolicy controls when wings should pull a container image
+type ImagePullPolicy string
+
+const (
+	ImagePullPolicyAlways       ImagePullPolicy = "Always"
+	ImagePullPolicyIfNotPresent ImagePullPolicy = "IfNotPresent"
+	ImagePullPolicyNever        ImagePullPolicy = "Never"
+)

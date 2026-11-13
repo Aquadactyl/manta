@@ -93,6 +93,22 @@ func TestRequestRetry(t *testing.T) {
 	assert.Equal(t, 3, i)
 }
 
+func TestRequestDoesNotRetryPermanentResponse(t *testing.T) {
+	calls := 0
+	c, server := createTestClient(func(rw http.ResponseWriter, _ *http.Request) {
+		calls++
+		rw.WriteHeader(http.StatusBadRequest)
+	})
+	defer server.Close()
+	c.maxAttempts = 3
+
+	r, err := c.request(context.Background(), http.MethodGet, "/bad", nil)
+	assert.Nil(t, r)
+	assert.Error(t, err)
+	assert.Equal(t, 1, calls)
+	assert.Equal(t, http.StatusBadRequest, AsRequestError(err).StatusCode())
+}
+
 func TestGet(t *testing.T) {
 	c, _ := createTestClient(func(rw http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, http.MethodGet, r.Method)

@@ -831,10 +831,17 @@ func TestServerBackupMethods(t *testing.T) {
 	remoteCli.setBackupStatusErr = &remote.RequestError{Detail: "bad request"}
 	assert.Error(t, s.notifyPanelOfBackup("backup-uuid-1", ad, true))
 
-	// Backup notifyPanelOfBackup returns error (b.Remove called, returns generate err)
+	// A failure to notify the panel of a successful backup is returned to the
+	// caller, and the archive is removed again so that the daemon does not keep a
+	// backup the panel does not know about.
+	assert.FileExists(t, b2.Path(), "a backup that was notified is kept")
+
 	remoteCli.setBackupStatusErr = errors.New("cannot notify")
 	b3 := backup.NewLocal(remoteCli, uuid.New().String(), "")
-	assert.NoError(t, s.Backup(b3))
+	err = s.Backup(b3)
+	require.Error(t, err)
+	assert.ErrorContains(t, err, "cannot notify")
+	assert.NoFileExists(t, b3.Path(), "a backup that could not be notified is removed")
 	remoteCli.setBackupStatusErr = nil
 }
 

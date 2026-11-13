@@ -102,17 +102,17 @@ func TestRestoreCallbackError(t *testing.T) {
 }
 
 func TestUploadPartErrors(t *testing.T) {
-	uploader := newS3FileUploader(io.NopCloser(bytes.NewReader([]byte("part-data"))))
+	uploader := newS3FileUploader(bytes.NewReader([]byte("part-data")))
 
 	// 1. Invalid URL scheme
-	_, err := uploader.uploadPart(context.Background(), "://invalid-url", 9)
+	_, err := uploader.uploadPart(context.Background(), "://invalid-url", 0, 9)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "could not create request for S3")
 
 	// 2. Canceled context
 	ctxCanceled, cancel := context.WithCancel(context.Background())
 	cancel()
-	_, err = uploader.uploadPart(ctxCanceled, "http://127.0.0.1:9/part", 9)
+	_, err = uploader.uploadPart(ctxCanceled, "http://127.0.0.1:9/part", 0, 9)
 	assert.Error(t, err)
 
 	// 3. S3 500 error
@@ -125,7 +125,7 @@ func TestUploadPartErrors(t *testing.T) {
 
 	ctxTimeout, cancelTimeout := context.WithTimeout(context.Background(), 200*time.Millisecond)
 	defer cancelTimeout()
-	_, err = uploader.uploadPart(ctxTimeout, s500.URL+"/part", 9)
+	_, err = uploader.uploadPart(ctxTimeout, s500.URL+"/part", 0, 9)
 	assert.Error(t, err)
 	assert.True(t, attempts > 0)
 }

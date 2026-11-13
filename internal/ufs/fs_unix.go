@@ -7,10 +7,8 @@ package ufs
 
 import (
 	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 
@@ -36,6 +34,9 @@ type UnixFS struct {
 // checked and prevented from enabling an escape in a non-raceable manor.
 func NewUnixFS(basePath string, useOpenat2 bool) (*UnixFS, error) {
 	basePath = strings.TrimSuffix(basePath, "/")
+	// Platforms without openat2 resolve paths themselves, which is what
+	// useOpenat2 stands for from here on.
+	useOpenat2 = normalizeOpenat2(useOpenat2)
 	fs := &UnixFS{
 		basePath:   basePath,
 		useOpenat2: useOpenat2,
@@ -90,36 +91,7 @@ func (fs *UnixFS) Chmodat(dirfd int, name string, mode FileMode) error {
 }
 
 func (fs *UnixFS) fchmodat(op string, dirfd int, name string, mode FileMode) error {
-	err := unix.Fchmodat(dirfd, name, uint32(mode), AT_SYMLINK_NOFOLLOW)
-	if err == unix.EOPNOTSUPP {
-		// Kernels before 6.6 do not support fchmodat2, which is needed to pass
-		// AT_SYMLINK_NOFOLLOW.
-		err = fchmodNoFollow(dirfd, name, uint32(mode))
-	}
-	return ensurePathError(err, op, name)
-}
-
-// fchmodNoFollow changes the mode of name without following it if it is a
-// symbolic link, without needing fchmodat2.
-func fchmodNoFollow(dirfd int, name string, mode uint32) error {
-	fd, err := unix.Openat(dirfd, name, unix.O_PATH|unix.O_NOFOLLOW|unix.O_CLOEXEC, 0)
-	if err != nil {
-		return err
-	}
-	defer unix.Close(fd)
-
-	var st unix.Stat_t
-	if err := unix.Fstat(fd, &st); err != nil {
-		return err
-	}
-	// Linux does not support changing the mode of a symbolic link.
-	if st.Mode&unix.S_IFMT == unix.S_IFLNK {
-		return unix.EOPNOTSUPP
-	}
-	// The descriptor was opened with O_PATH, which fchmod does not accept, so
-	// change the mode through its entry in /proc, which refers to the file that
-	// was opened.
-	return unix.Chmod("/proc/self/fd/"+strconv.Itoa(fd), mode)
+	return ensurePathError(fchmodatNoFollow(dirfd, name, uint32(mode)), op, name)
 }
 
 // Chown changes the numeric uid and gid of the named file.
@@ -191,7 +163,7 @@ func (fs *UnixFS) Chtimesat(dirfd int, name string, atime, mtime time.Time) erro
 	var utimes [2]unix.Timespec
 	set := func(i int, t time.Time) {
 		if t.IsZero() {
-			utimes[i] = unix.Timespec{Sec: unix.UTIME_OMIT, Nsec: unix.UTIME_OMIT}
+			utimes[i] = unix.Timespec{Sec: utimeOmit, Nsec: utimeOmit}
 		} else {
 			utimes[i] = unix.NsecToTimespec(t.UnixNano())
 		}
@@ -573,17 +545,9 @@ func (fs *UnixFS) statFollow(name string) (FileInfo, error) {
 	}
 	defer unix.Close(rootfd)
 
-	fd, err := fs.openatResolved(rootfd, rel, unix.O_PATH, 0)
-	if err != nil {
-		return nil, err
-	}
-	defer unix.Close(fd)
-
 	var s fileStat
-	if err := ignoringEINTR(func() error {
-		return unix.Fstat(fd, &s.sys)
-	}); err != nil {
-		return nil, ensurePathError(err, "stat", name)
+	if err := fs.statResolved(rootfd, rel, name, &s.sys); err != nil {
+		return nil, err
 	}
 	fillFileStatFromSys(&s, filepath.Base(rel))
 	return &s, nil
@@ -745,7 +709,13 @@ func (fs *UnixFS) openat(dirfd int, name string, flag int, mode FileMode) (int, 
 func (fs *UnixFS) openatResolved(dirfd int, name string, flag int, mode FileMode) (int, error) {
 	// Open everything without blocking and refuse anything that is not a regular
 	// file or a directory. Paths opened with O_PATH are never read or written.
-	checkType := flag&unix.O_PATH == 0
+	return fs.openatResolvedType(dirfd, name, flag, mode, flag&oPath == 0)
+}
+
+// openatResolvedType is openatResolved with an explicit choice of whether the
+// type of the opened file is checked. Callers that only describe the file, and
+// never read from or write to it, skip the check.
+func (fs *UnixFS) openatResolvedType(dirfd int, name string, flag int, mode FileMode, checkType bool) (int, error) {
 	if checkType {
 		flag |= unix.O_NONBLOCK
 	}
@@ -754,7 +724,7 @@ func (fs *UnixFS) openatResolved(dirfd int, name string, flag int, mode FileMode
 	for {
 		var err error
 		if fs.useOpenat2 {
-			fd, err = fs._openat2(dirfd, name, uint64(flag), uint64(syscallMode(mode)))
+			fd, err = fs.openBeneath(dirfd, name, uint64(flag), uint64(syscallMode(mode)))
 		} else {
 			fd, err = fs._openat(dirfd, name, flag, uint32(syscallMode(mode)))
 		}
@@ -789,47 +759,6 @@ func (fs *UnixFS) openatResolved(dirfd int, name string, flag int, mode FileMode
 		return 0, err
 	}
 	return fd, nil
-}
-
-// checkOpenedPath returns an error if the file opened as fd, without the
-// protection of openat2, resolved to a path outside of the filesystem.
-func (fs *UnixFS) checkOpenedPath(fd int, name string) error {
-	var finalPath string
-	finalPath, err := filepath.EvalSymlinks(filepath.Join("/proc/self/fd/", strconv.Itoa(fd)))
-	if err != nil {
-		if !errors.Is(err, ErrNotExist) {
-			return fmt.Errorf("failed to evaluate symlink: %w", convertErrorType(err))
-		}
-
-		// The target of one of the symlinks (EvalSymlinks is recursive)
-		// does not exist. So get the path that does not exist and use
-		// that for further validation instead.
-		var pErr *PathError
-		if !errors.As(err, &pErr) {
-			return fmt.Errorf("failed to evaluate symlink: %w", convertErrorType(err))
-		}
-
-		// Update the final path to whatever directory or path didn't exist while
-		// recursing any symlinks.
-		finalPath = pErr.Path
-		// Ensure the error is wrapped correctly.
-		err = convertErrorType(err)
-	}
-
-	// Check if the path is within our root.
-	if !fs.unsafeIsPathInsideOfBase(finalPath) {
-		op := "openat"
-		if fs.useOpenat2 {
-			op = "openat2"
-		}
-		return &PathError{
-			Op:   op,
-			Path: name,
-			Err:  ErrBadPathResolution,
-		}
-	}
-
-	return err
 }
 
 // checkOpenedType returns an error if the file descriptor opened without
@@ -869,45 +798,6 @@ func (fs *UnixFS) _openat(dirfd int, name string, flag int, mode uint32) (int, e
 		return fd, err
 	default:
 		return fd, ensurePathError(err, "openat", name)
-	}
-}
-
-// _openat2 is a wonderful syscall that supersedes the `openat` syscall. It has
-// improved validation and security characteristics that weren't available or
-// considered when `openat` was originally implemented. As such, it is only
-// present in Kernel 5.6 and above.
-//
-// This method should never be directly called, use `openat` instead.
-func (fs *UnixFS) _openat2(dirfd int, name string, flag, mode uint64) (int, error) {
-	// Ensure the O_CLOEXEC flag is set.
-	// Go sets this when using the os package, but since we are directly using
-	// the unix package we need to set it ourselves.
-	if flag&O_CLOEXEC == 0 {
-		flag |= O_CLOEXEC
-	}
-	// Ensure the O_LARGEFILE flag is set.
-	// Go sets this for unix.Open, unix.Openat, but not unix.Openat2.
-	if flag&O_LARGEFILE == 0 {
-		flag |= O_LARGEFILE
-	}
-	fd, err := unix.Openat2(dirfd, name, &unix.OpenHow{
-		Flags: flag,
-		Mode:  mode,
-		// This is the bread and butter of preventing a symlink escape, without
-		// this option, we have to handle path validation fully on our own.
-		//
-		// This is why using Openat2 over Openat is preferred if available.
-		Resolve: unix.RESOLVE_BENEATH,
-	})
-	switch err {
-	case nil:
-		return fd, nil
-	case unix.EINTR:
-		return fd, err
-	case unix.EAGAIN:
-		return fd, err
-	default:
-		return fd, ensurePathError(err, "openat2", name)
 	}
 }
 

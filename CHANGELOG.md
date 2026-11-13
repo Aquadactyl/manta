@@ -8,6 +8,41 @@ This project follows [Semantic Versioning](http://semver.org) guidelines.
 
 ## Unreleased (Manta)
 
+### Added
+
+- Add native macOS support for Apple Silicon (`arm64`) and Intel (`amd64`). Manta manages containers through Docker Desktop, OrbStack, Colima or Rancher Desktop and runs unprivileged as the logged-in user. See [Running Manta on macOS](docs/macos.md).
+- Add `wings_darwin_arm64` and `wings_darwin_amd64` binaries to the release workflow and include them in `checksums.txt`.
+- Add a macOS CI job that mirrors the Linux one: Go 1.26.9 and 1.27.2 on both architectures, each built and tested natively (Apple Silicon on `macos-26`, Intel on `macos-26-intel`). It runs the filesystem, configuration and macOS specific tests, also under the race detector, and uploads the binaries as artifacts.
+- Add built-in size based log rotation for macOS, which has no logrotate. `wings.log` rotates at 10 MiB and seven old files are kept, unless `system.enable_log_rotate` is `false`. Linux keeps using logrotate and reopening on `SIGHUP`.
+- Add host CPU, RAM and disk metrics to `GET /api/system/usage` on macOS and advertise `system_usage` there. CPU and RAM come from the Mach host statistics (`host_statistics` and `host_statistics64`) through `purego`, so the binary stays a static build without cgo. RAM used is added up the way Activity Monitor does it, application memory without purgeable pages plus wired and compressed memory, and total memory comes from `hw.memsize`. Disk is the volume holding the server data. The tests compare the counters with `vm_stat`.
+- Add a launchd LaunchAgent (`macos/uk.aquadactyl.manta.plist`) to start Manta at login and restart it if it stops, and a LaunchDaemon (`macos/uk.aquadactyl.manta.daemon.plist`) that starts it at boot as an ordinary user.
+- Add a startup check on macOS (`docker.mount_check`, on by default) that runs a short container as the server user to find out whether the data directory is shared with the Docker runtime and writable, and says what to change when it is not, for example for the read-only home directory mount of Colima.
+- Discover the Docker socket on macOS when `DOCKER_HOST` is unset and `/var/run/docker.sock` is missing, checking Docker Desktop, OrbStack, Colima and Rancher Desktop in order.
+- Add `docker.image_pull_policy` to control when images are pulled for server containers and installation containers. `Always` (the default) keeps the current behavior of pulling every time and carrying on with a local copy if the pull fails, `IfNotPresent` pulls only when the image reference does not resolve to a local image, and `Never` fails with a clear error when the image is not present locally. Images prefixed with `~` are never pulled, as before.
+- Add `docker.network.interfaces.v6.enabled` (default `true`) to turn IPv6 off on the Docker network Manta creates. IPv6 was always enabled before. It applies when the network is created, an existing network is left as it is.
+- Take `allowed_mounts` from the Panel response when running `wings configure`. The data directory stays local, so a stale daemon base in the Panel can not move existing servers.
+
+### Changed
+
+- Split the Linux specific parts of `internal/ufs` into platform files. macOS resolves every path beneath its directory in userspace (`userspaceOpenBeneath`), one component at a time with every directory held open and every link read and checked instead of followed by the kernel, in place of `/proc/self/fd`. It enforces the same rules as `RESOLVE_BENEATH` (no `..`, absolute path or absolute link target leaving the directory, at most 40 links) and has no limit on the length or the case of a path. `openat2` stays Linux only, and `system.openat_mode` has no effect on macOS. The existing filesystem tests also run on this resolver on Linux (`UFS_TEST_USERSPACE_RESOLVE=1`).
+- Use macOS locations for the default configuration, data, archive, backup, temporary, log and generated passwd directories. Defaults on Linux are unchanged and values set in the configuration file still take priority.
+- Report the macOS version, build number and Darwin kernel version (for example `macOS 15.1 (24B83)`) from `GET /api/system` using `sysctl`, without `/etc/os-release` or `system_profiler`, so the panel can reach the node. The Darwin version from `uname` is used if the product version is unavailable.
+- Detect the system timezone on macOS from `/etc/localtime`.
+- Create the directory of the configuration file when it is missing before writing it.
+- Skip the Linux only CPU burst cgroup update on other platforms instead of logging a warning for every container.
+- Handle the SFTP sessions of a connection concurrently instead of one after another, and keep the connection open until all of them have finished. A failing session is logged and no longer ends the others.
+- Print the version as `manta <version>` from `wings version`, without a second `v` in front of a version that already has one.
+- Return an error from the configuration file parser for an unknown parser type instead of silently doing nothing.
+- Stop building the JWT signer from an empty token in `config.Set`, and clear it when the token is removed.
+
+### Fixed
+
+- Fix every installation and reinstallation failing with `install: cannot obtain installation lock`. Since v0.2-beta `Install` and `Reinstall` set the installing state before starting the installation process, which then could not take the lock that was already held. The server is now marked as busy for the whole installation through a separate flag, so power actions are still refused while it stops, syncs and installs, and the installing state stays the lock of the installation process alone. A second installation that begins while one is running is rejected.
+- Run the descriptor leak regression test on every Unix platform by counting descriptors with `fcntl` instead of reading `/proc/self/fd`.
+- Fix S3 backup part uploads sending a truncated body when a retry was needed. Every attempt now reads the part again from its own offset in the file, where a retry used to continue with what was left of the body of the failed attempt.
+- Report a failure to notify the Panel of a successful backup with its own error, instead of returning an unrelated earlier error value.
+- Honor exclusive create requests (`SSH_FXF_CREAT` with `SSH_FXF_EXCL`) over SFTP, so they fail with an error when the file exists instead of truncating it.
+
 ## v0.3-beta
 
 ### Added

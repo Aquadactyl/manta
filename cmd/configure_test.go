@@ -116,6 +116,45 @@ docker:
 	require.Contains(t, cfg.Docker.Registries, "registry.example.com")
 }
 
+// Configuring an existing node replaces the mounts with the ones from the Panel
+// and keeps the local data directory.
+func TestConfigureAppliesPanelMounts(t *testing.T) {
+	clearTokenEnvironment(t)
+	path := filepath.Join(t.TempDir(), "config.yml")
+	require.NoError(t, os.WriteFile(path, []byte(`token_id: old-id
+token: old-token
+allowed_mounts:
+  - /srv/shared
+system:
+  data: /srv/old-volumes
+`), 0o600))
+
+	body := `{"token_id":"new-id","token":"new-token","allowed_mounts":["/srv/media","/srv/maps"],"system":{"data":"/srv/volumes","sftp":{"bind_port":2022}}}`
+	require.NoError(t, writePanelConfiguration(path, "http://panel.test", []byte(body)))
+
+	cfg, err := config.Load(path)
+	require.NoError(t, err)
+	require.Equal(t, []string{"/srv/media", "/srv/maps"}, cfg.AllowedMounts)
+	require.Equal(t, "/srv/old-volumes", cfg.System.Data)
+}
+
+// Mounts removed from the node in the Panel are removed from the configuration.
+func TestConfigureClearsRemovedMounts(t *testing.T) {
+	clearTokenEnvironment(t)
+	path := filepath.Join(t.TempDir(), "config.yml")
+	require.NoError(t, os.WriteFile(path, []byte(`token_id: old-id
+token: old-token
+allowed_mounts:
+  - /srv/shared
+`), 0o600))
+
+	require.NoError(t, writePanelConfiguration(path, "http://panel.test", []byte(`{"token_id":"new-id","token":"new-token","allowed_mounts":[]}`)))
+
+	cfg, err := config.Load(path)
+	require.NoError(t, err)
+	require.Empty(t, cfg.AllowedMounts)
+}
+
 func TestConfigureGetRequestAndMore(t *testing.T) {
 	prevArgs := configureArgs
 	defer func() { configureArgs = prevArgs }()
@@ -133,5 +172,7 @@ func TestConfigureGetRequestAndMore(t *testing.T) {
 	require.Error(t, writePanelConfiguration(filepath.Join(tmp, "conf.yml"), "http://panel.test", []byte("invalid-json")))
 
 	// writePanelConfiguration with unwritable path
-	require.Error(t, writePanelConfiguration("/unwritable-dir-xyz/conf.yml", "http://panel.test", []byte(`{"token_id":"id","token":"tok"}`)))
+	unwritableFile := filepath.Join(tmp, "regular_file")
+	require.NoError(t, os.WriteFile(unwritableFile, []byte("x"), 0o644))
+	require.Error(t, writePanelConfiguration(filepath.Join(unwritableFile, "conf.yml"), "http://panel.test", []byte(`{"token_id":"id","token":"tok"}`)))
 }

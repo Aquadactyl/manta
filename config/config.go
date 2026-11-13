@@ -22,13 +22,10 @@ import (
 	"github.com/apex/log"
 	"github.com/creasty/defaults"
 	"github.com/gbrlsnchs/jwt/v3"
-	"golang.org/x/sys/unix"
 	"gopkg.in/yaml.v2"
 
 	"github.com/pterodactyl/wings/system"
 )
-
-const DefaultLocation = "/etc/pterodactyl/config.yml"
 
 // DefaultTLSConfig sets sane defaults to use when configuring the internal
 // webserver to listen for public connections.
@@ -298,7 +295,7 @@ type Backups struct {
 	//
 	// "none" -> no compression will be applied
 	// "best_speed" -> uses gzip level 1 for fast speed
-	// "best_compression" -> uses gzip level 9 for minimal disk space useage
+	// "best_compression" -> uses gzip level 9 for minimal disk space usage
 	//
 	// Defaults to "best_speed" (level 1)
 	CompressionLevel string `default:"best_speed" yaml:"compression_level"`
@@ -461,6 +458,8 @@ func NewAtPath(path string) (*Configuration, error) {
 	if err := defaults.Set(&c); err != nil {
 		return nil, err
 	}
+	// Replace the defaults that only make sense on Linux where needed.
+	applyPlatformDefaults(&c)
 	// Track the location where we created this configuration.
 	c.path = path
 	return &c, nil
@@ -477,8 +476,10 @@ func Set(c *Configuration) {
 		c.Token.Token = c.AuthenticationToken
 		token = c.Token.Token
 	}
-	if _config == nil || _config.Token.Token != token {
+	if token != "" && (_config == nil || _config.Token.Token != token) {
 		_jwtAlgo = jwt.NewHS256([]byte(token))
+	} else if token == "" {
+		_jwtAlgo = nil
 	}
 	_config = c
 }
@@ -594,6 +595,12 @@ func WriteToDisk(c *Configuration) error {
 	if err != nil {
 		return err
 	}
+	// The directory holding the configuration does not exist the first time a
+	// configuration is written on platforms that do not have a package or an
+	// installation guide creating it.
+	if err := os.MkdirAll(filepath.Dir(c.path), 0o700); err != nil {
+		return err
+	}
 	if err := os.WriteFile(c.path, b, 0o600); err != nil {
 		return err
 	}
@@ -608,6 +615,10 @@ func WriteToDisk(c *Configuration) error {
 // This function IS NOT thread safe and should only be called in the main thread
 // when the application is booting.
 func EnsurePterodactylUser() error {
+	if handled, err := ensurePlatformUser(); handled || err != nil {
+		return err
+	}
+
 	sysName, err := getSystemName()
 	if err != nil {
 		return err
@@ -875,6 +886,11 @@ func ConfigureTimezone() error {
 		_config.System.Timezone = tz
 	}
 	if _config.System.Timezone == "" {
+		if tz, ok := detectPlatformTimezone(); ok {
+			_config.System.Timezone = tz
+		}
+	}
+	if _config.System.Timezone == "" {
 		b, err := os.ReadFile("/etc/timezone")
 		if err != nil {
 			if !os.IsNotExist(err) {
@@ -936,19 +952,26 @@ func UseOpenat2() bool {
 	openatMode := c.System.OpenatMode
 	switch openatMode {
 	case "openat2":
+		if !openat2Supported {
+			log.Warn("system.openat_mode is set to openat2, but openat2 is not available on this platform, falling back to openat")
+			openat2.Store(false)
+			return false
+		}
 		openat2.Store(true)
 		return true
 	case "openat":
 		openat2.Store(false)
 		return false
 	default:
-		fd, err := unix.Openat2(unix.AT_FDCWD, "/", &unix.OpenHow{})
-		if err != nil {
+		if !openat2Supported {
+			openat2.Store(false)
+			return false
+		}
+		if err := probeOpenat2(); err != nil {
 			log.WithError(err).Warn("error occurred while checking for openat2 support, falling back to openat")
 			openat2.Store(false)
 			return false
 		}
-		_ = unix.Close(fd)
 		openat2.Store(true)
 		return true
 	}

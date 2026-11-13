@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  LaunchDaemon that starts Manta at boot, before anyone logs in, and runs it as
+  an ordinary user rather than as root. Use it instead of the LaunchAgent
+  (uk.aquadactyl.manta.plist) on a machine that has to come back by itself after a
+  restart. Only one of the two should be installed.
+
+  The user must own the Docker runtime, and the runtime must itself be running
+  without a login, see docs/macos.md. Replace __USER__ with that user, and
+  __HOME__ with their home directory, when installing:
+
+    sudo sh -c 'sed -e "s|__USER__|$USER|g" -e "s|__HOME__|$HOME|g" \
+      macos/uk.aquadactyl.manta.daemon.plist \
+      > /Library/LaunchDaemons/uk.aquadactyl.manta.plist'
+    sudo chown root:wheel /Library/LaunchDaemons/uk.aquadactyl.manta.plist
+    sudo chmod 644 /Library/LaunchDaemons/uk.aquadactyl.manta.plist
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>uk.aquadactyl.manta</string>
+
+  <!-- Run as this user and not as root. Manta stores its files and finds the
+       Docker socket in the home directory of the user it runs as. -->
+  <key>UserName</key>
+  <string>__USER__</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>HOME</key>
+    <string>__HOME__</string>
+    <key>USER</key>
+    <string>__USER__</string>
+    <key>LOGNAME</key>
+    <string>__USER__</string>
+    <key>PATH</key>
+    <string>/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+  </dict>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/local/bin/wings</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>__HOME__/Library/Application Support/Manta</string>
+
+  <key>RunAtLoad</key>
+  <true/>
+
+  <!-- The Docker runtime may not be up yet when this starts, so keep trying
+       instead of giving up. -->
+  <key>KeepAlive</key>
+  <true/>
+  <key>ThrottleInterval</key>
+  <integer>10</integer>
+
+  <!-- Give Manta time to stop servers and finish transfers before it is killed. -->
+  <key>ExitTimeOut</key>
+  <integer>60</integer>
+
+  <key>ProcessType</key>
+  <string>Interactive</string>
+
+  <!-- Manta writes its own log file, this only catches what is printed before it starts. -->
+  <key>StandardOutPath</key>
+  <string>__HOME__/Library/Logs/Manta/launchd.log</string>
+  <key>StandardErrorPath</key>
+  <string>__HOME__/Library/Logs/Manta/launchd.log</string>
+</dict>
+</plist>

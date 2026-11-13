@@ -1,7 +1,8 @@
 version: "2"
 
-# Wings only builds for Linux; run with GOOS=linux (see `make lint`) so the
-# _linux/_unix files are type-checked and linted.
+# Manta builds for Linux and macOS; run with GOOS=linux (see `make lint`) so the
+# _linux/_unix files are type-checked and linted, and with GOOS=darwin for the
+# _darwin files.
 
 linters:
   # errcheck, govet, ineffassign, staticcheck, unused

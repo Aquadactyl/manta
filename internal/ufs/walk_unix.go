@@ -10,7 +10,6 @@ import (
 	"bytes"
 	"fmt"
 	iofs "io/fs"
-	"os"
 	"path"
 	"unsafe"
 
@@ -195,8 +194,6 @@ func (fs *UnixFS) modeType(dirfd int, name string) (FileMode, error) {
 	return fi.Mode() & ModeType, nil
 }
 
-var minimumScratchBufferSize = os.Getpagesize()
-
 func newScratchBuffer() []byte {
 	return make([]byte, minimumScratchBufferSize)
 }
@@ -213,7 +210,7 @@ func (fs *UnixFS) readDir(fd int, name, relative string, b []byte) ([]DirEntry, 
 	var sde unix.Dirent
 	for {
 		if len(workBuffer) == 0 {
-			n, err := unix.Getdents(fd, scratchBuffer)
+			n, err := readDirent(fd, scratchBuffer)
 			if err != nil {
 				if err == unix.EINTR {
 					continue

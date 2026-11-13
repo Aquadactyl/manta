@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  LaunchAgent that keeps Manta running for the user it is installed for.
+
+  Replace __HOME__ with the home directory of that user when installing, for
+  example:
+
+    sed "s|__HOME__|$HOME|g" macos/uk.aquadactyl.manta.plist \
+      > ~/Library/LaunchAgents/uk.aquadactyl.manta.plist
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>uk.aquadactyl.manta</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/local/bin/wings</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>__HOME__/Library/Application Support/Manta</string>
+
+  <key>RunAtLoad</key>
+  <true/>
+
+  <!-- Restart Manta if it exits, but wait a little so a failing start does not spin. -->
+  <key>KeepAlive</key>
+  <true/>
+  <key>ThrottleInterval</key>
+  <integer>5</integer>
+
+  <!-- Give Manta time to stop servers and finish transfers before it is killed. -->
+  <key>ExitTimeOut</key>
+  <integer>60</integer>
+
+  <key>ProcessType</key>
+  <string>Interactive</string>
+
+  <!-- Manta writes its own log file, this only catches what is printed before it starts. -->
+  <key>StandardOutPath</key>
+  <string>__HOME__/Library/Logs/Manta/launchd.log</string>
+  <key>StandardErrorPath</key>
+  <string>__HOME__/Library/Logs/Manta/launchd.log</string>
+</dict>
+</plist>

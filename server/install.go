@@ -33,9 +33,31 @@ import (
 // Pass true as the first argument in order to execute a server sync before the
 // process to ensure the latest information is used.
 func (s *Server) Install() error {
-	s.SetInstalling(true)
-	defer s.SetInstalling(false)
+	release, err := s.beginInstall()
+	if err != nil {
+		return err
+	}
+	defer release()
+
 	return s.install(false)
+}
+
+// beginInstall marks the server as busy for the whole installation, including
+// the work done before the installer container runs, such as stopping the server
+// and syncing it with the Panel, so that power actions are refused while it
+// happens. It cancels the open SFTP sessions of the server and fails if another
+// installation has already begun.
+//
+// It deliberately does not take the installing state. That state is the lock of
+// InstallationProcess.Run, which fails when it is already held, so holding it
+// here would make every installation fail.
+func (s *Server) beginInstall() (func(), error) {
+	if !s.installPending.CompareAndSwap(false, true) {
+		return nil, errors.New("install: cannot obtain installation lock")
+	}
+	s.Sftp().CancelAll()
+
+	return func() { s.installPending.Store(false) }, nil
 }
 
 func (s *Server) install(reinstall bool) error {
@@ -82,8 +104,11 @@ func (s *Server) install(reinstall bool) error {
 // for the server egg. This does not touch any existing files for the server,
 // other than what the script modifies.
 func (s *Server) Reinstall() error {
-	s.SetInstalling(true)
-	defer s.SetInstalling(false)
+	release, err := s.beginInstall()
+	if err != nil {
+		return err
+	}
+	defer release()
 
 	if s.Environment.State() != environment.ProcessOfflineState {
 		s.Log().Debug("waiting for server instance to enter a stopped state")
@@ -144,10 +169,10 @@ func NewInstallationProcess(s *Server, script *remote.InstallationScript) (*Inst
 	return proc, nil
 }
 
-// IsInstalling returns if the server is actively running the installation
-// process by checking the status of the installer lock.
+// IsInstalling returns if the server is installing, either running the
+// installation process, which holds the installer lock, or preparing for it.
 func (s *Server) IsInstalling() bool {
-	return s.installing.Load()
+	return s.installing.Load() || s.installPending.Load()
 }
 
 func (s *Server) SetInstalling(state bool) {
@@ -267,9 +292,52 @@ func (ip *InstallationProcess) writeScriptToDisk() error {
 	return nil
 }
 
-// Pulls the docker image to be used for the installation container.
+// Pulls the docker image to be used for the installation container when
+// docker.image_pull_policy requires it. If there is an error while pulling from
+// the source but the image already exists locally, we log a warning and continue.
 func (ip *InstallationProcess) pullInstallationImage() error {
-	registry, registryAuth := config.Get().Docker.RegistryCredentialsForImage(ip.Script.ContainerImage)
+	img := ip.Script.ContainerImage
+
+	// Images prefixed with a ~ are local images that we do not need to try and pull.
+	if strings.HasPrefix(img, "~") {
+		return nil
+	}
+
+	policy := config.Get().Docker.ImagePullPolicy
+	if policy == "" {
+		policy = config.ImagePullPolicyAlways
+	}
+
+	// Give it up to 15 minutes to pull the image
+	ctx, cancel := context.WithTimeout(ip.Server.Context(), 15*time.Minute)
+	defer cancel()
+
+	switch policy {
+	case config.ImagePullPolicyNever:
+		// check if the image exists and if not return an error
+		exists, err := docker.ImageExistsLocally(ctx, ip.client, img)
+		if err != nil {
+			return err
+		}
+		if !exists {
+			// The image doesn't exist locally so return an error
+			return errors.Errorf("server/install: image %q is not present locally (docker.image_pull_policy is Never)", img)
+		}
+		return nil
+	case config.ImagePullPolicyIfNotPresent:
+		// check if the image exists and if not pull it
+		exists, err := docker.ImageExistsLocally(ctx, ip.client, img)
+		if err != nil {
+			return err
+		}
+		if exists {
+			// The image is already pulled so return
+			return nil
+		}
+		// the image doesn't exist yet so proceed to pull it
+	}
+
+	registry, registryAuth := config.Get().Docker.RegistryCredentialsForImage(img)
 	if registryAuth != nil {
 		log.WithField("registry", registry).Debug("using authentication for registry")
 	}
@@ -286,23 +354,23 @@ func (ip *InstallationProcess) pullInstallationImage() error {
 		imagePullOptions.RegistryAuth = b64
 	}
 
-	r, err := ip.client.ImagePull(ip.Server.Context(), ip.Script.ContainerImage, imagePullOptions)
+	r, err := ip.client.ImagePull(ctx, img, imagePullOptions)
 	if err != nil {
-		images, ierr := ip.client.ImageList(ip.Server.Context(), image.ListOptions{})
+		images, ierr := ip.client.ImageList(ctx, image.ListOptions{})
 		if ierr != nil {
 			// Well damn, something has gone really wrong here, just go ahead and abort there
 			// isn't much anything we can do to try and self-recover from this.
 			return ierr
 		}
 
-		for _, img := range images {
-			for _, t := range img.RepoTags {
-				if t != ip.Script.ContainerImage {
+		for _, img2 := range images {
+			for _, t := range img2.RepoTags {
+				if t != img {
 					continue
 				}
 
 				log.WithFields(log.Fields{
-					"image": ip.Script.ContainerImage,
+					"image": img,
 					"err":   err.Error(),
 				}).Warn("unable to pull requested image from remote source, however the image exists locally")
 
@@ -312,11 +380,11 @@ func (ip *InstallationProcess) pullInstallationImage() error {
 			}
 		}
 
-		return err
+		return errors.Wrapf(err, "failed to pull %q installation container image", img)
 	}
 	defer r.Close()
 
-	log.WithField("image", ip.Script.ContainerImage).Debug("pulling docker image... this could take a bit of time")
+	log.WithField("image", img).Debug("pulling docker image... this could take a bit of time")
 
 	// Block continuation until the image has been pulled successfully.
 	scanner := bufio.NewScanner(r)
