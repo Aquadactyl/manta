@@ -2,6 +2,7 @@ package progress
 
 import (
 	"io"
+	"math"
 	"strings"
 	"sync/atomic"
 
@@ -72,6 +73,17 @@ func (p *Progress) Progress(width int) string {
 	// Values are cast to floats to prevent integer division.
 	current := p.Written()
 	total := p.Total()
+	// An underflowed signed tick count can appear as a very large uint64.
+	// Treat it as zero before converting to float or formatting the byte count.
+	if current > math.MaxInt64 {
+		current = 0
+	}
+	if width <= 0 {
+		width = 0
+	}
+	if width == 0 {
+		return "[] " + system.FormatBytes(current) + " / " + system.FormatBytes(total)
+	}
 	// width := is passed as a parameter
 	widthPercentage := float64(100) / float64(width)
 	percentageDecimal := float64(current) / float64(total)
