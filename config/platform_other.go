@@ -9,9 +9,7 @@ const DefaultLocation = "/etc/pterodactyl/config.yml"
 
 // applyPlatformDefaults replaces defaults that are specific to a platform. The
 // defaults declared on the configuration are already correct for Linux.
-func applyPlatformDefaults(_ *Configuration) {
-	return
-}
+func applyPlatformDefaults(_ *Configuration) {}
 
 // ensurePlatformUser handles the system user on platforms that need something
 // other than the default behavior. It reports whether it did so.

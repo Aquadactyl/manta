@@ -67,3 +67,55 @@ func TestWalkDiratReportsDirectoriesRemovedDuringWalk(t *testing.T) {
 		}
 	}
 }
+
+func TestWalkDiratSkipDirAndCallbackErrors(t *testing.T) {
+	fs, err := newTestUnixFS()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer fs.Cleanup()
+	for _, p := range []string{"skip/hidden", "visit/file"} {
+		if err := os.MkdirAll(filepath.Join(fs.Root, filepath.Dir(p)), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if filepath.Ext(p) != "" {
+			if err := os.WriteFile(filepath.Join(fs.Root, p), []byte("x"), 0o644); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	dirfd, _, closeFd, err := fs.SafePath("/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer closeFd()
+
+	var skipCalled bool
+	err = fs.WalkDirat(dirfd, "skip", func(_ int, _, _ string, d ufs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		skipCalled = true
+		if d == nil || !d.IsDir() {
+			t.Fatal("skip target should be a directory")
+		}
+		return ufs.SkipDir
+	})
+	if err != nil {
+		t.Fatalf("WalkDirat SkipDir: %v", err)
+	}
+	if !skipCalled {
+		t.Fatal("WalkDirat did not invoke callback for SkipDir target")
+	}
+
+	want := errors.New("callback failed")
+	err = fs.WalkDirat(dirfd, "visit", func(_ int, _, _ string, _ ufs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		return want
+	})
+	if !errors.Is(err, want) {
+		t.Fatalf("WalkDirat error = %v, want %v", err, want)
+	}
+}

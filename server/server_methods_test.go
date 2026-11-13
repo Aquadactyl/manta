@@ -77,6 +77,31 @@ func TestServerErrorsAndPowerActions(t *testing.T) {
 	assert.False(t, PowerAction(PowerActionTerminate).IsStart())
 }
 
+func TestServerNewReturnsDefaultingErrors(t *testing.T) {
+	previous := setServerDefaults
+	t.Cleanup(func() { setServerDefaults = previous })
+	want := errors.New("defaulting failed")
+
+	t.Run("server struct", func(t *testing.T) {
+		setServerDefaults = func(any) error { return want }
+		_, err := New(nil)
+		require.ErrorIs(t, err, want)
+	})
+	t.Run("server configuration", func(t *testing.T) {
+		calls := 0
+		setServerDefaults = func(any) error {
+			calls++
+			if calls == 1 {
+				return nil
+			}
+			return want
+		}
+		_, err := New(nil)
+		require.ErrorIs(t, err, want)
+		require.Equal(t, 2, calls)
+	})
+}
+
 func TestServerStateAndActivities(t *testing.T) {
 	s, err := New(nil)
 	require.NoError(t, err)

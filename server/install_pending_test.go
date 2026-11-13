@@ -17,6 +17,7 @@ func TestEnsureDataDirectoryContinuesWhenChownFails(t *testing.T) {
 	require.NoError(t, err)
 	s.fs, err = filesystem.New(filepath.Join(t.TempDir(), "data"), 0, nil)
 	require.NoError(t, err)
+	require.NoError(t, os.RemoveAll(s.fs.Path()))
 	oldChown := chownServerDataDirectory
 	chownServerDataDirectory = func(*filesystem.Filesystem) error { return os.ErrPermission }
 	t.Cleanup(func() { chownServerDataDirectory = oldChown })

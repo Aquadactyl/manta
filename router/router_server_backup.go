@@ -258,6 +258,12 @@ func parseBackupUuid(c *gin.Context, value string) (string, bool) {
 
 var validBackupURLRegexp = regexp.MustCompile(`^https?://[a-zA-Z0-9.\-_~%:\[\]]+(/[^?#\s]*)?(\?[^#\s]*)?$`)
 
+var lookupBackupRestoreIPAddr = net.DefaultResolver.LookupIPAddr
+
+var dialBackupRestore = func(ctx context.Context, network, address string) (net.Conn, error) {
+	return (&net.Dialer{Timeout: 30 * time.Second, KeepAlive: 30 * time.Second}).DialContext(ctx, network, address)
+}
+
 func isValidRedirectUrl(raw string) bool {
 	if !validBackupURLRegexp.MatchString(raw) {
 		return false
@@ -286,16 +292,12 @@ func backupRestoreHttpClient() http.Client {
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 	transport.Proxy = nil
 	transport.ResponseHeaderTimeout = 30 * time.Second
-	dialer := &net.Dialer{
-		Timeout:   30 * time.Second,
-		KeepAlive: 30 * time.Second,
-	}
 	transport.DialContext = func(ctx context.Context, network string, address string) (net.Conn, error) {
 		host, port, err := net.SplitHostPort(address)
 		if err != nil {
 			return nil, err
 		}
-		ips, err := net.DefaultResolver.LookupIPAddr(ctx, host)
+		ips, err := lookupBackupRestoreIPAddr(ctx, host)
 		if err != nil {
 			return nil, err
 		}
@@ -309,7 +311,7 @@ func backupRestoreHttpClient() http.Client {
 		}
 		var lastErr error
 		for _, resolved := range ips {
-			conn, err := dialer.DialContext(ctx, network, net.JoinHostPort(resolved.IP.String(), port))
+			conn, err := dialBackupRestore(ctx, network, net.JoinHostPort(resolved.IP.String(), port))
 			if err == nil {
 				return conn, nil
 			}

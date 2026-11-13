@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -707,4 +708,57 @@ func TestRouterRemainingCoverage(t *testing.T) {
 	w = httptest.NewRecorder()
 	h.router.ServeHTTP(w, authReq(http.MethodDelete, "/api/servers/"+sTransfer.ID(), ""))
 	assert.Equal(t, http.StatusNoContent, w.Code)
+}
+
+func TestBackupRestoreDialResolutionFailures(t *testing.T) {
+	previousLookup, previousDial := lookupBackupRestoreIPAddr, dialBackupRestore
+	t.Cleanup(func() {
+		lookupBackupRestoreIPAddr, dialBackupRestore = previousLookup, previousDial
+	})
+	transport := backupRestoreHttpClient().Transport.(*http.Transport)
+	address := "backup.example.test:443"
+
+	lookupErr := errors.New("resolver unavailable")
+	lookupBackupRestoreIPAddr = func(context.Context, string) ([]net.IPAddr, error) { return nil, lookupErr }
+	_, err := transport.DialContext(context.Background(), "tcp", address)
+	assert.ErrorIs(t, err, lookupErr)
+
+	lookupBackupRestoreIPAddr = func(context.Context, string) ([]net.IPAddr, error) { return nil, nil }
+	_, err = transport.DialContext(context.Background(), "tcp", address)
+	assert.ErrorContains(t, err, "did not resolve to any addresses")
+
+	lookupBackupRestoreIPAddr = func(context.Context, string) ([]net.IPAddr, error) {
+		return []net.IPAddr{{IP: net.ParseIP("127.0.0.1")}}, nil
+	}
+	_, err = transport.DialContext(context.Background(), "tcp", address)
+	assert.ErrorContains(t, err, "resolves to a blocked address")
+
+	lookupBackupRestoreIPAddr = func(context.Context, string) ([]net.IPAddr, error) {
+		return []net.IPAddr{{IP: net.ParseIP("8.8.8.8")}, {IP: net.ParseIP("1.1.1.1")}}, nil
+	}
+	dialErr := errors.New("connection refused")
+	dialBackupRestore = func(context.Context, string, string) (net.Conn, error) { return nil, dialErr }
+	_, err = transport.DialContext(context.Background(), "tcp", address)
+	assert.ErrorIs(t, err, dialErr)
+
+	called := 0
+	dialBackupRestore = func(context.Context, string, string) (net.Conn, error) {
+		called++
+		if called == 1 {
+			return nil, dialErr
+		}
+		conn, _ := net.Pipe()
+		return conn, nil
+	}
+	conn, err := transport.DialContext(context.Background(), "tcp", address)
+	assert.NoError(t, err)
+	assert.NotNil(t, conn)
+	_ = conn.Close()
+	assert.Equal(t, 2, called)
+
+	assert.Error(t, validateBackupDownloadUrl("https://example.com/file#fragment"))
+	client := backupRestoreHttpClient()
+	redirect, err := http.NewRequest(http.MethodGet, "https://example.com/backup", nil)
+	assert.NoError(t, err)
+	assert.NoError(t, client.CheckRedirect(redirect, nil))
 }

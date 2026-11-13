@@ -26,6 +26,8 @@ import (
 )
 
 // postTransfers .
+var createTransferEnvironment = func(s *server.Server) error { return s.CreateEnvironment() }
+
 func postTransfers(c *gin.Context) {
 	auth := strings.SplitN(c.GetHeader("Authorization"), " ", 2)
 	if len(auth) != 2 || auth[0] != "Bearer" {
@@ -239,7 +241,7 @@ out:
 	// stage, but we will just to be safe.
 
 	// Ensure the server environment gets configured.
-	if err := trnsfr.Server.CreateEnvironment(); err != nil {
+	if err := createTransferEnvironment(trnsfr.Server); err != nil {
 		middleware.CaptureAndAbort(c, err)
 		return
 	}

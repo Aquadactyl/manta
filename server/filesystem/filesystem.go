@@ -489,7 +489,7 @@ func (fs *Filesystem) Copy(p string) error {
 	for i := 0; ; i++ {
 		newName, err = fs.findCopySuffix(dirfd, baseName, extension)
 		if err == nil {
-			dst, err = fs.unixFS.OpenFileat(dirfd, newName, ufs.O_WRONLY|ufs.O_CREATE|ufs.O_EXCL, info.Mode())
+			dst, err = filesystemOpenFileat(fs.unixFS.UnixFS, dirfd, newName, ufs.O_WRONLY|ufs.O_CREATE|ufs.O_EXCL, info.Mode())
 		}
 		if err == nil {
 			break
@@ -505,8 +505,8 @@ func (fs *Filesystem) Copy(p string) error {
 	n, err := io.Copy(dst, io.LimitReader(source, currentSize))
 	used = n
 
-	if !fs.isTest && os.Geteuid() == 0 {
-		if err := fs.unixFS.Lchownat(dirfd, newName, config.Get().System.User.Uid, config.Get().System.User.Gid); err != nil {
+	if !fs.isTest && filesystemIsRoot() {
+		if err := filesystemLchownat(fs.unixFS.UnixFS, dirfd, newName, config.Get().System.User.Uid, config.Get().System.User.Gid); err != nil {
 			return err
 		}
 	}

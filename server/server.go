@@ -85,6 +85,8 @@ type Server struct {
 
 var chownServerDataDirectory = func(fs *filesystem.Filesystem) error { return fs.Chown("/") }
 
+var setServerDefaults = defaults.Set
+
 // New returns a new server instance with a context and all of the default
 // values set on the struct.
 func New(client remote.Client) (*Server, error) {
@@ -102,10 +104,10 @@ func New(client remote.Client) (*Server, error) {
 			system.InstallSink: system.NewSinkPool(),
 		},
 	}
-	if err := defaults.Set(&s); err != nil {
+	if err := setServerDefaults(&s); err != nil {
 		return nil, errors.Wrap(err, "server: could not set default values for struct")
 	}
-	if err := defaults.Set(&s.cfg); err != nil {
+	if err := setServerDefaults(&s.cfg); err != nil {
 		return nil, errors.Wrap(err, "server: could not set defaults for server configuration")
 	}
 	s.resources.State = system.NewAtomicString(environment.ProcessOfflineState)

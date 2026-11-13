@@ -70,6 +70,27 @@ func TestFilesystemErrors(t *testing.T) {
 	assert.False(t, IsFilesystemError(io.EOF))
 }
 
+func TestFindCopySuffixUsesTimestampAfterExhaustingNames(t *testing.T) {
+	dir := t.TempDir()
+	fs, err := New(dir, 1024*1024, nil)
+	require.NoError(t, err)
+	dirfd, _, closeFd, err := fs.unixFS.SafePath(".")
+	require.NoError(t, err)
+	defer closeFd()
+
+	for i := 0; i <= 50; i++ {
+		name := "file copy.txt"
+		if i > 0 {
+			name = fmt.Sprintf("file copy %d.txt", i)
+		}
+		require.NoError(t, os.WriteFile(filepath.Join(dir, name), nil, 0644))
+	}
+
+	got, err := fs.findCopySuffix(dirfd, "file", ".txt")
+	require.NoError(t, err)
+	assert.True(t, strings.HasPrefix(got, "filecopy."), got)
+}
+
 func TestFilesystemDiskSpaceChecks(t *testing.T) {
 	dir := t.TempDir()
 	fs, err := New(dir, 1024, []string{})

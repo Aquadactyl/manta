@@ -258,6 +258,7 @@ func transferTestMultipart(t *testing.T, archive []byte, checksum string) (*byte
 
 	var buf bytes.Buffer
 	mw := multipart.NewWriter(&buf)
+	require.NoError(t, mw.WriteField("ignored", "ignored transfer metadata"))
 	part, err := mw.CreateFormFile("archive", "archive.tar.gz")
 	require.NoError(t, err)
 	_, err = part.Write(archive)
@@ -569,6 +570,9 @@ func TestTransferInstallerFailure(t *testing.T) {
 
 func TestTransferSuccessFlow(t *testing.T) {
 	h := newTransferHarness(t, &transferTestPanel{})
+	previousCreate := createTransferEnvironment
+	createTransferEnvironment = func(*wserver.Server) error { return nil }
+	t.Cleanup(func() { createTransferEnvironment = previousCreate })
 
 	archive := buildTransferTestArchive(t, map[string]string{"file.txt": "content123"})
 	sum := sha256.Sum256(archive)
@@ -579,7 +583,5 @@ func TestTransferSuccessFlow(t *testing.T) {
 
 	body, contentType := transferTestMultipart(t, archive, checksum)
 	w := h.postTransfer(body, contentType, signTransferTestToken(t, newUUID))
-	// Even if Docker container create in CreateEnvironment returns error in test environment,
-	// all earlier branches (archive extract, checksum loop, verification) are fully exercised!
-	assert.Contains(t, []int{http.StatusOK, http.StatusBadRequest, http.StatusInternalServerError}, w.Code)
+	assert.Equal(t, http.StatusOK, w.Code)
 }
