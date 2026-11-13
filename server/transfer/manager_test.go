@@ -3,6 +3,7 @@ package transfer
 import (
 	"bytes"
 	"context"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -242,6 +243,19 @@ func TestTransferArchiveCreation(t *testing.T) {
 	assert.Equal(t, StatusPending, trNilCancel.Status())
 }
 
+func TestTransferArchiveReturnsDiskUsageError(t *testing.T) {
+	tr := newManagerTestTransfer(t, "transfer-archive-size-error")
+	previous := transferDiskUsage
+	t.Cleanup(func() { transferDiskUsage = previous })
+	transferDiskUsage = func(_ *filesystem.Filesystem, _ bool) (int64, error) {
+		return 0, errors.New("disk usage unavailable")
+	}
+
+	_, err := tr.Archive()
+	require.ErrorContains(t, err, "transfer: failed to get server disk usage")
+	require.ErrorContains(t, err, "disk usage unavailable")
+}
+
 func TestIsValidRedirectURL(t *testing.T) {
 	valid := []string{
 		"http://127.0.0.1:1/api/transfers",
@@ -265,10 +279,44 @@ func TestIsValidRedirectURL(t *testing.T) {
 		"javascript:alert(1)",
 		"http://[invalid-ipv6",
 		"http://\nnewline",
+		"http://example.com/%ZZ",
+		"http://:80/path",
 	}
 	for _, u := range invalid {
 		assert.False(t, IsValidRedirectURL(u), "expected %s to be invalid", u)
 	}
+}
+
+func TestPushArchiveToTargetRejectsMalformedEscapedURL(t *testing.T) {
+	tr := newManagerTestTransfer(t, "transfer-invalid-escape")
+	_, err := tr.PushArchiveToTarget("http://example.com/%ZZ", "token")
+	require.ErrorContains(t, err, "invalid target URL")
+}
+
+func TestPushArchiveToTargetReturnsRequestConstructionError(t *testing.T) {
+	tr := newManagerTestTransfer(t, "transfer-request-error")
+	tr.archive = &Archive{archive: &filesystem.Archive{Progress: progress.NewProgress(0)}}
+	previous := transferNewRequest
+	t.Cleanup(func() { transferNewRequest = previous })
+	want := errors.New("request construction failed")
+	transferNewRequest = func(context.Context, string, string, io.Reader) (*http.Request, error) {
+		return nil, want
+	}
+
+	_, err := tr.PushArchiveToTarget("http://example.com/upload", "token")
+	require.ErrorIs(t, err, want)
+}
+
+func TestPushArchiveToTargetReturnsArchiveCreationError(t *testing.T) {
+	tr := newManagerTestTransfer(t, "transfer-archive-error")
+	previous := transferGetArchive
+	t.Cleanup(func() { transferGetArchive = previous })
+	transferGetArchive = func(*Transfer) (*Archive, error) {
+		return nil, errors.New("archive creation failed")
+	}
+
+	_, err := tr.PushArchiveToTarget("http://example.com/upload", "token")
+	require.ErrorContains(t, err, "failed to get archive for transfer")
 }
 
 func TestPushArchiveToTarget_AdvancedBranches(t *testing.T) {

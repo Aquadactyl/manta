@@ -31,11 +31,12 @@ func TestOpenat2SetsRequiredFlagsAndPreservesRetryableErrors(t *testing.T) {
 			fd, err := (&UnixFS{})._openat2(AT_EMPTY_PATH, "file", O_RDONLY, 0)
 			require.Equal(t, 42, fd)
 			require.NotZero(t, gotHow.Flags&O_CLOEXEC)
-			if tc.err == nil {
+			switch tc.err {
+			case nil:
 				require.NoError(t, err)
-			} else if tc.err == unix.EINTR || tc.err == unix.EAGAIN {
+			case unix.EINTR, unix.EAGAIN:
 				require.ErrorIs(t, err, tc.err)
-			} else {
+			default:
 				var pathErr *PathError
 				require.ErrorAs(t, err, &pathErr)
 				require.Equal(t, "openat2", pathErr.Op)

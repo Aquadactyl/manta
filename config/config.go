@@ -947,11 +947,11 @@ var (
 	currentSystemUser        = user.Current
 	lookupSystemUser         = user.Lookup
 	ensurePlatformUserFn     = ensurePlatformUser
-	runUserCommand           = func(name string, args ...string) ([]byte, error) { return exec.Command(name, args...).Output() }
+	runUserCommand           = func(name string, args ...string) ([]byte, error) { return exec.Command(name, args...).Output() } //nolint:gosec // command and arguments come from operator configuration; no shell is involved
 	detectPlatformTimezoneFn = detectPlatformTimezone
 	readTimezoneFile         = os.ReadFile
 	runTimezoneCommand       = func(ctx context.Context, name string, args ...string) ([]byte, error) {
-		return exec.CommandContext(ctx, name, args...).Output()
+		return exec.CommandContext(ctx, name, args...).Output() //nolint:gosec // name is the fixed timedatectl command; no shell is involved
 	}
 )
 

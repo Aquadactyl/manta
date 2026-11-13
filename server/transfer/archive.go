@@ -9,12 +9,16 @@ import (
 	"github.com/pterodactyl/wings/server/filesystem"
 )
 
+var transferDiskUsage = func(fs *filesystem.Filesystem, allowStaleValue bool) (int64, error) {
+	return fs.DiskUsage(allowStaleValue)
+}
+
 // Archive returns an archive that can be used to stream the contents of the
 // contents of a server.
 func (t *Transfer) Archive() (*Archive, error) {
 	if t.archive == nil {
 		// Get the disk usage of the server (used to calculate the progress of the archive process)
-		rawSize, err := t.Server.Filesystem().DiskUsage(true)
+		rawSize, err := transferDiskUsage(t.Server.Filesystem(), true)
 		if err != nil {
 			return nil, fmt.Errorf("transfer: failed to get server disk usage: %w", err)
 		}

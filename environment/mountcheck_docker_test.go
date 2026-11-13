@@ -183,3 +183,33 @@ func TestDockerMountCheckerRunHonorsContextCancellation(t *testing.T) {
 		t.Fatal("Run() did not return after cancellation")
 	}
 }
+
+func TestDockerMountCheckerRunSelectsCanceledContextWhenWaitChannelsStayOpen(t *testing.T) {
+	checker := dockerMountCheckerForTest(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		path := strings.TrimPrefix(r.URL.Path, "/v1.51")
+		switch {
+		case r.Method == http.MethodPost && path == "/containers/create":
+			_, _ = fmt.Fprint(w, `{"Id":"mount-check","Warnings":[]}`)
+		case r.Method == http.MethodPost && path == "/containers/mount-check/start":
+			w.WriteHeader(http.StatusNoContent)
+		case r.Method == http.MethodDelete && path == "/containers/mount-check":
+			w.WriteHeader(http.StatusNoContent)
+		default:
+			t.Errorf("unexpected Docker request: %s %s", r.Method, r.URL)
+			http.NotFound(w, r)
+		}
+	}))
+
+	ctx, cancel := context.WithCancel(context.Background())
+	previous := dockerContainerWait
+	t.Cleanup(func() { dockerContainerWait = previous })
+	dockerContainerWait = func(_ *client.Client, _ context.Context, _ string, _ container.WaitCondition) (<-chan container.WaitResponse, <-chan error) {
+		cancel()
+		return nil, nil
+	}
+
+	_, err := checker.Run(ctx, &container.Config{}, &container.HostConfig{})
+	if err != context.Canceled {
+		t.Fatalf("Run() error = %v, want context.Canceled", err)
+	}
+}

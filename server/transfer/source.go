@@ -26,20 +26,25 @@ var transferCopyBuffers = sync.Pool{
 	},
 }
 
+var transferNewRequest = http.NewRequestWithContext
+var transferGetArchive = func(t *Transfer) (*Archive, error) { return t.Archive() }
+
 // IsValidRedirectURL validates that the target URL uses http or https, has a valid
 // host, and does not contain illegal characters or ambiguous authority components.
 func IsValidRedirectURL(raw string) bool {
+	_, ok := parseValidRedirectURL(raw)
+	return ok
+}
+
+func parseValidRedirectURL(raw string) (*url.URL, bool) {
 	if !validTransferURLRegexp.MatchString(raw) {
-		return false
+		return nil, false
 	}
 	parsed, err := url.Parse(raw)
 	if err != nil || parsed.Host == "" || parsed.Hostname() == "" {
-		return false
+		return nil, false
 	}
-	if parsed.Scheme != "http" && parsed.Scheme != "https" {
-		return false
-	}
-	return true
+	return parsed, true
 }
 
 func isValidRedirectUrl(raw string) bool {
@@ -49,13 +54,9 @@ func isValidRedirectUrl(raw string) bool {
 // PushArchiveToTarget POSTs the archive to the target node and returns the
 // response body.
 func (t *Transfer) PushArchiveToTarget(targetURL, token string) ([]byte, error) {
-	if !isValidRedirectUrl(targetURL) {
+	parsedURL, ok := parseValidRedirectURL(targetURL)
+	if !ok {
 		return nil, fmt.Errorf("transfer: invalid target URL %q", targetURL)
-	}
-
-	parsedURL, err := url.Parse(targetURL)
-	if err != nil {
-		return nil, fmt.Errorf("transfer: failed to parse target URL: %w", err)
 	}
 
 	ctx, cancel := context.WithCancel(t.ctx)
@@ -64,7 +65,7 @@ func (t *Transfer) PushArchiveToTarget(targetURL, token string) ([]byte, error) 
 	t.SendMessage("Preparing to stream server data to destination...")
 	t.SetStatus(StatusProcessing)
 
-	a, err := t.Archive()
+	a, err := transferGetArchive(t)
 	if err != nil {
 		t.Error(err, "Failed to get archive for transfer.")
 		return nil, errors.New("failed to get archive for transfer")
@@ -92,7 +93,7 @@ func (t *Transfer) PushArchiveToTarget(targetURL, token string) ([]byte, error) 
 	body, writer := io.Pipe()
 	defer body.Close()
 	defer writer.Close()
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, parsedURL.String(), body)
+	req, err := transferNewRequest(ctx, http.MethodPost, parsedURL.String(), body)
 	if err != nil {
 		return nil, err
 	}

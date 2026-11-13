@@ -110,6 +110,7 @@ func TestVariablesGet(t *testing.T) {
 		"float64": float64(50.5),
 		"bool":    true,
 		"str":     "hello",
+		"nil":     nil,
 		"bad":     make(chan int),
 	}
 
@@ -120,6 +121,7 @@ func TestVariablesGet(t *testing.T) {
 	assert.Contains(t, v.Get("float64"), "50.5")
 	assert.Equal(t, "true", v.Get("bool"))
 	assert.Equal(t, "hello", v.Get("str"))
+	assert.Empty(t, v.Get("nil"))
 	assert.Empty(t, v.Get("nonexistent"))
 	assert.Empty(t, v.Get("bad"))
 }

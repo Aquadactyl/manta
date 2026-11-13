@@ -392,6 +392,9 @@ func TestStatFollowReportsMissingFilesystemRoot(t *testing.T) {
 	require.NoError(t, os.Remove(root))
 	_, err = fs.statFollow("file")
 	assert.Error(t, err)
+	_, _, closeFd, err := fs.SafePath("file")
+	closeFd()
+	assert.Error(t, err)
 }
 
 func TestTouchPathReportsDirectoryCreationFailure(t *testing.T) {

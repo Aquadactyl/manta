@@ -172,6 +172,10 @@ type dockerMountChecker struct {
 	cli *client.Client
 }
 
+var dockerContainerWait = func(cli *client.Client, ctx context.Context, id string, condition container.WaitCondition) (<-chan container.WaitResponse, <-chan error) {
+	return cli.ContainerWait(ctx, id, condition)
+}
+
 func (d *dockerMountChecker) HasImage(ctx context.Context, ref string) (bool, error) {
 	if _, err := d.cli.ImageInspect(ctx, ref); err != nil {
 		if cerrdefs.IsNotFound(err) {
@@ -209,7 +213,7 @@ func (d *dockerMountChecker) Run(ctx context.Context, cfg *container.Config, hos
 		return 0, err
 	}
 
-	statusCh, errCh := d.cli.ContainerWait(ctx, created.ID, container.WaitConditionNotRunning)
+	statusCh, errCh := dockerContainerWait(d.cli, ctx, created.ID, container.WaitConditionNotRunning)
 	select {
 	case err := <-errCh:
 		return 0, err
