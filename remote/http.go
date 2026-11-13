@@ -198,9 +198,6 @@ func (c *client) request(ctx context.Context, method, path string, body *bytes.B
 		return nil
 	}, c.backoff(ctx))
 	if err != nil {
-		if v, ok := err.(*backoff.PermanentError); ok {
-			return nil, v.Unwrap()
-		}
 		return nil, err
 	}
 	return res, nil

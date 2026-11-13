@@ -142,9 +142,17 @@ jobs:
         env:
           CGO_ENABLED: 0
         run: |
-          go test ./internal/... ./config/... ./server/filesystem/...
-          go test -run 'Darwin|MemoryUsed|CPUPercent|VMStat' ./system/...
-          go test -run 'CheckMount|MountCheck' ./environment/
+          go test -coverprofile=coverage-darwin-core.out ./internal/... ./config/... ./server/filesystem/...
+          go test -coverprofile=coverage-darwin-system.out -run 'Darwin|MemoryUsed|CPUPercent|VMStat' ./system/...
+          go test -coverprofile=coverage-darwin-environment.out -run 'CheckMount|MountCheck' ./environment/
+
+      - name: Upload Darwin coverage
+        if: always() && matrix.goarch == 'arm64' && matrix.go == '1.27.2'
+        uses: actions/upload-artifact@v7
+        with:
+          name: go-coverage-darwin
+          path: coverage-darwin-*.out
+          if-no-files-found: ignore
 
       - name: Run tests with race detector
         env:
