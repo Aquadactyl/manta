@@ -26,6 +26,8 @@ type unixFS interface {
 	unlinkat(dirfd int, path string, flags int) error
 }
 
+var removeAllFstatat = unix.Fstatat
+
 func (fs *UnixFS) removeAll(path string) error {
 	return removeAll(fs, path)
 }
@@ -204,7 +206,7 @@ func removeAllFrom(fs unixFS, parent File, base string) error {
 	// Is this a directory we need to recurse into?
 	var statInfo unix.Stat_t
 	statErr := ignoringEINTR(func() error {
-		return unix.Fstatat(parentFd, base, &statInfo, AT_SYMLINK_NOFOLLOW)
+		return removeAllFstatat(parentFd, base, &statInfo, AT_SYMLINK_NOFOLLOW)
 	})
 	if statErr != nil {
 		if errors.Is(statErr, ErrNotExist) {

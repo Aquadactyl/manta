@@ -30,6 +30,8 @@ var pool = sync.Pool{
 	},
 }
 
+var archiveFileInfoHeader = tar.FileInfoHeader
+
 // TarProgress .
 type TarProgress struct {
 	*tar.Writer
@@ -294,7 +296,7 @@ func (a *Archive) addToArchive(dirfd int, name, relative string, entry ufs.DirEn
 		// the logs, but we're not going to stop the backup. There are far too many cases of
 		// symlinks causing all sorts of unnecessary pain in this process. Sucks to suck if
 		// it doesn't work.
-		target, err = a.Filesystem.unixFS.Readlinkat(dirfd, name)
+		target, err = filesystemReadlinkat(a.Filesystem.unixFS.UnixFS, dirfd, name)
 		if err != nil {
 			// Ignore the not exist errors specifically, since there is nothing important about that.
 			if !errors.Is(err, ufs.ErrNotExist) {
@@ -305,7 +307,7 @@ func (a *Archive) addToArchive(dirfd int, name, relative string, entry ufs.DirEn
 	}
 
 	// Get the tar FileInfoHeader in order to add the file to the archive.
-	header, err := tar.FileInfoHeader(s, filepath.ToSlash(target))
+	header, err := archiveFileInfoHeader(s, filepath.ToSlash(target))
 	if err != nil {
 		return errors.WrapIff(err, "failed to get tar#FileInfoHeader for '%s'", name)
 	}
@@ -327,7 +329,7 @@ func (a *Archive) addToArchive(dirfd int, name, relative string, entry ufs.DirEn
 	buf := *bp
 
 	// Open the file.
-	f, err := a.Filesystem.unixFS.OpenFileat(dirfd, name, ufs.O_RDONLY, 0)
+	f, err := filesystemOpenFileat(a.Filesystem.unixFS.UnixFS, dirfd, name, ufs.O_RDONLY, 0)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil

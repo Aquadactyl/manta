@@ -124,6 +124,32 @@ func TestDecompressExtractsEntriesByType(t *testing.T) {
 	}
 }
 
+func TestDecompressReportsDirectoryAndSymlinkParentErrors(t *testing.T) {
+	for _, entry := range []struct {
+		name   string
+		header tar.Header
+	}{
+		{name: "directory", header: tar.Header{Name: "block/child/", Mode: 0o755, Typeflag: tar.TypeDir}},
+		{name: "symlink", header: tar.Header{Name: "block/link", Linkname: "target", Mode: 0o777, Typeflag: tar.TypeSymlink}},
+	} {
+		t.Run(entry.name, func(t *testing.T) {
+			fs, rfs := NewFs()
+			t.Cleanup(func() { _ = os.RemoveAll(rfs.root) })
+			require.NoError(t, rfs.CreateServerFile("block", []byte("not a directory")))
+
+			var archive bytes.Buffer
+			gz := gzip.NewWriter(&archive)
+			tarWriter := tar.NewWriter(gz)
+			require.NoError(t, tarWriter.WriteHeader(&entry.header))
+			require.NoError(t, tarWriter.Close())
+			require.NoError(t, gz.Close())
+			require.NoError(t, rfs.CreateServerFile("bundle.tar.gz", archive.Bytes()))
+
+			require.Error(t, fs.DecompressFile(context.Background(), "/", "bundle.tar.gz"))
+		})
+	}
+}
+
 // A symlink in a zip archive is extracted as a symlink.
 func TestDecompressZipSymlinkEntry(t *testing.T) {
 	fs, rfs := NewFs()

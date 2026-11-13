@@ -28,6 +28,8 @@ type UnixFS struct {
 	useOpenat2 bool
 }
 
+var ufsOpenat = unix.Openat
+
 // NewUnixFS creates a new sandboxed unix filesystem. BasePath is used as the
 // sandbox path, operations on BasePath itself are not allowed, but any
 // operations on its descendants are. Symlinks pointing outside BasePath are
@@ -788,7 +790,7 @@ func (fs *UnixFS) _openat(dirfd int, name string, flag int, mode uint32) (int, e
 		flag |= O_CLOEXEC
 	}
 	// O_LARGEFILE is set by Openat for us automatically.
-	fd, err := unix.Openat(dirfd, name, flag, mode)
+	fd, err := ufsOpenat(dirfd, name, flag, mode)
 	switch err {
 	case nil:
 		return fd, nil

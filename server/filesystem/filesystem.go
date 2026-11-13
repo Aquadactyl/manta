@@ -61,6 +61,12 @@ var (
 	filesystemLchownat = func(fs *ufs.UnixFS, dirfd int, p string, uid, gid int) error {
 		return fs.Lchownat(dirfd, p, uid, gid)
 	}
+	filesystemReadlinkat = func(fs *ufs.UnixFS, dirfd int, p string) (string, error) {
+		return fs.Readlinkat(dirfd, p)
+	}
+	filesystemOpenFileat = func(fs *ufs.UnixFS, dirfd int, p string, flag int, mode ufs.FileMode) (ufs.File, error) {
+		return fs.OpenFileat(dirfd, p, flag, mode)
+	}
 	filesystemWalkDirat = func(fs *ufs.UnixFS, dirfd int, p string, walk func(int, string, string, ufs.DirEntry, error) error) error {
 		return fs.WalkDirat(dirfd, p, walk)
 	}
