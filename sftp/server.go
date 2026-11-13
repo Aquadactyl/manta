@@ -77,6 +77,8 @@ type SFTPServer struct {
 	droppedUser    droppedLog
 }
 
+var listenSFTP = net.Listen
+
 // connectionCounter counts open connections in total and by a key, such as the
 // address or the user they belong to.
 type connectionCounter struct {
@@ -228,7 +230,7 @@ func (c *SFTPServer) Run() error {
 	}
 	conf.AddHostKey(private)
 
-	listener, err := net.Listen("tcp", c.Listen)
+	listener, err := listenSFTP("tcp", c.Listen)
 	if err != nil {
 		return err
 	}

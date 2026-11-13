@@ -3,6 +3,8 @@ package cmd
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -11,10 +13,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/apex/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/pterodactyl/wings/config"
+	"github.com/pterodactyl/wings/remote"
+	"github.com/pterodactyl/wings/server"
 )
 
 func TestRootCmdRunIgnoreCertErrorsDeprecated(t *testing.T) {
@@ -126,6 +131,75 @@ func TestRootCmdRunLifecycle(t *testing.T) {
 	})
 }
 
+func TestRootCmdRunAbortsOnInitializationFailures(t *testing.T) {
+	old := struct {
+		timezone, directories, user, passwd, rotation func() error
+		database                                      func() error
+		manager                                       func(context.Context, remote.Client) (*server.Manager, error)
+		docker                                        func(context.Context) error
+		fatal                                         func(log.Fields, string)
+		ignore                                        string
+	}{
+		configureTimezone, configureDirectories, ensurePterodactylUser, configurePasswd, enableLogRotation,
+		initializeDatabase, newServerManager, configureDocker, rootFatal,
+		rootCommand.Flags().Lookup("ignore-certificate-errors").Value.String(),
+	}
+	t.Cleanup(func() {
+		configureTimezone, configureDirectories, ensurePterodactylUser = old.timezone, old.directories, old.user
+		configurePasswd, enableLogRotation, initializeDatabase = old.passwd, old.rotation, old.database
+		newServerManager, configureDocker, rootFatal = old.manager, old.docker, old.fatal
+		_ = rootCommand.Flags().Set("ignore-certificate-errors", old.ignore)
+	})
+
+	for _, tc := range []struct {
+		name string
+		fail func(error)
+	}{
+		{name: "timezone", fail: func(err error) { configureTimezone = func() error { return err } }},
+		{name: "directories", fail: func(err error) { configureDirectories = func() error { return err } }},
+		{name: "system user", fail: func(err error) { ensurePterodactylUser = func() error { return err } }},
+		{name: "container passwd", fail: func(err error) { configurePasswd = func() error { return err } }},
+		{name: "log rotation", fail: func(err error) { enableLogRotation = func() error { return err } }},
+		{name: "database", fail: func(err error) { initializeDatabase = func() error { return err } }},
+		{name: "server manager", fail: func(err error) {
+			newServerManager = func(context.Context, remote.Client) (*server.Manager, error) { return nil, err }
+		}},
+		{name: "docker", fail: func(err error) { configureDocker = func(context.Context) error { return err } }},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			configureTimezone = func() error { return nil }
+			configureDirectories = func() error { return nil }
+			ensurePterodactylUser = func() error { return nil }
+			configurePasswd = func() error { return nil }
+			enableLogRotation = func() error { return nil }
+			initializeDatabase = func() error { return nil }
+			newServerManager = func(_ context.Context, client remote.Client) (*server.Manager, error) {
+				return server.NewEmptyManager(client), nil
+			}
+			configureDocker = func(context.Context) error { return nil }
+			rootFatal = func(_ log.Fields, message string) { panic(message) }
+			config.Set(&config.Configuration{})
+			_ = rootCommand.Flags().Set("ignore-certificate-errors", "false")
+			tc.fail(errors.New("injected initialization failure"))
+
+			cmd := rootCommand
+			cmd.SetContext(context.Background())
+			require.Panics(t, func() { rootCmdRun(cmd, nil) })
+		})
+	}
+}
+
+func TestRootCmdRunRejectsInsecureCertificateFlag(t *testing.T) {
+	oldFatal, oldFlag := rootFatal, rootCommand.Flags().Lookup("ignore-certificate-errors").Value.String()
+	t.Cleanup(func() {
+		rootFatal = oldFatal
+		_ = rootCommand.Flags().Set("ignore-certificate-errors", oldFlag)
+	})
+	rootFatal = func(_ log.Fields, message string) { panic(message) }
+	require.NoError(t, rootCommand.Flags().Set("ignore-certificate-errors", "true"))
+	require.Panics(t, func() { rootCmdRun(rootCommand, nil) })
+}
+
 func TestExitWithConfigurationNoticeUsesExitFunction(t *testing.T) {
 	old := exitCommand
 	t.Cleanup(func() { exitCommand = old })
@@ -197,4 +271,78 @@ func TestInitLoggingEnablesDebugLevel(t *testing.T) {
 	config.Set(cfg)
 	initLogging()
 	require.FileExists(t, filepath.Join(cfg.System.LogDirectory, "wings.log"))
+}
+
+func TestExecuteReportsCommandErrors(t *testing.T) {
+	oldFatalf := fatalfCommand
+	t.Cleanup(func() {
+		fatalfCommand = oldFatalf
+		rootCommand.SetArgs(nil)
+	})
+	fatalfCommand = func(format string, args ...interface{}) { panic("fatal: " + fmt.Sprintf(format, args...)) }
+	rootCommand.SetArgs([]string{"unknown-command"})
+	require.Panics(t, Execute)
+}
+
+func TestInitConfigReportsInvalidFile(t *testing.T) {
+	oldPath, oldFatalf := configPath, fatalfCommand
+	t.Cleanup(func() { configPath, fatalfCommand = oldPath, oldFatalf })
+
+	path := filepath.Join(t.TempDir(), "invalid.yml")
+	require.NoError(t, os.WriteFile(path, []byte("system: ["), 0o600))
+	configPath = path
+	fatalfCommand = func(format string, args ...interface{}) { panic(fmt.Sprintf(format, args...)) }
+	require.Panics(t, initConfig)
+}
+
+func TestInitConfigReportsMissingFile(t *testing.T) {
+	oldPath, oldExit := configPath, exitCommand
+	t.Cleanup(func() { configPath, exitCommand = oldPath, oldExit })
+	configPath = filepath.Join(t.TempDir(), "missing.yml")
+	exitCommand = func(code int) { panic(code) }
+	require.PanicsWithValue(t, 1, initConfig)
+}
+
+func TestInitConfigReportsAbsolutePathFailure(t *testing.T) {
+	oldPath, oldAbs, oldFatalf := configPath, filepathAbs, fatalfCommand
+	t.Cleanup(func() { configPath, filepathAbs, fatalfCommand = oldPath, oldAbs, oldFatalf })
+
+	configPath = "relative.yml"
+	filepathAbs = func(string) (string, error) { return "", errors.New("cwd unavailable") }
+	fatalfCommand = func(format string, args ...interface{}) { panic(fmt.Sprintf(format, args...)) }
+	require.Panics(t, initConfig)
+}
+
+func TestInitLoggingReportsSetupErrors(t *testing.T) {
+	oldFatalf := fatalfCommand
+	t.Cleanup(func() { fatalfCommand = oldFatalf })
+	fatalfCommand = func(format string, args ...interface{}) { panic(fmt.Sprintf(format, args...)) }
+
+	t.Run("install directory cannot be created", func(t *testing.T) {
+		file := filepath.Join(t.TempDir(), "file")
+		require.NoError(t, os.WriteFile(file, []byte("x"), 0o600))
+		cfg := &config.Configuration{}
+		cfg.System.LogDirectory = file
+		config.Set(cfg)
+		require.Panics(t, initLogging)
+	})
+
+	t.Run("log file cannot be opened", func(t *testing.T) {
+		dir := t.TempDir()
+		require.NoError(t, os.Mkdir(filepath.Join(dir, "wings.log"), 0o700))
+		cfg := &config.Configuration{}
+		cfg.System.LogDirectory = dir
+		config.Set(cfg)
+		require.Panics(t, initLogging)
+	})
+}
+
+func TestShutdownOnSignalClosesServerAfterShutdownError(t *testing.T) {
+	oldShutdown := shutdownHTTP
+	t.Cleanup(func() { shutdownHTTP = oldShutdown })
+	shutdownHTTP = func(*http.Server, context.Context) error { return errors.New("shutdown failed") }
+
+	signals := make(chan os.Signal, 1)
+	signals <- syscall.SIGTERM
+	shutdownOnSignal(signals, server.NewEmptyManager(nil), &http.Server{})
 }

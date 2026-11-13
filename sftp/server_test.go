@@ -317,6 +317,21 @@ func TestSFTPServerRunAndHandleBranches(t *testing.T) {
 	}
 }
 
+func TestSFTPServerRunStartsListener(t *testing.T) {
+	config.Set(&config.Configuration{AuthenticationToken: "test-token"})
+	oldListen := listenSFTP
+	t.Cleanup(func() { listenSFTP = oldListen })
+	listenSFTP = func(string, string) (net.Listener, error) { return &flakyListener{}, nil }
+
+	srv := New(server.NewEmptyManager(nil))
+	srv.BasePath = t.TempDir()
+	srv.Listen = "127.0.0.1:0"
+	srv.MaxConnections = 1
+	if err := srv.Run(); !errors.Is(err, net.ErrClosed) {
+		t.Fatalf("expected the listener's close error, got %v", err)
+	}
+}
+
 type flakyListener struct {
 	fails int
 }

@@ -3,6 +3,7 @@ package environment
 import (
 	"context"
 	"math"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -63,6 +64,41 @@ func TestLimitsAndSettings(t *testing.T) {
 
 	// 6. blkioWeightSupported
 	_ = blkioWeightSupported()
+}
+
+func TestBlkioWeightSupportedAcrossPlatformsAndCgroupLayouts(t *testing.T) {
+	const controllers = "/sys/fs/cgroup/cgroup.controllers"
+	const systemSliceWeight = "/sys/fs/cgroup/system.slice/io.weight"
+	const rootWeight = "/sys/fs/cgroup/io.weight"
+
+	tests := []struct {
+		name  string
+		goos  string
+		files map[string]error
+		want  bool
+	}{
+		{name: "darwin does not probe the host", goos: "darwin", want: false},
+		{name: "cgroup v1", goos: "linux", files: map[string]error{controllers: os.ErrNotExist}, want: true},
+		{name: "delegated cgroup v2 weight", goos: "linux", files: map[string]error{controllers: nil, systemSliceWeight: nil}, want: true},
+		{name: "root cgroup v2 weight", goos: "linux", files: map[string]error{controllers: nil, systemSliceWeight: os.ErrNotExist, rootWeight: nil}, want: true},
+		{name: "cgroup v2 without weight support", goos: "linux", files: map[string]error{controllers: nil, systemSliceWeight: os.ErrNotExist, rootWeight: os.ErrNotExist}, want: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			calls := 0
+			stat := func(path string) (os.FileInfo, error) {
+				calls++
+				if err, ok := tt.files[path]; ok {
+					return nil, err
+				}
+				return nil, os.ErrNotExist
+			}
+			assert.Equal(t, tt.want, blkioWeightSupportedFor(tt.goos, stat))
+			if tt.goos == "darwin" {
+				assert.Zero(t, calls)
+			}
+		})
+	}
 }
 
 func TestVariablesGet(t *testing.T) {

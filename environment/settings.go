@@ -167,15 +167,19 @@ func (l Limits) AsContainerResources() container.Resources {
 // container block IO weight. On cgroup v2 the io.weight knob must be present or
 // runc fails container creation; cgroup v1/hybrid always supports it.
 func blkioWeightSupported() bool {
+	return blkioWeightSupportedFor(runtime.GOOS, os.Stat)
+}
+
+func blkioWeightSupportedFor(goos string, stat func(string) (os.FileInfo, error)) bool {
 	// Wings runs natively on macOS, but Docker's cgroup hierarchy is inside its
 	// Linux VM. The local filesystem probe cannot determine whether a cgroup
 	// created for the container will expose io.weight, so do not send the limit.
-	if runtime.GOOS == "darwin" {
+	if goos == "darwin" {
 		return false
 	}
 
 	// cgroup v1/hybrid honors the weight via blkio.weight; only v2 needs probing.
-	if _, err := os.Stat("/sys/fs/cgroup/cgroup.controllers"); err != nil {
+	if _, err := stat("/sys/fs/cgroup/cgroup.controllers"); err != nil {
 		return true
 	}
 	// On v2 the knob lives on the delegated child cgroups, not the root.
@@ -183,7 +187,7 @@ func blkioWeightSupported() bool {
 		"/sys/fs/cgroup/system.slice/io.weight",
 		"/sys/fs/cgroup/io.weight",
 	} {
-		if _, err := os.Stat(p); err == nil {
+		if _, err := stat(p); err == nil {
 			return true
 		}
 	}

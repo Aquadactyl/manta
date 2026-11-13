@@ -19,6 +19,7 @@ import (
 
 	"github.com/pterodactyl/wings/config"
 	"github.com/pterodactyl/wings/internal/models"
+	"github.com/pterodactyl/wings/internal/ufs"
 	"github.com/pterodactyl/wings/router/downloader"
 	"github.com/pterodactyl/wings/router/middleware"
 	"github.com/pterodactyl/wings/router/tokens"
@@ -31,11 +32,21 @@ import (
 // behavior. A reusable buffer avoids 4 KiB read/write cycles for large files.
 var fileReadBuffers = sync.Pool{New: func() any { return new([64 << 10]byte) }}
 
+var openServerFile = func(s *server.Server, p string) (ufs.File, filesystem.Stat, error) {
+	return s.Filesystem().File(p)
+}
+
+var executeRemoteDownload = func(dl *downloader.Download) error { return dl.Execute() }
+
+var decompressServerFile = func(s *server.Server, ctx context.Context, root, file string) error {
+	return s.Filesystem().DecompressFile(ctx, root, file)
+}
+
 // getServerFileContents returns the contents of a file on the server.
 func getServerFileContents(c *gin.Context) {
 	s := middleware.ExtractServer(c)
 	p := strings.TrimLeft(c.Query("file"), "/")
-	f, st, err := s.Filesystem().File(p)
+	f, st, err := openServerFile(s, p)
 	if err != nil {
 		middleware.CaptureAndAbort(c, err)
 		return
@@ -59,7 +70,6 @@ func getServerFileContents(c *gin.Context) {
 		c.Header("Content-Disposition", "attachment; filename="+strconv.Quote(st.Name()))
 		c.Header("Content-Type", "application/octet-stream")
 	}
-	defer c.Writer.Flush()
 	// If you don't do a limited reader here you will trigger a panic on write when
 	// a different server process writes content to the file after you've already
 	// determined the file size. This could lead to some weird content output but
@@ -78,6 +88,7 @@ func getServerFileContents(c *gin.Context) {
 		middleware.CaptureAndAbort(c, err)
 		return
 	}
+	c.Writer.Flush()
 }
 
 // Returns the contents of a directory for a server.
@@ -367,7 +378,7 @@ func postServerPullRemoteFile(c *gin.Context) {
 
 	download := func() error {
 		s.Log().WithField("download_id", dl.Identifier).WithField("url", system.LogURL(u.String())).Info("starting pull of remote file to disk")
-		if err := dl.Execute(); err != nil {
+		if err := executeRemoteDownload(dl); err != nil {
 			if !downloader.IsDownloadError(err) {
 				s.Log().WithField("download_id", dl.Identifier).WithField("error", err).Error("failed to pull remote file")
 			}
@@ -438,7 +449,7 @@ func postServerCreateDirectory(c *gin.Context) {
 	}
 
 	if err := s.Filesystem().CreateDirectory(data.Name, data.Path); err != nil {
-		if err.Error() == "not a directory" {
+		if errors.Is(err, ufs.ErrNotDirectory) {
 			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
 				"error": "Part of the path being created is not a directory (ENOTDIR).",
 			})
@@ -517,7 +528,7 @@ func postServerDecompressFiles(c *gin.Context) {
 	}
 
 	lg.Info("starting file decompression")
-	if err := s.Filesystem().DecompressFile(context.Background(), data.RootPath, data.File); err != nil {
+	if err := decompressServerFile(s, context.Background(), data.RootPath, data.File); err != nil {
 		// If the file is busy for some reason just return a nicer error to the user since there is not
 		// much we specifically can do. They'll need to stop the running server process in order to overwrite
 		// a file like this.

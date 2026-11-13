@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/franela/goblin"
+	"github.com/stretchr/testify/assert"
 
 	"github.com/pterodactyl/wings/internal/progress"
 )
@@ -80,4 +81,13 @@ func TestProgress(t *testing.T) {
 			_, _ = p2.Write(make([]byte, 1000000000)) // will test ticks
 		})
 	})
+}
+
+func TestProgressHandlesZeroAndNegativeWidthsAndZeroTotal(t *testing.T) {
+	p := progress.NewProgress(100)
+	assert.Equal(t, "[] 0 B / 100 B", p.Progress(0))
+	assert.Equal(t, "[] 0 B / 100 B", p.Progress(-1))
+
+	zeroTotal := progress.NewProgress(0)
+	assert.Equal(t, "[                         ] 0 B / 0 B", zeroTotal.Progress(25))
 }

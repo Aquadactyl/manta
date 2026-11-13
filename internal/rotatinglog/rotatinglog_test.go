@@ -1,6 +1,7 @@
 package rotatinglog
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -11,6 +12,26 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+type wrappedLogFile struct {
+	*os.File
+	statErr  error
+	closeErr error
+}
+
+func (f *wrappedLogFile) Stat() (os.FileInfo, error) {
+	if f.statErr != nil {
+		return nil, f.statErr
+	}
+	return f.File.Stat()
+}
+
+func (f *wrappedLogFile) Close() error {
+	if f.closeErr != nil {
+		return f.closeErr
+	}
+	return f.File.Close()
+}
 
 func read(t *testing.T, p string) string {
 	t.Helper()
@@ -28,6 +49,107 @@ func TestOpenValidatesArguments(t *testing.T) {
 	assert.Error(t, err)
 	_, err = Open(filepath.Join(t.TempDir(), "missing", "log"), 10, 3)
 	assert.Error(t, err)
+}
+
+func TestOpenClosesFileWhenStatFails(t *testing.T) {
+	statErr := errors.New("stat failed")
+	originalOpen := openLogFile
+	t.Cleanup(func() { openLogFile = originalOpen })
+	var opened *os.File
+	openLogFile = func(path string, flag int, perm os.FileMode) (logFile, error) {
+		f, err := os.OpenFile(path, flag, perm)
+		opened = f
+		if err != nil {
+			return nil, err
+		}
+		return &wrappedLogFile{File: f, statErr: statErr}, nil
+	}
+
+	_, err := Open(filepath.Join(t.TempDir(), "log"), 10, 1)
+	assert.ErrorIs(t, err, statErr)
+	_, err = opened.Write([]byte("x"))
+	assert.ErrorIs(t, err, os.ErrClosed)
+}
+
+func TestWriteReturnsUnderlyingWriteError(t *testing.T) {
+	w, err := Open(filepath.Join(t.TempDir(), "log"), 10, 1)
+	require.NoError(t, err)
+	require.NoError(t, w.file.Close())
+
+	n, err := w.Write([]byte("x"))
+	assert.Zero(t, n)
+	assert.ErrorIs(t, err, os.ErrClosed)
+}
+
+func TestRotationCloseErrorKeepsLogging(t *testing.T) {
+	p := filepath.Join(t.TempDir(), "log")
+	w, err := Open(p, 2, 1)
+	require.NoError(t, err)
+	require.NoError(t, w.file.Close())
+	file, err := os.OpenFile(p, os.O_WRONLY|os.O_APPEND, 0o600)
+	require.NoError(t, err)
+	closeErr := errors.New("close failed")
+	w.file = &wrappedLogFile{File: file, closeErr: closeErr}
+	_, err = w.file.Write([]byte("a"))
+	require.NoError(t, err)
+	w.size = 1
+	t.Cleanup(func() {
+		w.file.(*wrappedLogFile).closeErr = nil
+		_ = w.Close()
+	})
+
+	n, err := w.Write([]byte("bc"))
+	assert.Equal(t, 2, n)
+	assert.ErrorIs(t, err, closeErr)
+	assert.Equal(t, "abc", read(t, p))
+}
+
+func TestRotationReopenFailureClosesWriter(t *testing.T) {
+	p := filepath.Join(t.TempDir(), "log")
+	reopenErr := errors.New("reopen failed")
+	originalOpen := openLogFile
+	t.Cleanup(func() { openLogFile = originalOpen })
+	opens := 0
+	openLogFile = func(path string, flag int, perm os.FileMode) (logFile, error) {
+		opens++
+		if opens == 2 {
+			return nil, reopenErr
+		}
+		return os.OpenFile(path, flag, perm)
+	}
+	w, err := Open(p, 1, 1)
+	require.NoError(t, err)
+	_, err = w.Write([]byte("a"))
+	require.NoError(t, err)
+
+	n, err := w.Write([]byte("b"))
+	assert.Zero(t, n)
+	assert.ErrorIs(t, err, reopenErr)
+	assert.ErrorIs(t, err, os.ErrClosed)
+	assert.NoError(t, w.Close())
+}
+
+func TestRotationStopsWhenShiftingOldFileFails(t *testing.T) {
+	p := filepath.Join(t.TempDir(), "log")
+	shiftErr := errors.New("shift failed")
+	originalRename := renameLogFile
+	t.Cleanup(func() { renameLogFile = originalRename })
+	renameLogFile = func(old, new string) error {
+		if old == p+".1" && new == p+".2" {
+			return shiftErr
+		}
+		return os.Rename(old, new)
+	}
+	w, err := Open(p, 1, 2)
+	require.NoError(t, err)
+	defer w.Close()
+	_, err = w.Write([]byte("a"))
+	require.NoError(t, err)
+
+	n, err := w.Write([]byte("b"))
+	assert.Equal(t, 1, n)
+	assert.ErrorIs(t, err, shiftErr)
+	assert.Equal(t, "ab", read(t, p))
 }
 
 func TestWriteRotatesAndShiftsOldFiles(t *testing.T) {

@@ -40,10 +40,24 @@ import (
 )
 
 var (
-	configPath     = config.DefaultLocation
-	debug          = false
-	exitCommand    = os.Exit
-	getNoFileLimit = syscall.Getrlimit
+	configPath            = config.DefaultLocation
+	debug                 = false
+	exitCommand           = os.Exit
+	fatalfCommand         = log2.Fatalf
+	getNoFileLimit        = syscall.Getrlimit
+	filepathAbs           = filepath.Abs
+	shutdownHTTP          = (*http.Server).Shutdown
+	configureTimezone     = config.ConfigureTimezone
+	configureDirectories  = config.ConfigureDirectories
+	ensurePterodactylUser = config.EnsurePterodactylUser
+	configurePasswd       = config.ConfigurePasswd
+	enableLogRotation     = config.EnableLogRotation
+	initializeDatabase    = database.Initialize
+	newServerManager      = server.NewManager
+	configureDocker       = environment.ConfigureDocker
+	rootFatal             = func(fields log.Fields, message string) {
+		log.WithFields(fields).Fatal(message)
+	}
 )
 
 var rootCommand = &cobra.Command{
@@ -72,7 +86,7 @@ var versionCommand = &cobra.Command{
 
 func Execute() {
 	if err := rootCommand.Execute(); err != nil {
-		log2.Fatalf("failed to execute command: %s", err)
+		fatalfCommand("failed to execute command: %s", err)
 	}
 }
 
@@ -100,25 +114,25 @@ func rootCmdRun(cmd *cobra.Command, _ []string) {
 	log.WithField("config_file", configPath).Info("loading configuration from file")
 
 	if ok, _ := cmd.Flags().GetBool("ignore-certificate-errors"); ok {
-		log.Fatal("the --ignore-certificate-errors flag is insecure and is no longer supported; configure a valid TLS certificate chain and hostname trust instead")
+		rootFatal(nil, "the --ignore-certificate-errors flag is insecure and is no longer supported; configure a valid TLS certificate chain and hostname trust instead")
 		return
 	}
 
-	if err := config.ConfigureTimezone(); err != nil {
-		log.WithField("error", err).Fatal("failed to detect system timezone or use supplied configuration value")
+	if err := configureTimezone(); err != nil {
+		rootFatal(log.Fields{"error": err}, "failed to detect system timezone or use supplied configuration value")
 		return
 	}
 	log.WithField("timezone", config.Get().System.Timezone).Info("configured manta with system timezone")
-	if err := config.ConfigureDirectories(); err != nil {
-		log.WithField("error", err).Fatal("failed to configure system directories for manta")
+	if err := configureDirectories(); err != nil {
+		rootFatal(log.Fields{"error": err}, "failed to configure system directories for manta")
 		return
 	}
-	if err := config.EnsurePterodactylUser(); err != nil {
-		log.WithField("error", err).Fatal("failed to create manta system user")
+	if err := ensurePterodactylUser(); err != nil {
+		rootFatal(log.Fields{"error": err}, "failed to create manta system user")
 		return
 	}
-	if err := config.ConfigurePasswd(); err != nil {
-		log.WithField("error", err).Fatal("failed to configure container passwd file")
+	if err := configurePasswd(); err != nil {
+		rootFatal(log.Fields{"error": err}, "failed to configure container passwd file")
 		return
 	}
 	log.WithFields(log.Fields{
@@ -126,8 +140,8 @@ func rootCmdRun(cmd *cobra.Command, _ []string) {
 		"uid":      config.Get().System.User.Uid,
 		"gid":      config.Get().System.User.Gid,
 	}).Info("configured system user successfully")
-	if err := config.EnableLogRotation(); err != nil {
-		log.WithField("error", err).Fatal("failed to configure log rotation on the system")
+	if err := enableLogRotation(); err != nil {
+		rootFatal(log.Fields{"error": err}, "failed to configure log rotation on the system")
 		return
 	}
 
@@ -140,19 +154,19 @@ func rootCmdRun(cmd *cobra.Command, _ []string) {
 		}),
 	)
 
-	if err := database.Initialize(); err != nil {
-		log.WithField("error", err).Fatal("failed to initialize database")
+	if err := initializeDatabase(); err != nil {
+		rootFatal(log.Fields{"error": err}, "failed to initialize database")
 		return
 	}
 
-	manager, err := server.NewManager(cmd.Context(), pclient)
+	manager, err := newServerManager(cmd.Context(), pclient)
 	if err != nil {
-		log.WithField("error", err).Fatal("failed to load server configurations")
+		rootFatal(log.Fields{"error": err}, "failed to load server configurations")
 		return
 	}
 
-	if err := environment.ConfigureDocker(cmd.Context()); err != nil {
-		log.WithField("error", err).Fatal("failed to configure docker environment")
+	if err := configureDocker(cmd.Context()); err != nil {
+		rootFatal(log.Fields{"error": err}, "failed to configure docker environment")
 		return
 	}
 	startMountCheck(cmd.Context())
@@ -420,7 +434,7 @@ func shutdownOnSignal(signals <-chan os.Signal, manager *server.Manager, srv *ht
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	if err := srv.Shutdown(ctx); err != nil {
+	if err := shutdownHTTP(srv, ctx); err != nil {
 		log.WithField("error", err).Warn("failed to stop the HTTP server cleanly")
 		_ = srv.Close()
 	}
@@ -450,9 +464,9 @@ func connectionLimits() (int, int) {
 // with all the configuration values.
 func initConfig() {
 	if !filepath.IsAbs(configPath) {
-		d, err := filepath.Abs(configPath)
+		d, err := filepathAbs(configPath)
 		if err != nil {
-			log2.Fatalf("cmd/root: failed to get path to config file: %s", err)
+			fatalfCommand("cmd/root: failed to get path to config file: %s", err)
 		}
 		configPath = d
 	}
@@ -462,7 +476,7 @@ func initConfig() {
 		if errors.Is(err, os.ErrNotExist) {
 			exitWithConfigurationNotice()
 		}
-		log2.Fatalf("cmd/root: error while reading configuration file: %s", err)
+		fatalfCommand("cmd/root: error while reading configuration file: %s", err)
 	}
 	if debug && !config.Get().Debug {
 		config.SetDebugViaFlag(debug)
@@ -474,12 +488,12 @@ func initConfig() {
 func initLogging() {
 	dir := config.Get().System.LogDirectory
 	if err := os.MkdirAll(path.Join(dir, "/install"), 0o700); err != nil {
-		log2.Fatalf("cmd/root: failed to create install directory path: %s", err)
+		fatalfCommand("cmd/root: failed to create install directory path: %s", err)
 	}
 	p := filepath.Join(dir, "/wings.log")
 	w, err := openLogFile(p)
 	if err != nil {
-		log2.Fatalf("cmd/root: failed to create wings log: %s", err)
+		fatalfCommand("cmd/root: failed to create wings log: %s", err)
 	}
 	log.SetLevel(log.InfoLevel)
 	if config.Get().Debug {

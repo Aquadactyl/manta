@@ -19,9 +19,21 @@ type Writer struct {
 	path    string
 	maxSize int64
 	keep    int
-	file    *os.File
+	file    logFile
 	size    int64
 }
+
+type logFile interface {
+	Write([]byte) (int, error)
+	Stat() (os.FileInfo, error)
+	Close() error
+}
+
+var openLogFile = func(path string, flag int, perm os.FileMode) (logFile, error) {
+	return os.OpenFile(path, flag, perm)
+}
+
+var renameLogFile = os.Rename
 
 // Open opens the file at path for appending, creating it if it is missing, and
 // rotates it once it holds maxSize bytes, keeping up to keep old files. The size
@@ -43,7 +55,7 @@ func Open(path string, maxSize int64, keep int) (*Writer, error) {
 
 // open opens the file and records its current size.
 func (w *Writer) open() error {
-	f, err := os.OpenFile(w.path, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0o600)
+	f, err := openLogFile(w.path, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0o600)
 	if err != nil {
 		return err
 	}
@@ -98,14 +110,14 @@ func (w *Writer) rotate() error {
 	// The oldest file is overwritten by the rename.
 	var rotateErr error
 	for i := w.keep - 1; i >= 1; i-- {
-		err := os.Rename(w.numbered(i), w.numbered(i+1))
+		err := renameLogFile(w.numbered(i), w.numbered(i+1))
 		if err != nil && !errors.Is(err, os.ErrNotExist) {
 			rotateErr = err
 			break
 		}
 	}
 	if rotateErr == nil {
-		if err := os.Rename(w.path, w.numbered(1)); err != nil && !errors.Is(err, os.ErrNotExist) {
+		if err := renameLogFile(w.path, w.numbered(1)); err != nil && !errors.Is(err, os.ErrNotExist) {
 			rotateErr = err
 		}
 	}

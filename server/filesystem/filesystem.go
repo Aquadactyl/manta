@@ -47,9 +47,13 @@ type Filesystem struct {
 }
 
 var (
-	filesystemIsRoot = func() bool { return os.Geteuid() == 0 }
-	filesystemLchown = func(fs *ufs.UnixFS, p string, uid, gid int) error {
+	filesystemNewUnixFS = ufs.NewUnixFS
+	filesystemIsRoot    = func() bool { return os.Geteuid() == 0 }
+	filesystemLchown    = func(fs *ufs.UnixFS, p string, uid, gid int) error {
 		return fs.Lchown(p, uid, gid)
+	}
+	filesystemTouch = func(fs *ufs.Quota, p string, flag int, mode ufs.FileMode) (ufs.File, error) {
+		return fs.Touch(p, flag, mode)
 	}
 	filesystemLchownat = func(fs *ufs.UnixFS, dirfd int, p string, uid, gid int) error {
 		return fs.Lchownat(dirfd, p, uid, gid)
@@ -64,7 +68,7 @@ func New(root string, size int64, denylist []string) (*Filesystem, error) {
 	if err := os.MkdirAll(root, 0o755); err != nil { //nolint:gosec // mounted as the container's home directory; the parent data directory is 0700
 		return nil, err
 	}
-	unixFS, err := ufs.NewUnixFS(root, config.UseOpenat2())
+	unixFS, err := filesystemNewUnixFS(root, config.UseOpenat2())
 	if err != nil {
 		return nil, err
 	}
@@ -138,7 +142,7 @@ func (fs *Filesystem) Touch(p string, flag int) (ufs.File, error) {
 // for example to a symlink, between being checked and being opened. If flag
 // includes O_TRUNC the file is truncated after its size is read.
 func (fs *Filesystem) openForWrite(p string, flag int, mode ufs.FileMode) (ufs.File, int64, error) {
-	file, err := fs.unixFS.Touch(p, flag&^ufs.O_TRUNC, mode)
+	file, err := filesystemTouch(fs.unixFS, p, flag&^ufs.O_TRUNC, mode)
 	if err != nil {
 		return nil, 0, err
 	}

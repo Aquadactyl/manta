@@ -25,6 +25,10 @@ type FileAction struct {
 	Target string
 }
 
+var persistActivity = func(activity *models.Activity) error {
+	return database.Instance().Create(activity).Error
+}
+
 // Log parses a SFTP specific file activity event and then passes it off to be stored
 // in the normal activity database.
 func (eh *eventHandler) Log(e models.Event, fa FileAction) error {
@@ -44,8 +48,8 @@ func (eh *eventHandler) Log(e models.Event, fa FileAction) error {
 		IP:       eh.ip,
 	}
 
-	if tx := database.Instance().Create(a.SetUser(eh.user)); tx.Error != nil {
-		return errors.WithStack(tx.Error)
+	if err := persistActivity(a.SetUser(eh.user)); err != nil {
+		return errors.WithStack(err)
 	}
 	return nil
 }

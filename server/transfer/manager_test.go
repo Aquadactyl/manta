@@ -83,6 +83,10 @@ func TestTransferMethodsAndStatus(t *testing.T) {
 	// Cancel
 	tr.Cancel()
 	require.Equal(t, StatusCancelling, tr.Status())
+	activeTransfer := New(context.Background(), tr.Server)
+	activeTransfer.Cancel()
+	require.Equal(t, StatusCancelling, activeTransfer.Status())
+	assert.ErrorIs(t, activeTransfer.Context().Err(), context.Canceled)
 
 	// Cancel when already cancelling is a no-op
 	tr.Cancel()
