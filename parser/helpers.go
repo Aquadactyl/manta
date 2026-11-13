@@ -138,7 +138,7 @@ func setValueAtPath(c *gabs.Container, path string, value interface{}) error {
 		// If the length of matches is 4 it means we're trying to access an object down in this array
 		// key, so make sure we generate the array as an array of objects, and not just a generic nil
 		// array.
-		if len(matches) == 4 {
+		if matches[3] != "" {
 			t = []interface{}{map[string]interface{}{}}
 		}
 
@@ -164,10 +164,11 @@ func setValueAtPath(c *gabs.Container, path string, value interface{}) error {
 	//
 	// If there are four matches in the regex it means that we managed to also match a trailing pathway
 	// for the key, which should be found in the given array key item and modified further.
-	if len(matches) == 4 {
+	if matches[3] != "" {
 		_, err = ct.SetP(value, strings.TrimPrefix(matches[3], "."))
 	} else {
-		_, err = ct.Set(value)
+		array := c.Search(gabs.DotPathToSlice(matches[1])...).Data().([]interface{})
+		array[i] = value
 	}
 
 	if err != nil {

@@ -37,18 +37,20 @@ type installerCreateRequest struct {
 // path. It records the create body, fails the start call so Execute returns
 // without a real container, and serves a fixed log body.
 type fakeInstallerDocker struct {
-	mu          sync.Mutex
-	create      *installerCreateRequest
-	logs        string
-	startErr    bool
-	failPull    bool
-	failList    bool
-	createErr   bool
-	waitErr     bool
-	logsErr     bool
-	logsCopyErr bool
-	deleteErr   bool
-	hugeScan    bool
+	mu               sync.Mutex
+	create           *installerCreateRequest
+	logs             string
+	startErr         bool
+	failPull         bool
+	failList         bool
+	failImageInspect bool
+	imageExists      bool
+	createErr        bool
+	waitErr          bool
+	logsErr          bool
+	logsCopyErr      bool
+	deleteErr        bool
+	hugeScan         bool
 }
 
 func (f *fakeInstallerDocker) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -56,6 +58,17 @@ func (f *fakeInstallerDocker) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	defer f.mu.Unlock()
 
 	switch {
+	case r.Method == http.MethodGet && strings.Contains(r.URL.Path, "/images/") && strings.HasSuffix(r.URL.Path, "/json") && !strings.HasSuffix(r.URL.Path, "/images/json"):
+		if f.failImageInspect {
+			http.Error(w, `{"message":"inspect failed"}`, http.StatusInternalServerError)
+			return
+		}
+		if f.imageExists {
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{}`))
+			return
+		}
+		http.Error(w, `{"message":"not found"}`, http.StatusNotFound)
 	case r.Method == http.MethodPost && strings.Contains(r.URL.Path, "/images/create"):
 		if f.hugeScan {
 			w.Header().Set("Content-Type", "application/json")
@@ -276,6 +289,26 @@ func TestInstallationProcessPullFallback(t *testing.T) {
 	// ImageList fails
 	fake.failList = true
 	assert.Error(t, p.pullInstallationImage())
+}
+
+func TestInstallationProcessPullPolicies(t *testing.T) {
+	fake := &fakeInstallerDocker{}
+	p := newInstallerTestProcess(t, fake)
+	cfg := config.Get()
+	cfg.Docker.ImagePullPolicy = config.ImagePullPolicyNever
+	config.Set(cfg)
+	require.ErrorContains(t, p.pullInstallationImage(), "not present locally")
+	fake.failImageInspect = true
+	require.ErrorContains(t, p.pullInstallationImage(), "failed to inspect image")
+
+	fake.failImageInspect = false
+	cfg.Docker.ImagePullPolicy = config.ImagePullPolicyIfNotPresent
+	config.Set(cfg)
+	// The mock reports that the image is not present, so this policy falls back
+	// to pulling it.
+	require.NoError(t, p.pullInstallationImage())
+	fake.imageExists = true
+	require.NoError(t, p.pullInstallationImage())
 }
 
 func TestInstallationProcessRemoveContainer(t *testing.T) {

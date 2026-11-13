@@ -151,6 +151,8 @@ type InstallationProcess struct {
 	client *client.Client
 }
 
+var installationDockerClient = environment.Docker
+
 // NewInstallationProcess returns a new installation process struct that will be
 // used to create containers and otherwise perform installation commands for a
 // server.
@@ -160,7 +162,7 @@ func NewInstallationProcess(s *Server, script *remote.InstallationScript) (*Inst
 		Server: s,
 	}
 
-	if c, err := environment.Docker(); err != nil {
+	if c, err := installationDockerClient(); err != nil {
 		return nil, err
 	} else {
 		proc.client = c

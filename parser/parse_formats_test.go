@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/buger/jsonparser"
@@ -661,4 +662,34 @@ func TestParserRemainingCoverage(t *testing.T) {
 
 	mfWriteErr := &mockParserFile{statInfo: st, writeErr: errors.New("write failed")}
 	assert.Error(t, rewrite(mfWriteErr, []byte("ok")))
+}
+
+func TestParsePropertiesScannerError(t *testing.T) {
+	file, err := os.CreateTemp(t.TempDir(), "oversized-property-line")
+	require.NoError(t, err)
+	defer file.Close()
+	_, err = file.WriteString(strings.Repeat("x", 70*1024))
+	require.NoError(t, err)
+	_, err = file.Seek(0, 0)
+	require.NoError(t, err)
+
+	err = (&ConfigurationFile{}).parsePropertiesFile(file)
+	require.ErrorContains(t, err, "token too long")
+}
+
+func TestParsePropertiesRejectsCircularReplacement(t *testing.T) {
+	file, err := os.CreateTemp(t.TempDir(), "circular-property")
+	require.NoError(t, err)
+	defer file.Close()
+	_, err = file.WriteString("key=old\n")
+	require.NoError(t, err)
+	_, err = file.Seek(0, 0)
+	require.NoError(t, err)
+
+	f := &ConfigurationFile{Replace: []ConfigurationFileReplacement{{
+		Match:       "key",
+		ReplaceWith: NewReplaceValue([]byte(`"${key}"`), jsonparser.String),
+	}}}
+	err = f.parsePropertiesFile(file)
+	require.ErrorContains(t, err, "failed to set replacement value")
 }

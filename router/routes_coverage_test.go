@@ -6,6 +6,7 @@ import (
 	"compress/gzip"
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -27,6 +28,7 @@ import (
 	"github.com/pterodactyl/wings/internal/database"
 	"github.com/pterodactyl/wings/router/downloader"
 	"github.com/pterodactyl/wings/router/tokens"
+	"github.com/pterodactyl/wings/server/backup"
 	"github.com/pterodactyl/wings/server/transfer"
 	"github.com/pterodactyl/wings/system"
 	"mime/multipart"
@@ -1063,6 +1065,16 @@ func TestPostCreateServer(t *testing.T) {
 	h.router.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusUnprocessableEntity, w.Code)
 
+	// 2b. A non-validation error from the Panel is an internal server error.
+	h.panel.configErr = errors.New("panel unavailable")
+	req = httptest.NewRequest(http.MethodPost, "/api/servers", strings.NewReader(`{"uuid":"00000000-0000-4000-8000-000000000097"}`))
+	req.Header.Set("Authorization", "Bearer test-token")
+	req.Header.Set("Content-Type", "application/json")
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+	h.panel.configErr = nil
+
 	// 3. Accepted when valid
 	newUUID := "00000000-0000-4000-8000-000000000099"
 	h.panel.config.Settings, _ = json.Marshal(map[string]string{"uuid": newUUID})
@@ -1097,6 +1109,65 @@ func TestPostCreateServer(t *testing.T) {
 	h.router.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusAccepted, w.Code)
 	time.Sleep(50 * time.Millisecond)
+}
+
+func TestPostCreateServerConcurrentDuplicate(t *testing.T) {
+	panel := &transferTestPanel{configHit: make(chan struct{}, 1), configGate: make(chan struct{})}
+	h := newTransferHarness(t, panel)
+	serverUUID := "00000000-0000-4000-8000-000000000096"
+	settings, err := json.Marshal(map[string]string{"uuid": serverUUID})
+	require.NoError(t, err)
+	panel.config.Settings = settings
+	req := httptest.NewRequest(http.MethodPost, "/api/servers", strings.NewReader(`{"uuid":"`+serverUUID+`"}`))
+	req.Header.Set("Authorization", "Bearer test-token")
+	req.Header.Set("Content-Type", "application/json")
+	response := make(chan *httptest.ResponseRecorder, 1)
+	go func() {
+		w := httptest.NewRecorder()
+		h.router.ServeHTTP(w, req)
+		response <- w
+	}()
+
+	select {
+	case <-panel.configHit:
+	case <-time.After(time.Second):
+		t.Fatal("create request did not begin loading server configuration")
+	}
+	h.seedServerWithUUID(serverUUID)
+	close(panel.configGate)
+	select {
+	case w := <-response:
+		assert.Equal(t, http.StatusConflict, w.Code)
+	case <-time.After(time.Second):
+		t.Fatal("create request did not finish after configuration loaded")
+	}
+}
+
+func TestPostCreateServerEnvironmentSetupFailure(t *testing.T) {
+	h := newTransferHarness(t, &transferTestPanel{})
+	serverUUID := "00000000-0000-4000-8000-000000000095"
+	settings, err := json.Marshal(map[string]string{"uuid": serverUUID})
+	require.NoError(t, err)
+	h.panel.config.Settings = settings
+
+	// Machine ID creation is part of environment setup. Making its parent a file
+	// forces that setup step to fail before Docker is contacted.
+	filePath := filepath.Join(t.TempDir(), "not-a-directory")
+	require.NoError(t, os.WriteFile(filePath, []byte("x"), 0644))
+	oldConfig := *config.Get()
+	t.Cleanup(func() { config.Set(&oldConfig) })
+	cfg := config.Get()
+	cfg.System.MachineID.Enable = true
+	cfg.System.MachineID.Directory = filePath
+	config.Set(cfg)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/servers", strings.NewReader(`{"uuid":"`+serverUUID+`"}`))
+	req.Header.Set("Authorization", "Bearer test-token")
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusAccepted, w.Code)
+	time.Sleep(20 * time.Millisecond)
 }
 
 func TestPostServerCopyFileAndFileContents(t *testing.T) {
@@ -1529,6 +1600,97 @@ func TestRouterServerMoreOperations(t *testing.T) {
 	assert.Equal(t, http.StatusNoContent, w.Code)
 }
 
+func TestServerInstallSyncFailure(t *testing.T) {
+	panel := &transferTestPanel{
+		configErr: errors.New("panel unavailable"),
+		configHit: make(chan struct{}, 2),
+	}
+	h := newTransferHarness(t, panel)
+	s := h.seedServer()
+
+	req := httptest.NewRequest(http.MethodPost, "/api/servers/"+s.ID()+"/sync", nil)
+	req.Header.Set("Authorization", "Bearer test-token")
+	w := httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+	<-panel.configHit
+
+	req = httptest.NewRequest(http.MethodPost, "/api/servers/"+s.ID()+"/install", nil)
+	req.Header.Set("Authorization", "Bearer test-token")
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusAccepted, w.Code)
+	select {
+	case <-panel.configHit:
+	case <-time.After(time.Second):
+		t.Fatal("install did not attempt to sync with the Panel")
+	}
+}
+
+func TestServerLifecycleHandlersWithCanceledContext(t *testing.T) {
+	h := newTransferHarness(t, &transferTestPanel{})
+	s := h.seedServer()
+	s.CtxCancel()
+
+	for _, action := range []string{"install", "reinstall"} {
+		req := httptest.NewRequest(http.MethodPost, "/api/servers/"+s.ID()+"/"+action, nil)
+		req.Header.Set("Authorization", "Bearer test-token")
+		w := httptest.NewRecorder()
+		h.router.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusAccepted, w.Code)
+	}
+	// Let each handler's goroutine observe the canceled context before coverage
+	// instrumentation is collected at test shutdown.
+	time.Sleep(10 * time.Millisecond)
+}
+
+func TestServerPowerBackgroundErrorBranches(t *testing.T) {
+	h := newTransferHarness(t, &transferTestPanel{})
+	s := h.seedServer()
+
+	for _, powerErr := range []error{context.Canceled, context.DeadlineExceeded, errors.New("power failed")} {
+		hit := make(chan struct{}, 1)
+		s.Environment = transferTestEnvironment{waitErr: powerErr, waitHit: hit}
+		req := httptest.NewRequest(http.MethodPost, "/api/servers/"+s.ID()+"/power", strings.NewReader(`{"action":"stop"}`))
+		req.Header.Set("Authorization", "Bearer test-token")
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		h.router.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusAccepted, w.Code)
+		select {
+		case <-hit:
+		case <-time.After(time.Second):
+			t.Fatal("power handler did not wait for the process to stop")
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+}
+
+func TestServerReinstallConflictsWithPowerAction(t *testing.T) {
+	h := newTransferHarness(t, &transferTestPanel{})
+	s := h.seedServer()
+	waitHit := make(chan struct{}, 1)
+	waitGate := make(chan struct{})
+	s.Environment = transferTestEnvironment{waitHit: waitHit, waitGate: waitGate}
+	defer close(waitGate)
+
+	request := func(path string) *httptest.ResponseRecorder {
+		req := httptest.NewRequest(http.MethodPost, path, strings.NewReader(`{"action":"stop"}`))
+		req.Header.Set("Authorization", "Bearer test-token")
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		h.router.ServeHTTP(w, req)
+		return w
+	}
+	assert.Equal(t, http.StatusAccepted, request("/api/servers/"+s.ID()+"/power").Code)
+	select {
+	case <-waitHit:
+	case <-time.After(time.Second):
+		t.Fatal("power action did not acquire the lock")
+	}
+	assert.Equal(t, http.StatusConflict, request("/api/servers/"+s.ID()+"/reinstall").Code)
+}
+
 func TestMoreBackupAndSystemOperations(t *testing.T) {
 	h := newTransferHarness(t, &transferTestPanel{})
 	s := h.seedServer()
@@ -1550,6 +1712,15 @@ func TestMoreBackupAndSystemOperations(t *testing.T) {
 	w = httptest.NewRecorder()
 	h.router.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusNotFound, w.Code)
+
+	// A directory at the backup path is a malformed archive, not a missing backup.
+	directoryUUID := uuid.New().String()
+	require.NoError(t, os.Mkdir(filepath.Join(config.Get().System.BackupDirectory, directoryUUID+".tar.gz"), 0755))
+	req = httptest.NewRequest(http.MethodDelete, "/api/servers/"+s.ID()+"/backup/"+directoryUUID, nil)
+	req.Header.Set("Authorization", "Bearer test-token")
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
 
 	// 3. deleteServerBackup exists (204)
 	existingUUID := uuid.New().String()
@@ -1675,6 +1846,36 @@ func TestMoreBackupAndSystemOperations(t *testing.T) {
 	w = httptest.NewRecorder()
 	h.router.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusConflict, w.Code)
+}
+
+func TestDeleteServerBackupRemovalErrors(t *testing.T) {
+	h := newTransferHarness(t, &transferTestPanel{})
+	s := h.seedServer()
+	backupDir := config.Get().System.BackupDirectory
+	require.NoError(t, os.MkdirAll(backupDir, 0755))
+
+	for _, tc := range []struct {
+		name       string
+		removeErr  error
+		wantStatus int
+	}{
+		{name: "missing after locate is success", removeErr: os.ErrNotExist, wantStatus: http.StatusNoContent},
+		{name: "other removal error is reported", removeErr: errors.New("permission denied"), wantStatus: http.StatusInternalServerError},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			backupUUID := uuid.New().String()
+			require.NoError(t, os.WriteFile(filepath.Join(backupDir, backupUUID+".tar.gz"), []byte("backup"), 0644))
+			previousRemove := removeLocalBackup
+			removeLocalBackup = func(*backup.LocalBackup) error { return tc.removeErr }
+			t.Cleanup(func() { removeLocalBackup = previousRemove })
+
+			req := httptest.NewRequest(http.MethodDelete, "/api/servers/"+s.ID()+"/backup/"+backupUUID, nil)
+			req.Header.Set("Authorization", "Bearer test-token")
+			w := httptest.NewRecorder()
+			h.router.ServeHTTP(w, req)
+			assert.Equal(t, tc.wantStatus, w.Code)
+		})
+	}
 }
 
 func TestFilesEndpointsAdvancedCoverage(t *testing.T) {

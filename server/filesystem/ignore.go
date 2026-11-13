@@ -2,6 +2,7 @@ package filesystem
 
 import (
 	"fmt"
+	"runtime"
 	"strings"
 	"time"
 
@@ -130,9 +131,20 @@ type ignoreMatchBudget struct {
 // newIgnoreMatchBudget returns the budget for evaluating a pattern list containing the
 // given number of patterns.
 func newIgnoreMatchBudget(patterns int) *ignoreMatchBudget {
+	return newIgnoreMatchBudgetFor(runtime.GOOS, patterns)
+}
+
+func newIgnoreMatchBudgetFor(goos string, patterns int) *ignoreMatchBudget {
+	perPattern := ignoreMatchPerPatternBudget
+	// regexp matching is materially slower on the macOS runners we support. Keep
+	// the runtime guard proportional to the platform's matching throughput so
+	// ordinary ignore lists do not abort archive creation there.
+	if goos == "darwin" {
+		perPattern *= 2
+	}
 	return &ignoreMatchBudget{
 		base:    ignoreMatchBaseBudget,
-		perFile: ignoreMatchPerFileBudget + time.Duration(patterns)*ignoreMatchPerPatternBudget,
+		perFile: ignoreMatchPerFileBudget + time.Duration(patterns)*perPattern,
 	}
 }
 

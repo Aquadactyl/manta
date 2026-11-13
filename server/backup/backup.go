@@ -27,6 +27,8 @@ var format = archives.CompressedArchive{
 	Extraction:  archives.Tar{},
 }
 
+var openArchiveEntry = func(file archives.FileInfo) (io.ReadCloser, error) { return file.Open() }
+
 type AdapterType string
 
 const (
@@ -142,12 +144,14 @@ func (b *Backup) Checksum() ([]byte, error) {
 	defer f.Close()
 
 	buf := make([]byte, 1024*4)
-	if _, err := io.CopyBuffer(h, f, buf); err != nil {
+	if _, err := copyChecksum(h, f, buf); err != nil {
 		return nil, err
 	}
 
 	return h.Sum(nil), nil
 }
+
+var copyChecksum = io.CopyBuffer
 
 // Details returns both the checksum and size of the archive currently stored on
 // the disk to the caller.

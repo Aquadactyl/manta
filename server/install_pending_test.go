@@ -9,7 +9,22 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/pterodactyl/wings/config"
+	"github.com/pterodactyl/wings/server/filesystem"
 )
+
+func TestEnsureDataDirectoryContinuesWhenChownFails(t *testing.T) {
+	s, err := New(nil)
+	require.NoError(t, err)
+	s.fs, err = filesystem.New(filepath.Join(t.TempDir(), "data"), 0, nil)
+	require.NoError(t, err)
+	oldChown := chownServerDataDirectory
+	chownServerDataDirectory = func(*filesystem.Filesystem) error { return os.ErrPermission }
+	t.Cleanup(func() { chownServerDataDirectory = oldChown })
+
+	require.NoError(t, s.EnsureDataDirectoryExists())
+	_, err = os.Stat(s.fs.Path())
+	require.NoError(t, err)
+}
 
 // Beginning an installation marks the server as installing, so power actions are
 // refused, without taking the lock the installation process needs.
@@ -38,6 +53,8 @@ func TestBeginInstallRejectsASecondInstallation(t *testing.T) {
 	_, err = s.beginInstall()
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "cannot obtain installation lock")
+	require.ErrorContains(t, s.Install(), "cannot obtain installation lock")
+	require.ErrorContains(t, s.Reinstall(), "cannot obtain installation lock")
 
 	// Rejecting the second one must not end the first.
 	assert.True(t, s.IsInstalling())

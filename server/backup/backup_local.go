@@ -20,6 +20,10 @@ type LocalBackup struct {
 
 var _ BackupInterface = (*LocalBackup)(nil)
 
+var localBackupDetails = func(b *Backup, ctx context.Context) (*ArchiveDetails, error) {
+	return b.Details(ctx, nil)
+}
+
 func NewLocal(client remote.Client, uuid string, ignore string) *LocalBackup {
 	return &LocalBackup{
 		Backup{
@@ -80,7 +84,7 @@ func (b *LocalBackup) Generate(ctx context.Context, fsys *filesystem.Filesystem,
 	}
 	b.log().Info("created backup successfully")
 
-	ad, err := b.Details(ctx, nil)
+	ad, err := localBackupDetails(&b.Backup, ctx)
 	if err != nil {
 		return nil, errors.WrapIf(err, "backup: failed to get archive details for local backup")
 	}
@@ -106,7 +110,7 @@ func (b *LocalBackup) Restore(ctx context.Context, _ io.Reader, callback Restore
 		reader = ratelimit.Reader(f, ratelimit.NewBucketWithRate(float64(writeLimit), writeLimit))
 	}
 	if err := format.Extract(ctx, reader, func(ctx context.Context, f archives.FileInfo) error {
-		r, err := f.Open()
+		r, err := openArchiveEntry(f)
 		if err != nil {
 			return err
 		}

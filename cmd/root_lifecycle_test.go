@@ -18,9 +18,31 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/pterodactyl/wings/config"
+	"github.com/pterodactyl/wings/environment"
 	"github.com/pterodactyl/wings/remote"
 	"github.com/pterodactyl/wings/server"
 )
+
+type rootLifecycleEnvironment struct {
+	environment.ProcessEnvironment
+	running    bool
+	runningErr error
+	attachErr  error
+	createErr  error
+	state      string
+}
+
+func (e *rootLifecycleEnvironment) Create() error { return e.createErr }
+func (e *rootLifecycleEnvironment) IsRunning(context.Context) (bool, error) {
+	return e.running, e.runningErr
+}
+func (e *rootLifecycleEnvironment) Attach(context.Context) error { return e.attachErr }
+func (e *rootLifecycleEnvironment) SetState(state string)        { e.state = state }
+func (e *rootLifecycleEnvironment) State() string                { return e.state }
+func (e *rootLifecycleEnvironment) Config() *environment.Configuration {
+	return environment.NewConfiguration(environment.Settings{}, nil)
+}
+func (e *rootLifecycleEnvironment) InSituUpdate() error { return nil }
 
 func TestRootCmdRunIgnoreCertErrorsDeprecated(t *testing.T) {
 	cmd := rootCommand
@@ -100,6 +122,51 @@ func TestRootCmdRunLifecycle(t *testing.T) {
 	cfg.Api.Ssl.Enabled = false
 	require.NoError(t, config.WriteToDisk(cfg))
 	config.Set(cfg)
+	require.NoError(t, os.MkdirAll(cfg.System.Data, 0o700))
+	require.NoError(t, os.WriteFile(cfg.System.GetStatesPath(), []byte("{"), 0o600))
+
+	oldManagerFactory := newServerManager
+	t.Cleanup(func() { newServerManager = oldManagerFactory })
+	newServerManager = func(_ context.Context, client remote.Client) (*server.Manager, error) {
+		manager := server.NewEmptyManager(client)
+		settings, err := json.Marshal(settingsMap)
+		if err != nil {
+			return nil, err
+		}
+		srv, err := manager.InitServer(existingContainerUUID, remote.ServerConfigurationResponse{
+			Settings:             settings,
+			ProcessConfiguration: &remote.ProcessConfiguration{},
+		})
+		if err != nil {
+			return nil, err
+		}
+		srv.Environment = &rootLifecycleEnvironment{
+			running:    true,
+			runningErr: errors.New("status inspection failed"),
+			attachErr:  errors.New("attach failed"),
+		}
+		manager.Add(srv)
+		secondUUID := "92595161-eed8-4536-8f50-689b2c2912bb"
+		secondSettings, err := json.Marshal(map[string]any{
+			"uuid":             secondUUID,
+			"skip_egg_scripts": true,
+			"build":            map[string]any{"memory_limit": 128, "disk_space": 128},
+			"container":        map[string]any{"image": "~alpine:latest"},
+		})
+		if err != nil {
+			return nil, err
+		}
+		second, err := manager.InitServer(secondUUID, remote.ServerConfigurationResponse{
+			Settings:             secondSettings,
+			ProcessConfiguration: &remote.ProcessConfiguration{},
+		})
+		if err != nil {
+			return nil, err
+		}
+		second.Environment = &rootLifecycleEnvironment{createErr: errors.New("environment create failed")}
+		manager.Add(second)
+		return manager, nil
+	}
 
 	origConfigPath := configPath
 	configPath = cfgPath

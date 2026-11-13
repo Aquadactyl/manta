@@ -1,7 +1,6 @@
 package filesystem
 
 import (
-	"runtime"
 	"strconv"
 	"strings"
 	"testing"
@@ -92,6 +91,13 @@ func TestIgnore(t *testing.T) {
 	})
 
 	g.Describe("ignoreMatchBudget", func() {
+		g.It("allows for the slower regexp matching on macOS", func() {
+			linux := newIgnoreMatchBudgetFor("linux", 100)
+			darwin := newIgnoreMatchBudgetFor("darwin", 100)
+			g.Assert(darwin.perFile).Equal(ignoreMatchPerFileBudget + 2*100*ignoreMatchPerPatternBudget)
+			g.Assert(linux.perFile).Equal(ignoreMatchPerFileBudget + 100*ignoreMatchPerPatternBudget)
+		})
+
 		g.It("allows the base budget regardless of the file count", func() {
 			b := &ignoreMatchBudget{base: 10 * time.Millisecond, perFile: time.Millisecond}
 			g.Assert(b.track(9 * time.Millisecond)).IsNil()
@@ -158,12 +164,6 @@ func TestIgnore(t *testing.T) {
 					c = min(c, time.Since(start)/20)
 				}
 				budget := newIgnoreMatchBudget(len(ordinary)).perFile
-				// macOS CI runners are consistently slower for this regexp-heavy
-				// workload than Linux runners. Keep the production budget unchanged,
-				// but allow modest platform variance in this throughput assertion.
-				if runtime.GOOS == "darwin" {
-					budget = budget * 5 / 4
-				}
 				if c > budget {
 					g.Failf("the longest ordinary list costs %s per file, over its budget of %s", c, budget)
 				}

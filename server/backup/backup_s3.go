@@ -25,6 +25,13 @@ type S3Backup struct {
 
 var _ BackupInterface = (*S3Backup)(nil)
 
+var (
+	createS3Archive = func(ctx context.Context, archive *filesystem.Archive, path string) error {
+		return archive.Create(ctx, path)
+	}
+	removeS3BackupFile = os.Remove
+)
+
 func NewS3(client remote.Client, uuid string, ignore string) *S3Backup {
 	return &S3Backup{
 		Backup{
@@ -41,7 +48,7 @@ func (s *S3Backup) Remove() error {
 	if err := s.validateIdentifier(); err != nil {
 		return err
 	}
-	return os.Remove(s.Path())
+	return removeS3BackupFile(s.Path())
 }
 
 // WithLogContext attaches additional context to the log output for this backup.
@@ -67,7 +74,7 @@ func (s *S3Backup) Generate(ctx context.Context, fsys *filesystem.Filesystem, ig
 	}
 
 	s.log().WithField("path", s.Path()).Info("creating backup for server")
-	if err := a.Create(ctx, s.Path()); err != nil {
+	if err := createS3Archive(ctx, a, s.Path()); err != nil {
 		return nil, err
 	}
 	s.log().Info("created backup successfully")
@@ -104,7 +111,7 @@ func (s *S3Backup) Restore(ctx context.Context, r io.Reader, callback RestoreCal
 		reader = ratelimit.Reader(r, ratelimit.NewBucketWithRate(float64(writeLimit), writeLimit))
 	}
 	if err := format.Extract(ctx, reader, func(ctx context.Context, f archives.FileInfo) error {
-		r, err := f.Open()
+		r, err := openArchiveEntry(f)
 		if err != nil {
 			return err
 		}
@@ -241,9 +248,6 @@ func (fu *s3FileUploader) uploadPart(ctx context.Context, part string, offset, s
 		return nil
 	}, fu.backoff(ctx))
 	if err != nil {
-		if v, ok := err.(*backoff.PermanentError); ok {
-			return "", v.Unwrap()
-		}
 		return "", err
 	}
 	return etag, nil

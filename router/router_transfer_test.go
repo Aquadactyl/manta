@@ -42,14 +42,23 @@ const transferTestUUID = "3f0c9a52-7d1e-4b8a-9c2f-5e6d7a8b9c01"
 type transferTestPanel struct {
 	remote.Client
 
-	mu        sync.Mutex
-	config    remote.ServerConfigurationResponse
-	statusErr error
-	statuses  []bool
+	mu         sync.Mutex
+	config     remote.ServerConfigurationResponse
+	configErr  error
+	configHit  chan struct{}
+	configGate chan struct{}
+	statusErr  error
+	statuses   []bool
 }
 
 func (p *transferTestPanel) GetServerConfiguration(context.Context, string) (remote.ServerConfigurationResponse, error) {
-	return p.config, nil
+	if p.configHit != nil {
+		p.configHit <- struct{}{}
+	}
+	if p.configGate != nil {
+		<-p.configGate
+	}
+	return p.config, p.configErr
 }
 
 func (p *transferTestPanel) SetTransferStatus(_ context.Context, _ string, successful bool) error {
@@ -87,7 +96,10 @@ func (p *transferTestPanel) SetBackupStatus(context.Context, string, remote.Back
 // container is needed.
 type transferTestEnvironment struct {
 	environment.ProcessEnvironment
-	st *system.AtomicString
+	st       *system.AtomicString
+	waitErr  error
+	waitHit  chan struct{}
+	waitGate chan struct{}
 }
 
 func (transferTestEnvironment) Create() error { return nil }
@@ -125,7 +137,15 @@ func (e transferTestEnvironment) SetState(s string) {
 
 func (transferTestEnvironment) SetLogCallback(func([]byte)) {}
 
-func (transferTestEnvironment) WaitForStop(context.Context, time.Duration, bool) error { return nil }
+func (e transferTestEnvironment) WaitForStop(context.Context, time.Duration, bool) error {
+	if e.waitHit != nil {
+		e.waitHit <- struct{}{}
+	}
+	if e.waitGate != nil {
+		<-e.waitGate
+	}
+	return e.waitErr
+}
 
 func (transferTestEnvironment) Stop(context.Context) error { return nil }
 

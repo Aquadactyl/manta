@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/buger/jsonparser"
+	"github.com/docker/docker/client"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -1420,9 +1421,20 @@ func TestServerRemainingCoverage(t *testing.T) {
 		Entrypoint:     "bash",
 		Script:         "echo 1",
 	}
+	previousInstallationDockerClient := installationDockerClient
+	installationDockerClient = func() (*client.Client, error) { return nil, errors.New("docker client unavailable") }
+	assert.Error(t, s.internalInstall())
+	installationDockerClient = previousInstallationDockerClient
 	s.installing.Store(true)
 	assert.Error(t, s.internalInstall())
 	s.installing.Store(false)
+
+	fakeInstaller := &fakeInstallerDocker{logs: "installation completed\n"}
+	installerProcess := newInstallerTestProcess(t, fakeInstaller)
+	installationDockerClient = func() (*client.Client, error) { return installerProcess.client, nil }
+	t.Cleanup(func() { installationDockerClient = environment.Docker })
+	require.NoError(t, os.MkdirAll(filepath.Join(config.Get().System.LogDirectory, "install"), 0o700))
+	require.NoError(t, s.internalInstall())
 
 	// 12. Sync with 404 remote error
 	ts := httptest.NewServer(http.NotFoundHandler())

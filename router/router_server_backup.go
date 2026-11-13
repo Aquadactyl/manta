@@ -28,6 +28,8 @@ import (
 
 type backupDownloadError string
 
+var removeLocalBackup = func(b *backup.LocalBackup) error { return b.Remove() }
+
 func (e backupDownloadError) Error() string {
 	return string(e)
 }
@@ -238,7 +240,7 @@ func deleteServerBackup(c *gin.Context) {
 	// I'm not entirely sure how likely this is to happen, however if we did manage to
 	// locate the backup previously and it is now missing when we go to delete, just
 	// treat it as having been successful, rather than returning a 404.
-	if err := b.Remove(); err != nil && !errors.Is(err, os.ErrNotExist) {
+	if err := removeLocalBackup(b); err != nil && !errors.Is(err, os.ErrNotExist) {
 		middleware.CaptureAndAbort(c, err)
 		return
 	}

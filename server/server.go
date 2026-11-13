@@ -83,6 +83,8 @@ type Server struct {
 	sinks map[system.SinkName]*system.SinkPool
 }
 
+var chownServerDataDirectory = func(fs *filesystem.Filesystem) error { return fs.Chown("/") }
+
 // New returns a new server instance with a context and all of the default
 // values set on the struct.
 func New(client remote.Client) (*Server, error) {
@@ -314,7 +316,7 @@ func (s *Server) EnsureDataDirectoryExists() error {
 			if err := os.MkdirAll(s.fs.Path(), 0o700); err != nil {
 				return errors.WithStack(err)
 			}
-			if err := s.fs.Chown("/"); err != nil {
+			if err := chownServerDataDirectory(s.fs); err != nil {
 				s.Log().WithField("error", err).Warn("server: failed to chown server data directory")
 			}
 		} else {

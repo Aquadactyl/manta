@@ -3,6 +3,7 @@ package websocket
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -13,12 +14,14 @@ import (
 
 	"github.com/gbrlsnchs/jwt/v3"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/pterodactyl/wings/config"
 	"github.com/pterodactyl/wings/environment"
+	dockerEnvironment "github.com/pterodactyl/wings/environment/docker"
 	"github.com/pterodactyl/wings/remote"
 	"github.com/pterodactyl/wings/router/tokens"
 	"github.com/pterodactyl/wings/server"
@@ -95,6 +98,43 @@ func TestGetHandler(t *testing.T) {
 	assert.Error(t, err)
 	if conn != nil {
 		_ = conn.Close()
+	}
+}
+
+func TestGetHandlerClosesConnectionWhenUUIDGenerationFails(t *testing.T) {
+	previous := websocketUUIDFactory
+	previousConfig := config.Get()
+	t.Cleanup(func() {
+		websocketUUIDFactory = previous
+		config.Set(previousConfig)
+	})
+	nextConfig := *previousConfig
+	nextConfig.PanelLocation = ""
+	nextConfig.AllowedOrigins = []string{"*"}
+	config.Set(&nextConfig)
+	want := errors.New("random source unavailable")
+	websocketUUIDFactory = func() (uuid.UUID, error) { return uuid.Nil, want }
+
+	handlerErr := make(chan error, 1)
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, err := GetHandler(nil, w, r, nil)
+		handlerErr <- err
+	}))
+	defer ts.Close()
+	wsURL := "ws" + strings.TrimPrefix(ts.URL, "http")
+	conn, _, dialErr := websocket.DefaultDialer.Dial(wsURL, nil)
+	if dialErr == nil {
+		defer conn.Close()
+		require.NoError(t, conn.SetReadDeadline(time.Now().Add(time.Second)))
+		_, _, readErr := conn.ReadMessage()
+		require.Error(t, readErr, "the upgraded connection should close after UUID generation fails")
+	}
+
+	select {
+	case err := <-handlerErr:
+		require.ErrorIs(t, err, want)
+	case <-time.After(time.Second):
+		t.Fatal("GetHandler did not return after UUID generation failed")
 	}
 }
 
@@ -206,6 +246,7 @@ type customWsTestEnv struct {
 	running   bool
 	readLogFn func(int) ([]string, error)
 	sendCmdFn func(string) error
+	waitFn    func()
 }
 
 func (e *customWsTestEnv) State() string                           { return e.state }
@@ -222,7 +263,12 @@ func (e *customWsTestEnv) SendCommand(c string) error {
 	}
 	return nil
 }
-func (e *customWsTestEnv) WaitForStop(context.Context, time.Duration, bool) error { return nil }
+func (e *customWsTestEnv) WaitForStop(context.Context, time.Duration, bool) error {
+	if e.waitFn != nil {
+		e.waitFn()
+	}
+	return nil
+}
 
 func TestListeners_ErrorPathsOnClosedConn(t *testing.T) {
 	// 1. LogSink error path via registerListenerEvents
@@ -276,7 +322,7 @@ func TestHandleInbound_AllRemainingBranches(t *testing.T) {
 	assert.Error(t, err)
 
 	// 4. AuthenticationEvent with onAuthenticated returning error, then nil
-	tokStr, tok := signToken(t, serverUuid, PermissionConnect, PermissionSendCommand, PermissionSendPowerStart)
+	tokStr, tok := signToken(t, serverUuid, PermissionConnect, PermissionSendCommand, PermissionSendPowerStart, PermissionSendPowerStop)
 	h.onAuthenticated = func() error {
 		return assert.AnError
 	}
@@ -312,8 +358,26 @@ func TestHandleInbound_AllRemainingBranches(t *testing.T) {
 
 	// 7. SetStateEvent with permission when server power lock is busy (ErrLockerLocked)
 	h.setJwt(tok)
-	// Start an action or hold power lock by running HandlePowerAction concurrently on a blocking stop
-	// Or test SendServerLogsEvent when not running (running == false)
+	customEnv.state = environment.ProcessRunningState
+	waiting, release := make(chan struct{}), make(chan struct{})
+	customEnv.waitFn = func() {
+		close(waiting)
+		<-release
+	}
+	actionDone := make(chan error, 1)
+	go func() { actionDone <- h.server.HandlePowerAction(server.PowerActionStop) }()
+	select {
+	case <-waiting:
+	case <-time.After(time.Second):
+		t.Fatal("power action did not acquire its lock")
+	}
+	err = h.HandleInbound(ctx, Message{Event: SetStateEvent, Args: []string{"stop"}})
+	assert.NoError(t, err)
+	close(release)
+	assert.NoError(t, <-actionDone)
+
+	// Send logs when the environment reports itself as stopped.
+	customEnv.running = false
 	err = h.HandleInbound(ctx, Message{Event: SendServerLogsEvent})
 	assert.NoError(t, err)
 
@@ -334,6 +398,12 @@ func TestHandleInbound_AllRemainingBranches(t *testing.T) {
 	customEnv.state = environment.ProcessRunningState
 	customEnv.sendCmdFn = func(string) error { return nil }
 	err = h.HandleInbound(ctx, Message{Event: SendCommandEvent, Args: []string{"say hello"}})
+	assert.NoError(t, err)
+	dockerEnv, err := dockerEnvironment.New("starting-without-stream", &dockerEnvironment.Metadata{}, environment.NewConfiguration(environment.Settings{}, nil))
+	require.NoError(t, err)
+	dockerEnv.SetState(environment.ProcessStartingState)
+	h.server.Environment = dockerEnv
+	err = h.HandleInbound(ctx, Message{Event: SendCommandEvent, Args: []string{"ignored while attaching"}})
 	assert.NoError(t, err)
 
 	// 11. Unknown event falls through to final return nil

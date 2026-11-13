@@ -26,6 +26,8 @@ import (
 	"github.com/pterodactyl/wings/server"
 )
 
+var websocketUUIDFactory = uuid.NewRandom
+
 const (
 	PermissionConnect          = "websocket.connect"
 	PermissionSendCommand      = "control.console"
@@ -116,8 +118,9 @@ func GetHandler(s *server.Server, w http.ResponseWriter, r *http.Request, c *gin
 		return nil, err
 	}
 
-	u, err := uuid.NewRandom()
+	u, err := websocketUUIDFactory()
 	if err != nil {
+		_ = conn.Close()
 		return nil, err
 	}
 

@@ -6,6 +6,7 @@ import (
 
 	"github.com/Jeffail/gabs/v2"
 	"github.com/buger/jsonparser"
+	"github.com/stretchr/testify/require"
 )
 
 func replacement(t *testing.T, raw string) ConfigurationFileReplacement {
@@ -106,6 +107,28 @@ func TestSetAtPathwayRegexOnMissingKey(t *testing.T) {
 	if c.ExistsP("servers.lobby.address") {
 		t.Fatal("a regex replacement must not create a missing key")
 	}
+}
+
+func TestSetValueAtPathArrayMutationErrors(t *testing.T) {
+	rootScalar, err := gabs.ParseJSON([]byte(`"scalar"`))
+	require.NoError(t, err)
+	err = setValueAtPath(rootScalar, "a[0]", "value")
+	require.ErrorContains(t, err, "failed to create empty array")
+
+	arrayWithGap, err := gabs.ParseJSON([]byte(`{"a":["first"]}`))
+	require.NoError(t, err)
+	err = setValueAtPath(arrayWithGap, "a[1]", "second")
+	require.ErrorContains(t, err, "error while parsing array element at path")
+
+	existingScalar, err := gabs.ParseJSON([]byte(`{"a":[1]}`))
+	require.NoError(t, err)
+	err = setValueAtPath(existingScalar, "a[0].child", "value")
+	require.ErrorContains(t, err, "failed to set value at config path")
+
+	existingArray, err := gabs.ParseJSON([]byte(`{"a":["old"]}`))
+	require.NoError(t, err)
+	require.NoError(t, setValueAtPath(existingArray, "a[0]", "new"))
+	require.Equal(t, `"new"`, existingArray.Path("a.0").String())
 }
 
 func TestReplacementAcceptsNumericKeys(t *testing.T) {
