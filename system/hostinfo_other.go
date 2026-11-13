@@ -8,9 +8,14 @@ import (
 	"github.com/docker/docker/pkg/parsers/kernel"
 )
 
+var (
+	readOSRelease     = osrelease.Read
+	readKernelVersion = kernel.GetKernelVersion
+)
+
 // hostKernelVersion returns the version of the kernel the host is running.
 func hostKernelVersion() (string, error) {
-	k, err := kernel.GetKernelVersion()
+	k, err := readKernelVersion()
 	if err != nil {
 		return "", err
 	}
@@ -20,7 +25,7 @@ func hostKernelVersion() (string, error) {
 // hostOSName returns the name of the operating system the host is running, as
 // it is shown in the panel.
 func hostOSName(info dockersystem.Info) (string, error) {
-	release, err := osrelease.Read()
+	release, err := readOSRelease()
 	if err != nil {
 		return "", err
 	}

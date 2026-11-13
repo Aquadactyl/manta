@@ -93,6 +93,17 @@ func TestCheckMountOutcomes(t *testing.T) {
 	}
 }
 
+func TestCheckMountSkipsWhenRandomTokenCannotBeGenerated(t *testing.T) {
+	previous := readMountCheckRandom
+	readMountCheckRandom = func([]byte) (int, error) { return 0, errors.New("entropy unavailable") }
+	t.Cleanup(func() { readMountCheckRandom = previous })
+
+	result := CheckMount(context.Background(), &mountCheckStub{image: true}, t.TempDir(), 0, 0)
+	if result.Status != MountSkipped || result.Err == nil || !strings.Contains(result.Err.Error(), "entropy unavailable") {
+		t.Fatalf("CheckMount() = %#v, want skipped entropy error", result)
+	}
+}
+
 func TestMountCheckMessages(t *testing.T) {
 	for _, status := range []MountCheckStatus{MountSkipped, MountRefused, MountNotWritable, MountNotShared, MountCheckStatus(99)} {
 		if msg := (MountCheckResult{Status: status, Err: errors.New("example")}).Message("/data"); msg == "" {

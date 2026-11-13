@@ -3,11 +3,13 @@
 package system
 
 import (
+	"errors"
 	"testing"
 
 	dockersystem "github.com/docker/docker/api/types/system"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/sys/unix"
 )
 
 func TestDarwinHostInfo(t *testing.T) {
@@ -19,6 +21,47 @@ func TestDarwinHostInfo(t *testing.T) {
 	require.NoError(t, err)
 	assert.Contains(t, name, "macOS")
 	assert.NotContains(t, name, "Docker Desktop")
+}
+
+func TestDarwinHostKernelVersionFallbacks(t *testing.T) {
+	oldSysctl, oldUname := sysctlDarwin, unameDarwin
+	t.Cleanup(func() { sysctlDarwin, unameDarwin = oldSysctl, oldUname })
+
+	sysctlDarwin = func(string) (string, error) { return "24.1.0", nil }
+	version, err := hostKernelVersion()
+	require.NoError(t, err)
+	assert.Equal(t, "24.1.0", version)
+
+	sysctlDarwin = func(string) (string, error) { return "", nil }
+	unameDarwin = func(u *unix.Utsname) error { copy(u.Release[:], []byte("24.2.0")); return nil }
+	version, err = hostKernelVersion()
+	require.NoError(t, err)
+	assert.Equal(t, "24.2.0", version)
+
+	sysctlDarwin = func(string) (string, error) { return "", errors.New("sysctl failed") }
+	unameDarwin = func(*unix.Utsname) error { return errors.New("uname failed") }
+	_, err = hostKernelVersion()
+	require.Error(t, err)
+}
+
+func TestDarwinHostOSNameUsesSystemValues(t *testing.T) {
+	oldSysctl, oldUname := sysctlDarwin, unameDarwin
+	t.Cleanup(func() { sysctlDarwin, unameDarwin = oldSysctl, oldUname })
+	sysctlDarwin = func(name string) (string, error) {
+		switch name {
+		case "kern.osproductversion":
+			return "26.0", nil
+		case "kern.osversion":
+			return "A123", nil
+		case "kern.osrelease":
+			return "25.0.0", nil
+		default:
+			return "", errors.New("unexpected sysctl")
+		}
+	}
+	name, err := hostOSName(dockersystem.Info{OperatingSystem: "Linux VM"})
+	require.NoError(t, err)
+	assert.Equal(t, "macOS 26.0 (A123)", name)
 }
 
 func TestDarwinFormatOSName(t *testing.T) {

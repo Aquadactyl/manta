@@ -54,18 +54,24 @@ type System struct {
 	OSType        string `json:"os_type"`
 }
 
+var (
+	systemHostKernelVersion = hostKernelVersion
+	systemGetDockerInfo     = GetDockerInfo
+	systemHostOSName        = hostOSName
+)
+
 func GetSystemInformation() (*Information, error) {
-	kernelVersion, err := hostKernelVersion()
+	kernelVersion, err := systemHostKernelVersion()
 	if err != nil {
 		return nil, err
 	}
 
-	version, info, err := GetDockerInfo(context.Background())
+	version, info, err := systemGetDockerInfo(context.Background())
 	if err != nil {
 		return nil, err
 	}
 
-	os, err := hostOSName(info)
+	os, err := systemHostOSName(info)
 	if err != nil {
 		return nil, err
 	}

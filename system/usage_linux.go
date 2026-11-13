@@ -17,6 +17,8 @@ import (
 
 const HostUsageSupported = true
 
+var readProcStat = func() ([]byte, error) { return os.ReadFile("/proc/stat") }
+
 func ReadResourceUsage(ctx context.Context, dataPath string) ResourceUsage {
 	usage := ResourceUsage{SampledAt: time.Now().UTC()}
 	if content, err := os.ReadFile("/proc/meminfo"); err == nil {
@@ -30,7 +32,7 @@ func ReadResourceUsage(ctx context.Context, dataPath string) ResourceUsage {
 		used := (disk.Blocks - min(disk.Bfree, disk.Blocks)) * uint64(disk.Bsize)
 		usage.DiskTotalBytes, usage.DiskUsedBytes = &total, &used
 	}
-	before, err := os.ReadFile("/proc/stat")
+	before, err := readProcStat()
 	if err != nil {
 		return usage
 	}
@@ -41,7 +43,7 @@ func ReadResourceUsage(ctx context.Context, dataPath string) ResourceUsage {
 		return usage
 	case <-timer.C:
 	}
-	if after, err := os.ReadFile("/proc/stat"); err == nil {
+	if after, err := readProcStat(); err == nil {
 		if percent, err := cpuUsageBetween(string(before), string(after)); err == nil {
 			usage.CPUPercent = &percent
 		}

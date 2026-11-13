@@ -7,17 +7,22 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+var (
+	sysctlDarwin = unix.Sysctl
+	unameDarwin  = unix.Uname
+)
+
 // hostKernelVersion returns the version of the Darwin kernel the host is running.
 //
 // The helper that is used on Linux runs system_profiler on macOS, which takes
 // several seconds and is not needed to read a value the kernel already has.
 func hostKernelVersion() (string, error) {
-	if v, err := unix.Sysctl("kern.osrelease"); err == nil && v != "" {
+	if v, err := sysctlDarwin("kern.osrelease"); err == nil && v != "" {
 		return v, nil
 	}
 
 	var u unix.Utsname
-	if err := unix.Uname(&u); err != nil {
+	if err := unameDarwin(&u); err != nil {
 		return "", err
 	}
 	return unix.ByteSliceToString(u.Release[:]), nil
@@ -29,8 +34,8 @@ func hostKernelVersion() (string, error) {
 // The operating system of the Docker host is the Linux virtual machine on
 // macOS, which is not what is wanted here, so it is not used.
 func hostOSName(_ dockersystem.Info) (string, error) {
-	version, _ := unix.Sysctl("kern.osproductversion")
-	build, _ := unix.Sysctl("kern.osversion")
+	version, _ := sysctlDarwin("kern.osproductversion")
+	build, _ := sysctlDarwin("kern.osversion")
 	darwin, _ := hostKernelVersion()
 
 	return formatOSName(version, build, darwin), nil

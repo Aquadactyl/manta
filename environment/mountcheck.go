@@ -48,6 +48,8 @@ const (
 	MountNotShared
 )
 
+var readMountCheckRandom = rand.Read
+
 // MountCheckResult describes the outcome of a check.
 type MountCheckResult struct {
 	Status MountCheckStatus
@@ -121,7 +123,7 @@ func CheckMount(ctx context.Context, mc mountChecker, dir string, uid, gid int) 
 	}
 
 	tok := make([]byte, 16)
-	if _, err := rand.Read(tok); err != nil {
+	if _, err := readMountCheckRandom(tok); err != nil {
 		return MountCheckResult{Status: MountSkipped, Err: err}
 	}
 	token := hex.EncodeToString(tok)

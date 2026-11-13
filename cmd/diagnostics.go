@@ -45,6 +45,14 @@ var diagnosticsArgs struct {
 	LogLines           int
 }
 
+var (
+	askDiagnosticsQuestions    = survey.Ask
+	askDiagnosticsUpload       = survey.AskOne
+	collectDockerInfo          = getDockerInfo
+	uploadDiagnostics          = uploadToHastebin
+	newDiagnosticsDockerClient = environment.Docker
+)
+
 func newDiagnosticsCommand() *cobra.Command {
 	command := &cobra.Command{
 		Use:   "diagnostics",
@@ -88,14 +96,14 @@ func diagnosticsCmdRun(*cobra.Command, []string) {
 			},
 		},
 	}
-	if err := survey.Ask(questions, &diagnosticsArgs); err != nil {
+	if err := askDiagnosticsQuestions(questions, &diagnosticsArgs); err != nil {
 		if err == terminal.InterruptErr {
 			return
 		}
 		panic(err)
 	}
 
-	dockerVersion, dockerInfo, dockerErr := getDockerInfo()
+	dockerVersion, dockerInfo, dockerErr := collectDockerInfo()
 
 	output := &strings.Builder{}
 	buildDiagnosticsReport(output, dockerVersion, dockerInfo, dockerErr)
@@ -109,9 +117,9 @@ func diagnosticsCmdRun(*cobra.Command, []string) {
 	// Always ask before uploading, since the report can contain sensitive
 	// information. A failed or interrupted prompt leaves upload false.
 	var upload bool
-	_ = survey.AskOne(&survey.Confirm{Message: "Upload to " + diagnosticsArgs.HastebinURL + "?", Default: false}, &upload)
+	_ = askDiagnosticsUpload(&survey.Confirm{Message: "Upload to " + diagnosticsArgs.HastebinURL + "?", Default: false}, &upload)
 	if upload {
-		u, err := uploadToHastebin(diagnosticsArgs.HastebinURL, output.String())
+		u, err := uploadDiagnostics(diagnosticsArgs.HastebinURL, output.String())
 		if err == nil {
 			fmt.Println("Your report is available here: ", u)
 		}
@@ -230,7 +238,7 @@ func writeConfiguration(w io.Writer) *config.Configuration {
 }
 
 func getDockerInfo() (types.Version, dockersystem.Info, error) {
-	client, err := environment.Docker()
+	client, err := newDiagnosticsDockerClient()
 	if err != nil {
 		return types.Version{}, dockersystem.Info{}, err
 	}

@@ -75,12 +75,7 @@ func (l *Locker) TryAcquire(ctx context.Context) error {
 	case <-l.done:
 		return ErrLockerDestroyed
 	case <-ctx.Done():
-		if err := ctx.Err(); err != nil {
-			if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
-				return ErrLockerLocked
-			}
-		}
-		return nil
+		return ErrLockerLocked
 	}
 }
 

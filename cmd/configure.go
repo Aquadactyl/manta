@@ -29,6 +29,14 @@ var configureArgs struct {
 	AllowInsecure bool
 }
 
+var (
+	askConfigureQuestions   = survey.Ask
+	askConfigureOverride    = survey.AskOne
+	exitConfigure           = os.Exit
+	newConfigureHTTPRequest = http.NewRequest
+	doConfigureRequest      = func(c *http.Client, r *http.Request) (*http.Response, error) { return c.Do(r) }
+)
+
 var nodeIdRegex = regexp.MustCompile(`^(\d+)$`)
 
 var configureCmd = &cobra.Command{
@@ -62,10 +70,10 @@ func configureCmdRun(cmd *cobra.Command, args []string) {
 
 	if _, err := os.Stat(target); err == nil && !configureArgs.Override {
 		// A failed or interrupted prompt leaves Override false, which aborts below.
-		_ = survey.AskOne(&survey.Confirm{Message: "Override existing configuration file"}, &configureArgs.Override)
+		_ = askConfigureOverride(&survey.Confirm{Message: "Override existing configuration file"}, &configureArgs.Override)
 		if !configureArgs.Override {
 			fmt.Println("Aborting process; a configuration file already exists for this node.")
-			os.Exit(1)
+			exitConfigure(1)
 		}
 	} else if err != nil && !os.IsNotExist(err) {
 		panic(err)
@@ -73,7 +81,7 @@ func configureCmdRun(cmd *cobra.Command, args []string) {
 
 	questions := configureQuestions()
 
-	if err := survey.Ask(questions, &configureArgs); err != nil {
+	if err := askConfigureQuestions(questions, &configureArgs); err != nil {
 		if err == terminal.InterruptErr {
 			return
 		}
@@ -92,21 +100,21 @@ func configureCmdRun(cmd *cobra.Command, args []string) {
 
 	fmt.Println(req.URL.String())
 
-	res, err := c.Do(req)
+	res, err := doConfigureRequest(c, req)
 	if err != nil {
 		fmt.Println("Failed to fetch configuration from the panel.\n", err.Error())
-		os.Exit(1)
+		exitConfigure(1)
 	}
 	defer res.Body.Close()
 
 	if res.StatusCode == http.StatusForbidden || res.StatusCode == http.StatusUnauthorized {
 		fmt.Println("The authentication credentials provided were not valid.")
-		os.Exit(1)
+		exitConfigure(1)
 	} else if res.StatusCode != http.StatusOK {
 		b, _ := io.ReadAll(res.Body)
 
 		fmt.Println("An error occurred while processing this request.\n", string(b))
-		os.Exit(1)
+		exitConfigure(1)
 	}
 
 	b, err := io.ReadAll(io.LimitReader(res.Body, maxConfigurationResponseSize))
@@ -116,7 +124,7 @@ func configureCmdRun(cmd *cobra.Command, args []string) {
 
 	if err := writePanelConfiguration(target, configureArgs.PanelURL, b); err != nil {
 		fmt.Println("Failed to configure wings.\n", err.Error())
-		os.Exit(1)
+		exitConfigure(1)
 	}
 
 	fmt.Println("Successfully configured wings.")
@@ -225,7 +233,7 @@ func getRequest() (*http.Request, error) {
 
 	u.Path = path.Join(u.Path, fmt.Sprintf("api/application/nodes/%s/configuration", configureArgs.Node))
 
-	r, err := http.NewRequest(http.MethodGet, u.String(), nil)
+	r, err := newConfigureHTTPRequest(http.MethodGet, u.String(), nil)
 	if err != nil {
 		return nil, err
 	}
