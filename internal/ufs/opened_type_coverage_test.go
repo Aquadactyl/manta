@@ -16,6 +16,9 @@ func TestOpenatResolvedTypeRetriesInterruptedOpen(t *testing.T) {
 	require.NoError(t, os.WriteFile(root+"/file", []byte("content"), 0o600))
 	fs, err := NewUnixFS(root, false)
 	require.NoError(t, err)
+	// Darwin defaults to the userspace RESOLVE_BENEATH implementation even when
+	// openat2 was not requested; force the openat branch whose EINTR retry is under test.
+	fs.useOpenat2 = false
 	parent, err := os.Open(root)
 	require.NoError(t, err)
 	defer parent.Close()

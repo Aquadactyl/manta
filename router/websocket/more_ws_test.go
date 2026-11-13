@@ -289,9 +289,12 @@ func TestHandleInbound_AllRemainingBranches(t *testing.T) {
 		running: false,
 	}
 	h.server.Environment = customEnv
+	h.server.SetInstalling(false)
+	h.server.SetTransferring(false)
 	h.onAuthenticated = func() error {
 		return nil
 	}
+	h.limiter = NewLimiter()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	err = h.HandleInbound(ctx, Message{Event: AuthenticationEvent, Args: []string{tokStr}})
@@ -336,4 +339,16 @@ func TestHandleInbound_AllRemainingBranches(t *testing.T) {
 	// 11. Unknown event falls through to final return nil
 	err = h.HandleInbound(ctx, Message{Event: "completely-unknown-event"})
 	assert.NoError(t, err)
+}
+
+func TestHandleInboundRefreshesExistingAuthentication(t *testing.T) {
+	h, _, client := setupHandlerClient(t)
+	t.Cleanup(func() { _ = client.Close() })
+	_, existing := signToken(t, serverUuid, PermissionConnect)
+	h.setJwt(existing)
+	refresh, _ := signToken(t, serverUuid, PermissionConnect)
+
+	err := h.HandleInbound(context.Background(), Message{Event: AuthenticationEvent, Args: []string{refresh}})
+	assert.NoError(t, err)
+	assert.NotNil(t, h.GetJwt())
 }

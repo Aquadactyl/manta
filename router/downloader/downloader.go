@@ -27,6 +27,7 @@ import (
 )
 
 var client *http.Client
+var newDownloadRequest = http.NewRequestWithContext
 
 func init() {
 	dialer := &net.Dialer{
@@ -244,7 +245,7 @@ func (dl *Download) Execute() error {
 	// At this point we have verified the destination is not within the local network, so we can
 	// now make a request to that URL and pull down the file, saving it to the server's data
 	// directory.
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, targetURL, nil)
+	req, err := newDownloadRequest(ctx, http.MethodGet, targetURL, nil)
 	if err != nil {
 		return errors.WrapIf(err, "downloader: failed to create request")
 	}

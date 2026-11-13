@@ -16,8 +16,9 @@ import (
 )
 
 var (
-	_conce  sync.Once
-	_client *client.Client
+	_conce              sync.Once
+	_client             *client.Client
+	dockerClientFactory = Docker
 )
 
 // Docker returns a docker client to be used throughout the codebase. Once a
@@ -34,7 +35,7 @@ func Docker() (*client.Client, error) {
 // ConfigureDocker configures the required network for the docker environment.
 func ConfigureDocker(ctx context.Context) error {
 	// Ensure the required docker network exists on the system.
-	cli, err := Docker()
+	cli, err := dockerClientFactory()
 	if err != nil {
 		return err
 	}

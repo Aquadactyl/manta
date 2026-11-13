@@ -5,10 +5,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/google/uuid"
@@ -19,7 +22,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func newUniquePullTestServer(t *testing.T) *server.Server {
+func newUniquePullTestServer(t *testing.T, denylist ...string) *server.Server {
 	t.Helper()
 	previous := config.Get()
 	t.Cleanup(func() { config.Set(previous) })
@@ -31,7 +34,10 @@ func newUniquePullTestServer(t *testing.T) *server.Server {
 	config.Set(&next)
 
 	u := uuid.Must(uuid.NewRandom()).String()
-	settings, err := json.Marshal(map[string]string{"uuid": u})
+	settings, err := json.Marshal(map[string]interface{}{
+		"uuid": u,
+		"egg":  map[string]interface{}{"file_denylist": denylist},
+	})
 	require.NoError(t, err)
 	s, err := server.NewEmptyManager(nil).InitServer(u, remote.ServerConfigurationResponse{
 		Settings:             settings,
@@ -94,6 +100,18 @@ func TestExecuteEdgeCases(t *testing.T) {
 	dl = New(s, DownloadRequest{Directory: "/"})
 	dl.cancelled = true
 	assert.Equal(t, context.Canceled, dl.Execute())
+
+	previous := newDownloadRequest
+	t.Cleanup(func() { newDownloadRequest = previous })
+	want := errors.New("request constructor failed")
+	newDownloadRequest = func(context.Context, string, string, io.Reader) (*http.Request, error) {
+		return nil, want
+	}
+	validURL, err := url.Parse("http://example.com/file")
+	require.NoError(t, err)
+	dl = New(s, DownloadRequest{Directory: "/", URL: validURL})
+	err = dl.Execute()
+	assert.ErrorIs(t, err, want)
 }
 
 func TestExecuteDownloadScenarios(t *testing.T) {
@@ -183,6 +201,23 @@ func TestExecuteDownloadScenarios(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, "/no-filename-disposition", dl.Path())
 	})
+}
+
+func TestExecuteRejectsDenylistedFilename(t *testing.T) {
+	setAllowlist(t, "127.0.0.1")
+	s := newUniquePullTestServer(t, "blocked.txt")
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte("hello"))
+	}))
+	defer server.Close()
+	u, err := url.Parse(server.URL + "/source")
+	require.NoError(t, err)
+
+	dl := New(s, DownloadRequest{Directory: "/", URL: u, FileName: "blocked.txt"})
+	err = dl.Execute()
+	require.ErrorContains(t, err, "is on the denylist")
+	_, err = os.Stat(filepath.Join(s.Filesystem().Path(), "blocked.txt"))
+	require.True(t, os.IsNotExist(err), "denylisted files must not be written")
 }
 
 func TestDownloaderCacheAndLifecycle(t *testing.T) {

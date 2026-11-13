@@ -3,6 +3,7 @@ package environment
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -13,6 +14,39 @@ import (
 
 	"github.com/pterodactyl/wings/config"
 )
+
+func TestConfigureDockerErrorAndOverlayNetwork(t *testing.T) {
+	previousConfig, previousFactory := config.Get(), dockerClientFactory
+	t.Cleanup(func() {
+		config.Set(previousConfig)
+		dockerClientFactory = previousFactory
+	})
+
+	want := errors.New("docker client unavailable")
+	dockerClientFactory = func() (*client.Client, error) { return nil, want }
+	require.ErrorIs(t, ConfigureDocker(context.Background()), want)
+
+	api := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet || r.URL.Path != "/v1.41/networks/test-network" {
+			http.NotFound(w, r)
+			return
+		}
+		_, _ = w.Write([]byte(`{"Driver":"overlay"}`))
+	}))
+	defer api.Close()
+	cli, err := client.NewClientWithOpts(client.WithHost(api.URL), client.WithVersion("1.41"))
+	require.NoError(t, err)
+	defer cli.Close()
+	dockerClientFactory = func() (*client.Client, error) { return cli, nil }
+	cfg := &config.Configuration{}
+	cfg.Docker.Network.Name = "test-network"
+	config.Set(cfg)
+
+	require.NoError(t, ConfigureDocker(context.Background()))
+	require.Equal(t, "overlay", config.Get().Docker.Network.Driver)
+	require.Empty(t, config.Get().Docker.Network.Interface)
+	require.True(t, config.Get().Docker.Network.ISPN)
+}
 
 func TestCreateDockerNetworkDrivers(t *testing.T) {
 	config.Set(&config.Configuration{})

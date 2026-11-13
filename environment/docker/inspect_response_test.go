@@ -1,7 +1,9 @@
 package docker
 
 import (
+	"bytes"
 	"context"
+	"encoding/binary"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -50,6 +52,49 @@ func TestFastInspectRejectsMalformedAndTruncatedResponses(t *testing.T) {
 			require.ErrorContains(t, err, test.want)
 		})
 	}
+}
+
+func TestReadlogReturnsScannerErrorForOversizedLine(t *testing.T) {
+	payload := bytes.Repeat([]byte("x"), 70*1024)
+	frame := make([]byte, 8+len(payload))
+	frame[0] = 1 // Docker stdout frame.
+	binary.BigEndian.PutUint32(frame[4:8], uint32(len(payload)))
+	copy(frame[8:], payload)
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write(frame)
+	}))
+	defer ts.Close()
+	c, err := client.NewClientWithOpts(client.WithHost(ts.URL), client.WithVersion("1.51"))
+	require.NoError(t, err)
+	defer c.Close()
+
+	_, err = (&Environment{Id: "oversized-log", client: c}).Readlog(10)
+	require.ErrorContains(t, err, "token too long")
+}
+
+func TestExistsAndExitStateReturnUnexpectedInspectErrors(t *testing.T) {
+	previousSettings, previousEnabled := cli, fastEnabled
+	t.Cleanup(func() {
+		o = sync.Once{}
+		cli, fastEnabled = previousSettings, previousEnabled
+	})
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		http.Error(w, `{"message":"daemon unavailable"}`, http.StatusInternalServerError)
+	}))
+	defer ts.Close()
+	c, err := client.NewClientWithOpts(client.WithHost(ts.URL), client.WithVersion("1.51"))
+	require.NoError(t, err)
+	defer c.Close()
+	config.Set(&config.Configuration{AuthenticationToken: "test-token", Docker: config.DockerConfiguration{UsePerformantInspect: false}})
+	o = sync.Once{}
+	e := &Environment{Id: "inspect-failure", client: c}
+
+	exists, err := e.Exists()
+	require.Error(t, err)
+	require.False(t, exists)
+	_, _, err = e.ExitState()
+	require.ErrorContains(t, err, "environment/docker: failed to inspect container")
 }
 
 func TestFastInspectRejectsInvalidRequestPath(t *testing.T) {

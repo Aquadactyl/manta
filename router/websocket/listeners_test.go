@@ -146,6 +146,9 @@ func TestBusEventsRetainWebsocketAuthorization(t *testing.T) {
 			}
 			stopReady()
 			<-publisherDone
+			// Invalid bytes are ignored by the server event listener; the next
+			// well-formed event must still be delivered.
+			h.server.Events().Push([]byte("not json"))
 
 			if tc.expired {
 				_, expired := signToken(t, serverUuid, PermissionConnect)

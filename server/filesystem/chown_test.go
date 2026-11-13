@@ -20,7 +20,9 @@ func TestChownPaths(t *testing.T) {
 		filesystemIsRoot, filesystemLchown, filesystemLchownat, filesystemWalkDirat = oldRoot, oldLchown, oldLchownat, oldWalk
 	})
 	filesystemIsRoot = func() bool { return true }
-	config.Set(&config.Configuration{System: config.SystemConfiguration{}})
+	cfg := &config.Configuration{}
+	cfg.System.User.Uid, cfg.System.User.Gid = os.Geteuid(), os.Getegid()
+	config.Set(cfg)
 
 	root := t.TempDir()
 	fs, err := New(root, 1<<20, nil)
