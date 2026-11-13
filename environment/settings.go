@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"runtime"
 	"strconv"
 
 	"github.com/apex/log"
@@ -166,6 +167,13 @@ func (l Limits) AsContainerResources() container.Resources {
 // container block IO weight. On cgroup v2 the io.weight knob must be present or
 // runc fails container creation; cgroup v1/hybrid always supports it.
 func blkioWeightSupported() bool {
+	// Wings runs natively on macOS, but Docker's cgroup hierarchy is inside its
+	// Linux VM. The local filesystem probe cannot determine whether a cgroup
+	// created for the container will expose io.weight, so do not send the limit.
+	if runtime.GOOS == "darwin" {
+		return false
+	}
+
 	// cgroup v1/hybrid honors the weight via blkio.weight; only v2 needs probing.
 	if _, err := os.Stat("/sys/fs/cgroup/cgroup.controllers"); err != nil {
 		return true

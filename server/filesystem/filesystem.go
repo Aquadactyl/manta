@@ -46,6 +46,19 @@ type Filesystem struct {
 	isTest bool
 }
 
+var (
+	filesystemIsRoot = func() bool { return os.Geteuid() == 0 }
+	filesystemLchown = func(fs *ufs.UnixFS, p string, uid, gid int) error {
+		return fs.Lchown(p, uid, gid)
+	}
+	filesystemLchownat = func(fs *ufs.UnixFS, dirfd int, p string, uid, gid int) error {
+		return fs.Lchownat(dirfd, p, uid, gid)
+	}
+	filesystemWalkDirat = func(fs *ufs.UnixFS, dirfd int, p string, walk func(int, string, string, ufs.DirEntry, error) error) error {
+		return fs.WalkDirat(dirfd, p, walk)
+	}
+)
+
 // New creates a new Filesystem instance for a given server.
 func New(root string, size int64, denylist []string) (*Filesystem, error) {
 	if err := os.MkdirAll(root, 0o755); err != nil { //nolint:gosec // mounted as the container's home directory; the parent data directory is 0700
@@ -297,13 +310,13 @@ func (fs *Filesystem) Symlink(oldpath, newpath string) error {
 }
 
 func (fs *Filesystem) chownFile(name string) error {
-	if fs.isTest || os.Geteuid() != 0 {
+	if fs.isTest || !filesystemIsRoot() {
 		return nil
 	}
 
 	uid := config.Get().System.User.Uid
 	gid := config.Get().System.User.Gid
-	return fs.unixFS.Lchown(name, uid, gid)
+	return filesystemLchown(fs.unixFS.UnixFS, name, uid, gid)
 }
 
 // mkdirAll creates the directory p along with any missing parents, chowning
@@ -327,7 +340,7 @@ func (fs *Filesystem) mkdirAll(p string, mode ufs.FileMode) error {
 // go ahead and perform the chown operation. Otherwise dig deeper into the directory until
 // we've run out of directories to dig into.
 func (fs *Filesystem) Chown(p string) error {
-	if fs.isTest || os.Geteuid() != 0 {
+	if fs.isTest || !filesystemIsRoot() {
 		return nil
 	}
 
@@ -341,7 +354,7 @@ func (fs *Filesystem) Chown(p string) error {
 	}
 
 	// Start by just chowning the initial path that we received.
-	if err := fs.unixFS.Lchownat(dirfd, name, uid, gid); err != nil {
+	if err := filesystemLchownat(fs.unixFS.UnixFS, dirfd, name, uid, gid); err != nil {
 		return errors.Wrap(err, "server/filesystem: chown: failed to chown path")
 	}
 
@@ -356,11 +369,11 @@ func (fs *Filesystem) Chown(p string) error {
 	// need to check if every individual path it touches is safe as the code
 	// doesn't traverse symlinks, is immune to symlink timing attacks, and
 	// gives us a dirfd and file name to make a direct syscall with.
-	if err := fs.unixFS.WalkDirat(dirfd, name, func(dirfd int, name, _ string, info ufs.DirEntry, err error) error {
+	if err := filesystemWalkDirat(fs.unixFS.UnixFS, dirfd, name, func(dirfd int, name, _ string, info ufs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
-		if err := fs.unixFS.Lchownat(dirfd, name, uid, gid); err != nil {
+		if err := filesystemLchownat(fs.unixFS.UnixFS, dirfd, name, uid, gid); err != nil {
 			return err
 		}
 		return nil

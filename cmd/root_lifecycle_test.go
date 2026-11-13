@@ -125,3 +125,76 @@ func TestRootCmdRunLifecycle(t *testing.T) {
 		rootCmdRun(cmd, nil)
 	})
 }
+
+func TestExitWithConfigurationNoticeUsesExitFunction(t *testing.T) {
+	old := exitCommand
+	t.Cleanup(func() { exitCommand = old })
+	exitCommand = func(code int) { panic(code) }
+	require.PanicsWithValue(t, 1, exitWithConfigurationNotice)
+}
+
+func TestRootPreRunRejectsAutoTLSWithoutHostname(t *testing.T) {
+	oldPath, oldExit := configPath, exitCommand
+	oldAutoTLS, oldHostname := rootCommand.Flags().Lookup("auto-tls").Value.String(), rootCommand.Flags().Lookup("tls-hostname").Value.String()
+	t.Cleanup(func() {
+		configPath, exitCommand = oldPath, oldExit
+		_ = rootCommand.Flags().Set("auto-tls", oldAutoTLS)
+		_ = rootCommand.Flags().Set("tls-hostname", oldHostname)
+	})
+
+	path := filepath.Join(t.TempDir(), "config.yml")
+	cfg, err := config.NewAtPath(path)
+	require.NoError(t, err)
+	cfg.System.LogDirectory = filepath.Join(t.TempDir(), "logs")
+	require.NoError(t, config.WriteToDisk(cfg))
+	configPath = path
+	require.NoError(t, rootCommand.Flags().Set("auto-tls", "true"))
+	require.NoError(t, rootCommand.Flags().Set("tls-hostname", ""))
+	exitCommand = func(code int) { panic(code) }
+	require.PanicsWithValue(t, 1, func() { rootCommand.PreRun(rootCommand, nil) })
+}
+
+func TestConnectionLimitsCoversResourceLimitRanges(t *testing.T) {
+	old := getNoFileLimit
+	t.Cleanup(func() { getNoFileLimit = old })
+
+	t.Run("getrlimit error", func(t *testing.T) {
+		getNoFileLimit = func(int, *syscall.Rlimit) error { return syscall.EPERM }
+		httpLimit, sftpLimit := connectionLimits()
+		assert.Equal(t, 3072, httpLimit)
+		assert.Equal(t, 1024, sftpLimit)
+	})
+	t.Run("low soft limit", func(t *testing.T) {
+		getNoFileLimit = func(_ int, r *syscall.Rlimit) error { r.Cur = 512; return nil }
+		httpLimit, sftpLimit := connectionLimits()
+		assert.Equal(t, 192, httpLimit)
+		assert.Equal(t, 64, sftpLimit)
+	})
+	t.Run("very high soft limit is capped", func(t *testing.T) {
+		getNoFileLimit = func(_ int, r *syscall.Rlimit) error { r.Cur = 2 << 20; return nil }
+		httpLimit, sftpLimit := connectionLimits()
+		assert.Equal(t, 785664, httpLimit)
+		assert.Equal(t, 261888, sftpLimit)
+	})
+}
+
+func TestInitConfigAppliesDebugFlag(t *testing.T) {
+	oldPath, oldDebug := configPath, debug
+	t.Cleanup(func() { configPath, debug = oldPath, oldDebug })
+	path := filepath.Join(t.TempDir(), "config.yml")
+	cfg, err := config.NewAtPath(path)
+	require.NoError(t, err)
+	cfg.Debug = false
+	require.NoError(t, config.WriteToDisk(cfg))
+	configPath, debug = path, true
+	initConfig()
+	require.True(t, config.Get().Debug)
+}
+
+func TestInitLoggingEnablesDebugLevel(t *testing.T) {
+	cfg := &config.Configuration{Debug: true}
+	cfg.System.LogDirectory = t.TempDir()
+	config.Set(cfg)
+	initLogging()
+	require.FileExists(t, filepath.Join(cfg.System.LogDirectory, "wings.log"))
+}

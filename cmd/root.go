@@ -40,8 +40,10 @@ import (
 )
 
 var (
-	configPath = config.DefaultLocation
-	debug      = false
+	configPath     = config.DefaultLocation
+	debug          = false
+	exitCommand    = os.Exit
+	getNoFileLimit = syscall.Getrlimit
 )
 
 var rootCommand = &cobra.Command{
@@ -53,7 +55,7 @@ var rootCommand = &cobra.Command{
 		if tls, _ := cmd.Flags().GetBool("auto-tls"); tls {
 			if host, _ := cmd.Flags().GetString("tls-hostname"); host == "" {
 				fmt.Println("A TLS hostname must be provided when running manta with automatic TLS, e.g.:\n\n    ./manta --auto-tls --tls-hostname my.example.com")
-				os.Exit(1)
+				exitCommand(1)
 			}
 		}
 	},
@@ -430,7 +432,7 @@ func shutdownOnSignal(signals <-chan os.Signal, manager *server.Manager, srv *ht
 // everything else Wings does. Raise the open file limit to allow more.
 func connectionLimits() (int, int) {
 	var rl syscall.Rlimit
-	if err := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &rl); err != nil {
+	if err := getNoFileLimit(syscall.RLIMIT_NOFILE, &rl); err != nil {
 		return 3072, 1024
 	}
 	limit := rl.Cur
@@ -522,5 +524,5 @@ Default Location: %s
 for this issue, it will be closed.[reset]
 
 `), config.DefaultLocation)
-	os.Exit(1)
+	exitCommand(1)
 }
