@@ -253,7 +253,7 @@ func openFdAt(dirfd int, name string) (File, error) {
 	for {
 		var err error
 		// This is only used to open directories.
-		fd, err = unix.Openat(dirfd, name, O_RDONLY|O_CLOEXEC|O_NOFOLLOW|O_DIRECTORY, 0)
+		fd, err = ufsOpenat(dirfd, name, O_RDONLY|O_CLOEXEC|O_NOFOLLOW|O_DIRECTORY, 0)
 		if err == nil {
 			break
 		}

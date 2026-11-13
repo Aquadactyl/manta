@@ -29,6 +29,15 @@ type UnixFS struct {
 }
 
 var ufsOpenat = unix.Openat
+var ufsRenameat = unix.Renameat
+var ufsMkdirat = unix.Mkdirat
+var ufsSetNonblock = unix.SetNonblock
+var renameLstatat = func(fs *UnixFS, dirfd int, name string) (FileInfo, error) {
+	return fs.Lstatat(dirfd, name)
+}
+var renameMkdirAll = func(fs *UnixFS, name string, mode FileMode) ([]string, error) {
+	return fs.MkdirAll(name, mode)
+}
 
 // NewUnixFS creates a new sandboxed unix filesystem. BasePath is used as the
 // sandbox path, operations on BasePath itself are not allowed, but any
@@ -205,7 +214,7 @@ func (fs *UnixFS) Mkdirat(dirfd int, name string, mode FileMode) error {
 }
 
 func (fs *UnixFS) mkdirat(op string, dirfd int, name string, mode FileMode) error {
-	return ensurePathError(unix.Mkdirat(dirfd, name, uint32(mode)), op, name)
+	return ensurePathError(ufsMkdirat(dirfd, name, uint32(mode)), op, name)
 }
 
 // MkdirAll creates a directory named path, along with any necessary
@@ -467,7 +476,7 @@ func (fs *UnixFS) Rename(oldpath, newpath string) error {
 		}
 	}
 	// Stat the old target to return proper errors.
-	if _, err := fs.Lstatat(olddirfd, oldname); err != nil {
+	if _, err := renameLstatat(fs, olddirfd, oldname); err != nil {
 		return err
 	}
 
@@ -477,11 +486,9 @@ func (fs *UnixFS) Rename(oldpath, newpath string) error {
 		if !errors.Is(err, ErrNotExist) {
 			return err
 		}
-		var pathErr *PathError
-		if !errors.As(err, &pathErr) {
-			return err
-		}
-		if _, err := fs.MkdirAll(pathErr.Path, 0o755); err != nil {
+		// safePath wraps filesystem errors, including ErrNotExist, in *PathError.
+		pathErr := err.(*PathError)
+		if _, err := renameMkdirAll(fs, pathErr.Path, 0o755); err != nil {
 			return err
 		}
 		newdirfd, newname, closeFd2, err = fs.safePath(newpath)
@@ -504,7 +511,7 @@ func (fs *UnixFS) Rename(oldpath, newpath string) error {
 		}
 	}
 	// Stat the new target to return proper errors.
-	_, err = fs.Lstatat(newdirfd, newname)
+	_, err = renameLstatat(fs, newdirfd, newname)
 	switch {
 	case err == nil:
 		return &PathError{
@@ -515,7 +522,7 @@ func (fs *UnixFS) Rename(oldpath, newpath string) error {
 	case !errors.Is(err, ErrNotExist):
 		return err
 	}
-	if err := unix.Renameat(olddirfd, oldname, newdirfd, newname); err != nil {
+	if err := ufsRenameat(olddirfd, oldname, newdirfd, newname); err != nil {
 		return &LinkError{Op: "rename", Old: oldpath, New: newpath, Err: err}
 	}
 	return nil
@@ -662,10 +669,8 @@ func (fs *UnixFS) TouchPath(path string) (int, string, func(), error, bool) {
 		return dirfd, name, closeFd, err, false
 	}
 
-	var pathErr *PathError
-	if !errors.As(err, &pathErr) {
-		return dirfd, name, closeFd, err, false
-	}
+	// safePath wraps filesystem errors, including ErrNotExist, in *PathError.
+	pathErr := err.(*PathError)
 	if _, err := fs.MkdirAll(pathErr.Path, 0o755); err != nil {
 		return dirfd, name, closeFd, err, false
 	}
@@ -774,7 +779,7 @@ func checkOpenedType(fd int, name string) error {
 	if t := st.Mode & unix.S_IFMT; t != unix.S_IFREG && t != unix.S_IFDIR {
 		return &PathError{Op: "openat", Path: name, Err: ErrNotRegular}
 	}
-	if err := unix.SetNonblock(fd, false); err != nil {
+	if err := ufsSetNonblock(fd, false); err != nil {
 		return convertErrorType(&PathError{Op: "fcntl", Path: name, Err: err})
 	}
 	return nil

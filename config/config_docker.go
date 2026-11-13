@@ -225,9 +225,6 @@ func parseDockerRegistryReference(registry string) (string, string, bool) {
 		path = reference.Path(named)
 	}
 	domain := strings.ToLower(reference.Domain(named))
-	if domain == "docker.io" && (path == "v1" || path == "v2") {
-		path = ""
-	}
 
 	return domain, path, true
 }
@@ -250,7 +247,7 @@ type RegistryConfiguration struct {
 // Base64 returns the authentication for a given registry as a base64 encoded
 // string value.
 func (c RegistryConfiguration) Base64() (string, error) {
-	b, err := json.Marshal(registry.AuthConfig{ //nolint:gosec // the Docker API needs these credentials to pull images
+	b, err := marshalRegistryAuth(registry.AuthConfig{ //nolint:gosec // the Docker API needs these credentials to pull images
 		Username: c.Username,
 		Password: c.Password,
 	})
@@ -259,6 +256,8 @@ func (c RegistryConfiguration) Base64() (string, error) {
 	}
 	return base64.URLEncoding.EncodeToString(b), nil
 }
+
+var marshalRegistryAuth = json.Marshal
 
 // Overhead controls the memory overhead given to all containers to circumvent certain
 // software such as the JVM not staying below the maximum memory limit.

@@ -265,6 +265,10 @@ func TestPathHelpers(t *testing.T) {
 	dir, base = splitPath("single")
 	assert.Equal(t, "single", base)
 	assert.Equal(t, ".", dir)
+
+	dir, base = splitPath("/single")
+	assert.Equal(t, "single", base)
+	assert.Equal(t, "/", dir)
 }
 
 func TestErrorConversionHelpers(t *testing.T) {

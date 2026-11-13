@@ -59,6 +59,17 @@ func TestCheckConnectionEdgeCases(t *testing.T) {
 	assert.True(t, errors.Is(err, ErrInternalResolution))
 }
 
+func TestHTTPClientRejectsMalformedDialTargetAndRedirects(t *testing.T) {
+	transport, ok := client.Transport.(*http.Transport)
+	require.True(t, ok)
+	_, err := transport.DialContext(context.Background(), "tcp", "malformed-address")
+	require.Error(t, err)
+
+	req, err := http.NewRequest(http.MethodGet, "http://example.com/file", nil)
+	require.NoError(t, err)
+	require.ErrorIs(t, client.CheckRedirect(req, nil), http.ErrUseLastResponse)
+}
+
 func TestExecuteEdgeCases(t *testing.T) {
 	s := newUniquePullTestServer(t)
 

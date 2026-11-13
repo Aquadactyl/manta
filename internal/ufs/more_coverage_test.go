@@ -6,6 +6,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -320,6 +321,8 @@ func TestUFSUnixAndRemoveAllBranches(t *testing.T) {
 	assert.Error(t, ufs.Remove(".."))
 	assert.ErrorIs(t, ufs.Remove("."), ErrBadPathResolution)
 	assert.Error(t, ufs.Remove("nested"))
+	require.NoError(t, os.Mkdir(filepath.Join(base, "emptydir"), 0o755))
+	assert.NoError(t, ufs.Remove("emptydir"))
 
 	assert.Error(t, ufs.RemoveAll(".."))
 	assert.ErrorIs(t, ufs.RemoveAll("."), ErrBadPathResolution)
@@ -380,4 +383,121 @@ func TestUFSUnixAndRemoveAllBranches(t *testing.T) {
 	require.NoError(t, err)
 	defer devNull.Close()
 	assert.ErrorIs(t, checkOpenedType(int(devNull.Fd()), "devnull"), ErrNotRegular)
+}
+
+func TestStatFollowReportsMissingFilesystemRoot(t *testing.T) {
+	root := t.TempDir()
+	fs, err := NewUnixFS(root, false)
+	require.NoError(t, err)
+	require.NoError(t, os.Remove(root))
+	_, err = fs.statFollow("file")
+	assert.Error(t, err)
+}
+
+func TestTouchPathReportsDirectoryCreationFailure(t *testing.T) {
+	var root string
+	switch runtime.GOOS {
+	case "linux":
+		root = "/proc"
+	case "darwin":
+		root = "/System"
+	default:
+		t.Skip("test requires a read-only system filesystem")
+	}
+	fs, err := NewUnixFS(root, false)
+	require.NoError(t, err)
+	_, _, closeFd, err, existed := fs.TouchPath("codex-coverage-missing-parent/child")
+	closeFd()
+	assert.False(t, existed)
+	assert.Error(t, err)
+}
+
+func TestRenameReportsMissingParentCreationFailure(t *testing.T) {
+	var root, source string
+	switch runtime.GOOS {
+	case "linux":
+		root, source = "/proc", "cpuinfo"
+	case "darwin":
+		root, source = "/System", "Library/CoreServices/SystemVersion.plist"
+	default:
+		t.Skip("test requires a read-only system filesystem")
+	}
+	fs, err := NewUnixFS(root, false)
+	require.NoError(t, err)
+	err = fs.Rename(source, "codex-coverage-missing-parent/new")
+	assert.Error(t, err)
+}
+
+func TestRenameReturnsSecondSafePathError(t *testing.T) {
+	root := t.TempDir()
+	fs, err := NewUnixFS(root, false)
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(filepath.Join(root, "source"), []byte("x"), 0o600))
+	oldMkdirAll := renameMkdirAll
+	t.Cleanup(func() { renameMkdirAll = oldMkdirAll })
+	renameMkdirAll = func(*UnixFS, string, FileMode) ([]string, error) { return nil, nil }
+	err = fs.Rename("source", "missing-parent/destination")
+	assert.ErrorIs(t, err, ErrNotExist)
+}
+
+func TestRenameWrapsRenameatErrors(t *testing.T) {
+	root := t.TempDir()
+	fs, err := NewUnixFS(root, false)
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(filepath.Join(root, "source"), []byte("x"), 0o600))
+	oldRenameat := ufsRenameat
+	t.Cleanup(func() { ufsRenameat = oldRenameat })
+	want := unix.EIO
+	ufsRenameat = func(int, string, int, string) error { return want }
+	err = fs.Rename("source", "destination")
+	require.ErrorIs(t, err, want)
+	var linkErr *LinkError
+	require.ErrorAs(t, err, &linkErr)
+	require.Equal(t, "source", linkErr.Old)
+	require.Equal(t, "destination", linkErr.New)
+}
+
+func TestRenameReturnsDestinationStatError(t *testing.T) {
+	root := t.TempDir()
+	fs, err := NewUnixFS(root, false)
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(filepath.Join(root, "source"), []byte("x"), 0o600))
+	oldLstatat := renameLstatat
+	t.Cleanup(func() { renameLstatat = oldLstatat })
+	want := unix.EIO
+	calls := 0
+	renameLstatat = func(fs *UnixFS, dirfd int, name string) (FileInfo, error) {
+		calls++
+		if calls == 2 {
+			return nil, want
+		}
+		return oldLstatat(fs, dirfd, name)
+	}
+	require.ErrorIs(t, fs.Rename("source", "destination"), want)
+}
+
+func TestMkdirAllAcceptsDirectoryCreatedAfterMkdirError(t *testing.T) {
+	root := t.TempDir()
+	fs, err := NewUnixFS(root, false)
+	require.NoError(t, err)
+	oldMkdirat := ufsMkdirat
+	t.Cleanup(func() { ufsMkdirat = oldMkdirat })
+	ufsMkdirat = func(_ int, name string, mode uint32) error {
+		if err := os.Mkdir(filepath.Join(root, name), os.FileMode(mode)); err != nil {
+			return err
+		}
+		return unix.EEXIST
+	}
+	created, err := fs.MkdirAll("created-elsewhere", 0o755)
+	require.NoError(t, err)
+	require.Empty(t, created)
+}
+
+func TestMkdirAllTrimsTrailingSeparators(t *testing.T) {
+	root := t.TempDir()
+	fs, err := NewUnixFS(root, false)
+	require.NoError(t, err)
+	created, err := fs.mkdirAll("nested/child///", 0o755)
+	require.NoError(t, err)
+	require.Equal(t, []string{"nested", "nested/child///"}, created)
 }

@@ -30,6 +30,10 @@ func TestQuotaCanFitAllowsShrinkingWrite(t *testing.T) {
 
 func TestQuotaAddDoesNotResetOnPositiveOverflow(t *testing.T) {
 	q := NewQuota(nil, 0)
+	q.SetUsage(1)
+	if got := q.Add(2); got != 3 {
+		t.Fatalf("expected usage to increase to 3, got %d", got)
+	}
 	q.SetUsage(math.MaxInt64 - 1)
 
 	if got := q.Add(10); got != math.MaxInt64 {

@@ -210,9 +210,6 @@ func IsValidRedirectURL(raw string) bool {
 	if err != nil || parsed.Host == "" || parsed.Hostname() == "" {
 		return false
 	}
-	if parsed.Scheme != "http" && parsed.Scheme != "https" {
-		return false
-	}
 	return true
 }
 

@@ -1,6 +1,7 @@
 package ufs
 
 import (
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -57,4 +58,25 @@ func TestOpenatKeepsCloexecWhenAlreadySet(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 7, fd)
 	require.NotZero(t, gotFlags&O_CLOEXEC)
+}
+
+func TestOpenFdAtRetriesInterruptedOpen(t *testing.T) {
+	oldOpenat := ufsOpenat
+	t.Cleanup(func() { ufsOpenat = oldOpenat })
+	parent, err := os.Open(t.TempDir())
+	require.NoError(t, err)
+	defer parent.Close()
+
+	calls := 0
+	ufsOpenat = func(dirfd int, name string, flags int, mode uint32) (int, error) {
+		calls++
+		if calls == 1 {
+			return -1, unix.EINTR
+		}
+		return oldOpenat(dirfd, name, flags, mode)
+	}
+	child, err := openFdAt(int(parent.Fd()), ".")
+	require.NoError(t, err)
+	require.Equal(t, 2, calls)
+	require.NoError(t, child.Close())
 }

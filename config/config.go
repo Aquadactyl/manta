@@ -455,7 +455,7 @@ func NewAtPath(path string) (*Configuration, error) {
 	// Configures the default values for many of the configuration options present
 	// in the structs. Values set in the configuration file take priority over the
 	// default values.
-	if err := defaults.Set(&c); err != nil {
+	if err := setConfigurationDefaults(&c); err != nil {
 		return nil, err
 	}
 	// Replace the defaults that only make sense on Linux where needed.
@@ -591,7 +591,7 @@ func WriteToDisk(c *Configuration) error {
 	if c.path == "" {
 		return errors.New("cannot write configuration, no path defined in struct")
 	}
-	b, err := yaml.Marshal(&ccopy)
+	b, err := marshalConfiguration(&ccopy)
 	if err != nil {
 		return err
 	}
@@ -615,7 +615,7 @@ func WriteToDisk(c *Configuration) error {
 // This function IS NOT thread safe and should only be called in the main thread
 // when the application is booting.
 func EnsurePterodactylUser() error {
-	if handled, err := ensurePlatformUser(); handled || err != nil {
+	if handled, err := ensurePlatformUserFn(); handled || err != nil {
 		return err
 	}
 
@@ -634,7 +634,7 @@ func EnsurePterodactylUser() error {
 
 	if _config.System.User.Rootless.Enabled {
 		log.Info("rootless mode is enabled, skipping user creation...")
-		u, err := user.Current()
+		u, err := currentSystemUser()
 		if err != nil {
 			return err
 		}
@@ -645,7 +645,7 @@ func EnsurePterodactylUser() error {
 	}
 
 	log.WithField("username", _config.System.Username).Info("checking for pterodactyl system user")
-	u, err := user.Lookup(_config.System.Username)
+	u, err := lookupSystemUser(_config.System.Username)
 	// If an error is returned but it isn't the unknown user error just abort
 	// the process entirely. If we did find a user, return it immediately.
 	if err != nil {
@@ -665,16 +665,16 @@ func EnsurePterodactylUser() error {
 		command = fmt.Sprintf("adduser -S -D -H -G %[1]s -s /sbin/nologin %[1]s", _config.System.Username)
 		// We have to create the group first on Alpine, so do that here before continuing on
 		// to the user creation process.
-		if _, err := exec.Command("addgroup", "-S", _config.System.Username).Output(); err != nil { //nolint:gosec // no shell; username comes from the operator's config
+		if _, err := runUserCommand("addgroup", "-S", _config.System.Username); err != nil { //nolint:gosec // no shell; username comes from the operator's config
 			return err
 		}
 	}
 
 	split := strings.Split(command, " ")
-	if _, err := exec.Command(split[0], split[1:]...).Output(); err != nil { //nolint:gosec // no shell; username comes from the operator's config
+	if _, err := runUserCommand(split[0], split[1:]...); err != nil { //nolint:gosec // no shell; username comes from the operator's config
 		return err
 	}
-	u, err = user.Lookup(_config.System.Username)
+	u, err = lookupSystemUser(_config.System.Username)
 	if err != nil {
 		return err
 	}
@@ -851,7 +851,7 @@ func EnableLogRotation() error {
 	}
 	defer f.Close()
 
-	t, err := template.New("logrotate").Parse(`{{.LogDirectory}}/wings.log {
+	t, err := parseLogrotateTemplate("logrotate", `{{.LogDirectory}}/wings.log {
     size 10M
     compress
     delaycompress
@@ -886,12 +886,12 @@ func ConfigureTimezone() error {
 		_config.System.Timezone = tz
 	}
 	if _config.System.Timezone == "" {
-		if tz, ok := detectPlatformTimezone(); ok {
+		if tz, ok := detectPlatformTimezoneFn(); ok {
 			_config.System.Timezone = tz
 		}
 	}
 	if _config.System.Timezone == "" {
-		b, err := os.ReadFile("/etc/timezone")
+		b, err := readTimezoneFile("/etc/timezone")
 		if err != nil {
 			if !os.IsNotExist(err) {
 				return errors.WithMessage(err, "config: failed to open timezone file")
@@ -903,7 +903,7 @@ func ConfigureTimezone() error {
 			// Okay, file isn't found on this OS, we will try using timedatectl to handle this. If this
 			// command fails, exit, but if it returns a value use that. If no value is returned we will
 			// fall through to UTC to get Wings booted at least.
-			out, err := exec.CommandContext(ctx, "timedatectl").Output()
+			out, err := runTimezoneCommand(ctx, "timedatectl")
 			if err != nil {
 				log.WithField("error", err).Warn("failed to execute \"timedatectl\" to determine system timezone, falling back to UTC")
 				return nil
@@ -930,12 +930,30 @@ func ConfigureTimezone() error {
 // Gets the system release name.
 func getSystemName() (string, error) {
 	// use osrelease to get release version and ID
-	release, err := osrelease.Read()
+	release, err := readOSRelease()
 	if err != nil {
 		return "", err
 	}
 	return release["ID"], nil
 }
+
+var (
+	setConfigurationDefaults = defaults.Set
+	marshalConfiguration     = yaml.Marshal
+	parseLogrotateTemplate   = func(name, contents string) (*template.Template, error) {
+		return template.New(name).Parse(contents)
+	}
+	readOSRelease            = osrelease.Read
+	currentSystemUser        = user.Current
+	lookupSystemUser         = user.Lookup
+	ensurePlatformUserFn     = ensurePlatformUser
+	runUserCommand           = func(name string, args ...string) ([]byte, error) { return exec.Command(name, args...).Output() }
+	detectPlatformTimezoneFn = detectPlatformTimezone
+	readTimezoneFile         = os.ReadFile
+	runTimezoneCommand       = func(ctx context.Context, name string, args ...string) ([]byte, error) {
+		return exec.CommandContext(ctx, name, args...).Output()
+	}
+)
 
 var (
 	openat2    atomic.Bool

@@ -1,6 +1,7 @@
 package database
 
 import (
+	"database/sql"
 	"path/filepath"
 	"time"
 
@@ -15,8 +16,10 @@ import (
 )
 
 var (
-	o  system.AtomicBool
-	db *gorm.DB
+	o            system.AtomicBool
+	db           *gorm.DB
+	databaseSQL  = func(db *gorm.DB) (*sql.DB, error) { return db.DB() }
+	databaseExec = func(db *gorm.DB, query string) error { return db.Exec(query).Error }
 )
 
 // Initialize configures the local SQLite database for Wings and ensures that the models have
@@ -33,17 +36,17 @@ func Initialize() error {
 		return errors.Wrap(err, "database: could not open database file")
 	}
 	db = instance
-	if sql, err := db.DB(); err != nil {
+	if sql, err := databaseSQL(db); err != nil {
 		return errors.WithStack(err)
 	} else {
 		sql.SetMaxOpenConns(1)
 		sql.SetConnMaxLifetime(time.Hour)
 	}
-	if tx := db.Exec("PRAGMA synchronous = OFF"); tx.Error != nil {
-		return errors.WithStack(tx.Error)
+	if err := databaseExec(db, "PRAGMA synchronous = OFF"); err != nil {
+		return errors.WithStack(err)
 	}
-	if tx := db.Exec("PRAGMA journal_mode = MEMORY"); tx.Error != nil {
-		return errors.WithStack(tx.Error)
+	if err := databaseExec(db, "PRAGMA journal_mode = MEMORY"); err != nil {
+		return errors.WithStack(err)
 	}
 	if err := db.AutoMigrate(&models.Activity{}); err != nil {
 		return errors.WithStack(err)

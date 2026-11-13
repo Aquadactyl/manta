@@ -15,6 +15,8 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+var ufsOpenat2 = unix.Openat2
+
 const (
 	// O_LARGEFILE allows files larger than 2GiB to be opened on 32-bit systems.
 	O_LARGEFILE = unix.O_LARGEFILE
@@ -170,7 +172,7 @@ func (fs *UnixFS) _openat2(dirfd int, name string, flag, mode uint64) (int, erro
 	if flag&O_LARGEFILE == 0 {
 		flag |= O_LARGEFILE
 	}
-	fd, err := unix.Openat2(dirfd, name, &unix.OpenHow{
+	fd, err := ufsOpenat2(dirfd, name, &unix.OpenHow{
 		Flags: flag,
 		Mode:  mode,
 		// This is the bread and butter of preventing a symlink escape, without

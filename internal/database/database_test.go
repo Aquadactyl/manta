@@ -2,11 +2,13 @@ package database
 
 import (
 	"database/sql"
+	"errors"
 	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gorm.io/gorm"
 
 	"github.com/pterodactyl/wings/config"
 	"github.com/pterodactyl/wings/internal/models"
@@ -83,4 +85,45 @@ func TestDatabase(t *testing.T) {
 		},
 	})
 	assert.Error(t, Initialize())
+}
+
+func TestInitializeReportsDatabaseSetupErrors(t *testing.T) {
+	oldDatabaseSQL, oldDatabaseExec := databaseSQL, databaseExec
+	t.Cleanup(func() {
+		databaseSQL = oldDatabaseSQL
+		databaseExec = oldDatabaseExec
+	})
+
+	for _, test := range []struct {
+		name       string
+		failAtExec int
+		failSQLDB  bool
+	}{
+		{name: "obtain sql connection", failSQLDB: true},
+		{name: "set synchronous pragma", failAtExec: 1},
+		{name: "set journal pragma", failAtExec: 2},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			root := t.TempDir()
+			config.Set(&config.Configuration{System: config.SystemConfiguration{RootDirectory: root}})
+			o.Store(false)
+			want := errors.New("injected database setup error")
+			databaseSQL = oldDatabaseSQL
+			databaseExec = oldDatabaseExec
+			if test.failSQLDB {
+				databaseSQL = func(*gorm.DB) (*sql.DB, error) { return nil, want }
+			}
+			if test.failAtExec != 0 {
+				calls := 0
+				databaseExec = func(db *gorm.DB, query string) error {
+					calls++
+					if calls == test.failAtExec {
+						return want
+					}
+					return oldDatabaseExec(db, query)
+				}
+			}
+			require.ErrorIs(t, Initialize(), want)
+		})
+	}
 }
