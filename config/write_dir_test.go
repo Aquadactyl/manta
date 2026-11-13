@@ -24,3 +24,10 @@ func TestWriteToDiskCreatesTheConfigurationDirectory(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, os.FileMode(0o700), dir.Mode().Perm())
 }
+
+func TestWriteToDiskReportsWhenDestinationIsDirectory(t *testing.T) {
+	c, err := NewAtPath(filepath.Join(t.TempDir(), "config.yml"))
+	require.NoError(t, err)
+	require.NoError(t, os.Mkdir(c.path, 0o700))
+	require.Error(t, WriteToDisk(c))
+}

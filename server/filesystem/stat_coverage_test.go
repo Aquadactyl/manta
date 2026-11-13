@@ -18,6 +18,7 @@ type statTestFile struct {
 	statErr error
 	readErr error
 	seekErr error
+	closed  *bool
 }
 
 func (f statTestFile) Stat() (ufs.FileInfo, error) { return f.info, f.statErr }
@@ -28,6 +29,12 @@ func (f statTestFile) Read([]byte) (int, error) {
 	return 0, io.EOF
 }
 func (f statTestFile) Seek(int64, int) (int64, error) { return 0, f.seekErr }
+func (f statTestFile) Close() error {
+	if f.closed != nil {
+		*f.closed = true
+	}
+	return nil
+}
 
 func TestStatFromFileErrorAndDirectoryPaths(t *testing.T) {
 	t.Run("stat error", func(t *testing.T) {
@@ -64,4 +71,21 @@ func TestStatFromFileErrorAndDirectoryPaths(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, "inode/directory", st.Mimetype)
 	})
+}
+
+func TestFilesystemFileClosesWhenStatFails(t *testing.T) {
+	fs, err := New(t.TempDir(), 0, nil)
+	require.NoError(t, err)
+	want := errors.New("stat failed")
+	closed := false
+	oldOpen := filesystemOpen
+	t.Cleanup(func() { filesystemOpen = oldOpen })
+	filesystemOpen = func(*ufs.Quota, string) (ufs.File, error) {
+		return statTestFile{statErr: want, closed: &closed}, nil
+	}
+
+	file, _, err := fs.File("file")
+	require.ErrorIs(t, err, want)
+	require.Nil(t, file)
+	require.True(t, closed)
 }

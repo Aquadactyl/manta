@@ -16,9 +16,11 @@ import (
 	"github.com/pterodactyl/wings/system"
 )
 
+var readSystemInformation = system.GetSystemInformation
+
 // Returns information about the system that wings is running on.
 func getSystemInformation(c *gin.Context) {
-	i, err := system.GetSystemInformation()
+	i, err := readSystemInformation()
 	if err != nil {
 		middleware.CaptureAndAbort(c, err)
 		return

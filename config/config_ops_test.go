@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -760,5 +761,35 @@ func TestUseOpenat2Modes(t *testing.T) {
 	if !openat2Supported {
 		// The kernel is only probed on Linux, which may be too old for it.
 		assert.False(t, got)
+	}
+}
+
+func TestUseOpenat2DecisionsForAllPlatformOutcomes(t *testing.T) {
+	probeErr := errors.New("openat2 probe failed")
+	tests := []struct {
+		name       string
+		mode       string
+		supported  bool
+		probeErr   error
+		want       bool
+		wantProbes int
+	}{
+		{name: "explicit openat2 supported", mode: "openat2", supported: true, want: true},
+		{name: "explicit openat2 unsupported", mode: "openat2", supported: false, want: false},
+		{name: "explicit openat", mode: "openat", supported: true, want: false},
+		{name: "default unsupported", supported: false, want: false},
+		{name: "default probe fails", supported: true, probeErr: probeErr, want: false, wantProbes: 1},
+		{name: "default probe succeeds", supported: true, want: true, wantProbes: 1},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			probes := 0
+			got := useOpenat2(tt.mode, tt.supported, func() error {
+				probes++
+				return tt.probeErr
+			})
+			assert.Equal(t, tt.want, got)
+			assert.Equal(t, tt.wantProbes, probes)
+		})
 	}
 }

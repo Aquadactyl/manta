@@ -55,6 +55,9 @@ var (
 	filesystemTouch = func(fs *ufs.Quota, p string, flag int, mode ufs.FileMode) (ufs.File, error) {
 		return fs.Touch(p, flag, mode)
 	}
+	filesystemOpen = func(fs *ufs.Quota, p string) (ufs.File, error) {
+		return fs.Open(p)
+	}
 	filesystemLchownat = func(fs *ufs.UnixFS, dirfd int, p string, uid, gid int) error {
 		return fs.Lchownat(dirfd, p, uid, gid)
 	}
@@ -109,7 +112,7 @@ func (fs *Filesystem) ReadDirStat(path string) ([]ufs.FileInfo, error) {
 
 // File returns a reader for a file instance as well as the stat information.
 func (fs *Filesystem) File(p string) (ufs.File, Stat, error) {
-	f, err := fs.unixFS.Open(p)
+	f, err := filesystemOpen(fs.unixFS, p)
 	if err != nil {
 		return nil, Stat{}, err
 	}

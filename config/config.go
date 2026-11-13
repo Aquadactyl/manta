@@ -949,30 +949,29 @@ func UseOpenat2() bool {
 	defer openat2Set.Store(true)
 
 	c := Get()
-	openatMode := c.System.OpenatMode
-	switch openatMode {
+	supported := useOpenat2(c.System.OpenatMode, openat2Supported, probeOpenat2)
+	openat2.Store(supported)
+	return supported
+}
+
+func useOpenat2(mode string, supported bool, probe func() error) bool {
+	switch mode {
 	case "openat2":
-		if !openat2Supported {
+		if !supported {
 			log.Warn("system.openat_mode is set to openat2, but openat2 is not available on this platform, falling back to openat")
-			openat2.Store(false)
 			return false
 		}
-		openat2.Store(true)
 		return true
 	case "openat":
-		openat2.Store(false)
 		return false
 	default:
-		if !openat2Supported {
-			openat2.Store(false)
+		if !supported {
 			return false
 		}
-		if err := probeOpenat2(); err != nil {
+		if err := probe(); err != nil {
 			log.WithError(err).Warn("error occurred while checking for openat2 support, falling back to openat")
-			openat2.Store(false)
 			return false
 		}
-		openat2.Store(true)
 		return true
 	}
 }
