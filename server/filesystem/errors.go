@@ -45,7 +45,7 @@ func (e *Error) Code() ErrorCode {
 	return e.code
 }
 
-// Returns a human-readable error string to identify the Error by.
+// Error returns a human-readable description of the filesystem error.
 func (e *Error) Error() string {
 	switch e.code {
 	case ErrCodeIsDirectory:

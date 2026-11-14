@@ -137,11 +137,13 @@ func (s *Server) ID() string {
 // in favor of Server.ID().
 //
 // Deprecated
+//
+//lint:ignore ST1003 Deprecated compatibility method retained for callers; use ID.
 func (s *Server) Id() string {
 	return s.ID()
 }
 
-// Cancels the context assigned to this server instance. Assuming background tasks
+// CtxCancel cancels this server context and stops background tasks that use it.
 // are using this server's context for things, all of the background tasks will be
 // stopped as a result.
 func (s *Server) CtxCancel() {
@@ -150,14 +152,14 @@ func (s *Server) CtxCancel() {
 	}
 }
 
-// Returns a context instance for the server. This should be used to allow background
+// Context returns the server context used to cancel background tasks when the server is removed.
 // tasks to be canceled if the server is removed. It will only be canceled when the
 // application is stopped or if the server gets deleted.
 func (s *Server) Context() context.Context {
 	return s.ctx
 }
 
-// Returns all of the environment variables that should be assigned to a running
+// GetEnvironmentVariables returns the environment variables assigned to a running server.
 // server instance.
 func (s *Server) GetEnvironmentVariables() []string {
 	tz := config.Get().System.Timezone
@@ -267,12 +269,12 @@ func (s *Server) SyncWithConfiguration(cfg remote.ServerConfigurationResponse) e
 	return nil
 }
 
-// Reads the log file for a server up to a specified number of bytes.
+// ReadLogfile reads up to the specified number of bytes from the server log.
 func (s *Server) ReadLogfile(len int) ([]string, error) {
 	return s.Environment.Readlog(len)
 }
 
-// Initializes a server instance. This will run through and ensure that the environment
+// CreateEnvironment initializes a server environment and creates its required files.
 // for the server is setup, and that all of the necessary files are created.
 func (s *Server) CreateEnvironment() error {
 	// Ensure the data directory exists before getting too far through this process.
@@ -295,7 +297,7 @@ func (s *Server) CreateEnvironment() error {
 	return s.Environment.Create()
 }
 
-// Checks if the server is marked as being suspended or not on the system.
+// IsSuspended reports whether the server is suspended.
 func (s *Server) IsSuspended() bool {
 	return s.Config().Suspended
 }

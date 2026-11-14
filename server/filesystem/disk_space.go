@@ -54,7 +54,7 @@ func (fs *Filesystem) SetDiskLimit(i int64) {
 	fs.unixFS.SetLimit(i)
 }
 
-// The same concept as HasSpaceAvailable however this will return an error if there is
+// HasSpaceErr returns an error when the filesystem has no space available.
 // no space, rather than a boolean value.
 func (fs *Filesystem) HasSpaceErr(allowStaleValue bool) error {
 	if !fs.HasSpaceAvailable(allowStaleValue) {
@@ -63,7 +63,7 @@ func (fs *Filesystem) HasSpaceErr(allowStaleValue bool) error {
 	return nil
 }
 
-// Determines if the directory a file is trying to be added to has enough space available
+// HasSpaceAvailable reports whether a directory has enough space for a file.
 // for the file to be written to.
 //
 // Because determining the amount of space being used by a server is a taxing operation we
@@ -89,14 +89,14 @@ func (fs *Filesystem) HasSpaceAvailable(allowStaleValue bool) bool {
 	return size <= fs.MaxDisk()
 }
 
-// Returns the cached value for the amount of disk space used by the filesystem. Do not rely on this
+// CachedUsage returns the cached disk usage. Do not rely on this
 // function for critical logical checks. It should only be used in areas where the actual disk usage
 // does not need to be perfect, e.g. API responses for server resource usage.
 func (fs *Filesystem) CachedUsage() int64 {
 	return fs.unixFS.Usage()
 }
 
-// Internal helper function to allow other parts of the codebase to check the total used disk space
+// DiskUsage reports total filesystem usage while preferring the cached value to avoid
 // as needed without overly taxing the system. This will prioritize the value from the cache to avoid
 // excessive IO usage. We will only walk the filesystem and determine the size of the directory if there
 // is no longer a cached value.

@@ -19,7 +19,7 @@ type CrashHandler struct {
 	lastCrash time.Time
 }
 
-// Returns the time of the last crash for this server instance.
+// LastCrashTime returns the time of the last crash for this server instance.
 func (cd *CrashHandler) LastCrashTime() time.Time {
 	cd.mu.RLock()
 	defer cd.mu.RUnlock()
@@ -27,7 +27,7 @@ func (cd *CrashHandler) LastCrashTime() time.Time {
 	return cd.lastCrash
 }
 
-// Sets the last crash time for a server.
+// SetLastCrash records the time of a server crash.
 func (cd *CrashHandler) SetLastCrash(t time.Time) {
 	cd.mu.Lock()
 	cd.lastCrash = t

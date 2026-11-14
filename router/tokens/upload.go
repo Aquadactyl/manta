@@ -13,12 +13,12 @@ type UploadPayload struct {
 	UniqueID   string `json:"unique_id"`
 }
 
-// Returns the JWT payload.
+// GetPayload returns the JWT payload.
 func (p *UploadPayload) GetPayload() *jwt.Payload {
 	return &p.Payload
 }
 
-// Determines if this JWT is valid for the given request cycle. If the
+// IsUniqueRequest reports whether this JWT is valid for the request cycle. If the
 // unique ID passed in the token has already been seen before this will
 // return false. This allows us to use this JWT as a one-time token that
 // validates all of the request.

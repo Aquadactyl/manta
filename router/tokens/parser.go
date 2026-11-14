@@ -16,7 +16,7 @@ type TokenData interface {
 // not-before claims. Expiry remains strict, including at the expiry boundary.
 const tokenClockSkew = 30 * time.Second
 
-// Validates the provided JWT against the known secret for the Daemon and returns the
+// ParseToken validates the JWT against the Daemon secret and returns the
 // parsed data. This function DOES NOT validate that the token is valid for the connected
 // server, nor does it ensure that the user providing the token is able to actually do things.
 //

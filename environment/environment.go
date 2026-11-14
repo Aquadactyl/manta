@@ -22,7 +22,7 @@ const (
 	ProcessStoppingState = "stopping"
 )
 
-// Defines the basic interface that all environments need to implement so that
+// ProcessEnvironment defines the interface that all environments implement so that
 // a server can be properly controlled.
 type ProcessEnvironment interface {
 	// Returns the name of the environment.

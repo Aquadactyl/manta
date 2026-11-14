@@ -30,7 +30,7 @@ func getTokenStore() *TokenStore {
 	return _tokens
 }
 
-// Checks if a token is valid or not.
+// IsValidToken reports whether a token is valid.
 func (t *TokenStore) IsValidToken(token string) bool {
 	return t.IsValidUntil(token, time.Now().Add(time.Hour))
 }

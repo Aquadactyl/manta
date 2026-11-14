@@ -695,13 +695,13 @@ func TestFilesystemChownChtimesAndFile(t *testing.T) {
 	require.NoError(t, os.Mkdir(filepath.Join(dir, "zzz_dir"), 0755))
 
 	cfg := config.Get()
-	oldUID, oldGid := cfg.System.User.UID, cfg.System.User.GID
+	oldUID, oldGID := cfg.System.User.UID, cfg.System.User.GID
 	cfg.System.User.UID = os.Getuid()
 	cfg.System.User.GID = os.Getgid()
 	config.Set(cfg)
 	defer func() {
 		cfg.System.User.UID = oldUID
-		cfg.System.User.GID = oldGid
+		cfg.System.User.GID = oldGID
 		config.Set(cfg)
 	}()
 

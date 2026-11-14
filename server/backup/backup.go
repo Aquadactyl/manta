@@ -40,7 +40,7 @@ const (
 // and remote backups allowing the files to be restored.
 type RestoreCallback func(file string, info fs.FileInfo, r io.ReadCloser) error
 
-// noinspection GoNameStartsWithPackageName
+// BackupInterface defines the operations shared by backup adapters.
 type BackupInterface interface {
 	// SetClient sets the API request client on the backup interface.
 	SetClient(remote.Client)

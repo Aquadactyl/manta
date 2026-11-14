@@ -263,7 +263,7 @@ func (r *Response) HasError() bool {
 	return r.StatusCode >= 300 || r.StatusCode < 200
 }
 
-// Reads the body from the response and returns it, then replaces it on the response
+// Read returns the response body and replaces it so it can be read again later.
 // so that it can be read again later. The original body is always closed, and
 // truncated or oversized responses are rejected rather than partially decoded.
 func (r *Response) Read() ([]byte, error) {
@@ -303,7 +303,7 @@ func (r *Response) BindJSON(v interface{}) error {
 	return nil
 }
 
-// Returns the first error message from the API call as a string. The error
+// Error returns the first error message from the API call. The error
 // message will be formatted similar to the below example. If there is no error
 // that can be parsed out of the API you'll still get a RequestError returned
 // but the RequestError.Code will be "_MissingResponseCode".

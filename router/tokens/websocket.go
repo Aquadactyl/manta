@@ -29,7 +29,7 @@ var wingsBootTime = time.Now()
 var denylist sync.Map
 var userDenylist sync.Map
 
-// Adds a JTI to the denylist by marking any JWTs generated before the current time as
+// DenyJTI adds a JTI to the denylist, invalidating JWTs generated before the current time.
 // being invalid if they use the same JTI.
 //
 // deprecated: prefer the use of DenyForServer
@@ -89,7 +89,7 @@ type WebsocketPayload struct {
 	Permissions []string `json:"permissions"`
 }
 
-// Returns the JWT payload.
+// GetPayload returns the JWT payload.
 func (p *WebsocketPayload) GetPayload() *jwt.Payload {
 	p.RLock()
 	defer p.RUnlock()
@@ -97,7 +97,7 @@ func (p *WebsocketPayload) GetPayload() *jwt.Payload {
 	return &p.Payload
 }
 
-// Returns the UUID of the server associated with this JWT.
+// GetServerUUID returns the server UUID associated with this JWT.
 func (p *WebsocketPayload) GetServerUUID() string {
 	p.RLock()
 	defer p.RUnlock()
@@ -105,14 +105,14 @@ func (p *WebsocketPayload) GetServerUUID() string {
 	return p.ServerUUID
 }
 
-// Check if the JWT has been marked as denied by the instance due to either being issued
+// Denylisted reports whether this JWT was issued before startup or before its access was revoked.
 // before Wings was booted, or because we have denied all tokens with the same JTI
 // occurring before a set time.
 func (p *WebsocketPayload) Denylisted() bool {
 	return isDenylisted(&p.Payload, p.ServerUUID, p.UserUUID)
 }
 
-// Checks if the given token payload has a permission string.
+// HasPermission reports whether the token payload has the given permission.
 func (p *WebsocketPayload) HasPermission(permission string) bool {
 	p.RLock()
 	defer p.RUnlock()

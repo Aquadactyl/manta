@@ -31,6 +31,16 @@ linters:
       - linters:
           - staticcheck
         text: "QF1008:"
+      # Filesystem flags intentionally mirror the names in Go's os and unix APIs.
+      - path: internal/ufs/(file\.go|sys_linux\.go)
+        linters:
+          - staticcheck
+        text: "should not use ALL_CAPS in Go names"
+      # Server.Id is a deprecated compatibility alias for the already-named ID method.
+      - path: server/server\.go
+        linters:
+          - staticcheck
+        text: "method Id should be ID"
 
 formatters:
   enable:

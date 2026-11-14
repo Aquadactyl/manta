@@ -285,7 +285,7 @@ func (e *Environment) WaitForStop(ctx context.Context, duration time.Duration, t
 	return nil
 }
 
-// Sends the specified signal to the container in an attempt to stop it.
+// SignalContainer sends the specified signal to stop the container.
 func (e *Environment) SignalContainer(ctx context.Context, signal string) error {
 	c, err := e.ContainerInspect(ctx)
 	if err != nil {

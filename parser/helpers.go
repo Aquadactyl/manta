@@ -50,7 +50,7 @@ func (cfr *ConfigurationFileReplacement) getKeyValue(value string) interface{} {
 	return value
 }
 
-// Iterate over an unstructured JSON/YAML/etc. interface and set all of the required
+// IterateOverJSON iterates over unstructured JSON, YAML, or other data and sets the required
 // key/value pairs for the configuration file.
 //
 // We need to support wildcard characters in key searches, this allows you to make
@@ -175,7 +175,7 @@ func setValueAtPath(c *gabs.Container, path string, value interface{}) error {
 	return nil
 }
 
-// Sets the value at a specific pathway, but checks if we were looking for a specific
+// SetAtPathway sets a value at a path when the configured conditions match.
 // value or not before doing it.
 func (cfr *ConfigurationFileReplacement) SetAtPathway(c *gabs.Container, path string, value string) error {
 	if cfr.IfValue == "" {
@@ -220,7 +220,7 @@ func valueAtPath(c *gabs.Container, path string) string {
 	return c.Path(path).String()
 }
 
-// Looks up a configuration value on the Daemon given a dot-notated syntax.
+// LookupConfigurationValue looks up a Daemon configuration value using dot notation.
 func (f *ConfigurationFile) LookupConfigurationValue(cfr ConfigurationFileReplacement) (string, error) {
 	// If this is not something that we can do a regex lookup on then just continue
 	// on our merry way. If the value isn't a string, we're not going to be doing anything

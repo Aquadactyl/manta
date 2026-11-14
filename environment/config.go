@@ -11,7 +11,7 @@ type Settings struct {
 	Labels      map[string]string
 }
 
-// Defines the actual configuration struct for the environment with all of the settings
+// Configuration holds the settings and environment variables for an environment.
 // defined within it.
 type Configuration struct {
 	mu sync.RWMutex
@@ -20,7 +20,7 @@ type Configuration struct {
 	settings             Settings
 }
 
-// Returns a new environment configuration with the given settings and environment variables
+// NewConfiguration creates an environment configuration with the given settings and variables.
 // defined within it.
 func NewConfiguration(s Settings, envVars []string) *Configuration {
 	return &Configuration{
@@ -29,7 +29,7 @@ func NewConfiguration(s Settings, envVars []string) *Configuration {
 	}
 }
 
-// Updates the settings struct for this environment on the fly. This allows modified servers to
+// SetSettings updates the settings for this environment so modified servers can
 // automatically push those changes to the environment.
 func (c *Configuration) SetSettings(s Settings) {
 	c.mu.Lock()
@@ -37,7 +37,7 @@ func (c *Configuration) SetSettings(s Settings) {
 	c.mu.Unlock()
 }
 
-// Updates the environment variables associated with this environment by replacing the entire
+// SetEnvironmentVariables replaces this environment’s variables with the provided slice.
 // array of them with a new one.
 func (c *Configuration) SetEnvironmentVariables(ev []string) {
 	c.mu.Lock()
@@ -45,7 +45,7 @@ func (c *Configuration) SetEnvironmentVariables(ev []string) {
 	c.mu.Unlock()
 }
 
-// Returns the limits assigned to this environment.
+// Limits returns the limits assigned to this environment.
 func (c *Configuration) Limits() Limits {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
@@ -53,7 +53,7 @@ func (c *Configuration) Limits() Limits {
 	return c.settings.Limits
 }
 
-// Returns the allocations associated with this environment.
+// Allocations returns the allocations associated with this environment.
 func (c *Configuration) Allocations() Allocations {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
@@ -61,7 +61,7 @@ func (c *Configuration) Allocations() Allocations {
 	return c.settings.Allocations
 }
 
-// Returns all of the mounts associated with this environment.
+// Mounts returns all mounts associated with this environment.
 func (c *Configuration) Mounts() []Mount {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
@@ -77,7 +77,7 @@ func (c *Configuration) Labels() map[string]string {
 	return c.settings.Labels
 }
 
-// Returns the environment variables associated with this instance.
+// EnvironmentVariables returns the variables associated with this instance.
 func (c *Configuration) EnvironmentVariables() []string {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
