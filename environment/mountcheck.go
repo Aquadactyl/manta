@@ -13,10 +13,9 @@ import (
 
 	"github.com/apex/log"
 	cerrdefs "github.com/containerd/errdefs"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/image"
-	"github.com/docker/docker/api/types/mount"
-	"github.com/docker/docker/client"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/mount"
+	"github.com/moby/moby/client"
 
 	"github.com/Aquadactyl/manta/config"
 )
@@ -173,7 +172,8 @@ type dockerMountChecker struct {
 }
 
 var dockerContainerWait = func(cli *client.Client, ctx context.Context, id string, condition container.WaitCondition) (<-chan container.WaitResponse, <-chan error) {
-	return cli.ContainerWait(ctx, id, condition)
+	result := cli.ContainerWait(ctx, id, client.ContainerWaitOptions{Condition: condition})
+	return result.Result, result.Error
 }
 
 func (d *dockerMountChecker) HasImage(ctx context.Context, ref string) (bool, error) {
@@ -187,7 +187,7 @@ func (d *dockerMountChecker) HasImage(ctx context.Context, ref string) (bool, er
 }
 
 func (d *dockerMountChecker) PullImage(ctx context.Context, ref string) error {
-	out, err := d.cli.ImagePull(ctx, ref, image.PullOptions{})
+	out, err := d.cli.ImagePull(ctx, ref, client.ImagePullOptions{})
 	if err != nil {
 		return err
 	}
@@ -198,7 +198,7 @@ func (d *dockerMountChecker) PullImage(ctx context.Context, ref string) error {
 }
 
 func (d *dockerMountChecker) Run(ctx context.Context, cfg *container.Config, host *container.HostConfig) (int64, error) {
-	created, err := d.cli.ContainerCreate(ctx, cfg, host, nil, nil, "")
+	created, err := d.cli.ContainerCreate(ctx, client.ContainerCreateOptions{Config: cfg, HostConfig: host})
 	if err != nil {
 		return 0, err
 	}
@@ -206,10 +206,10 @@ func (d *dockerMountChecker) Run(ctx context.Context, cfg *container.Config, hos
 	defer func() {
 		rctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
-		_ = d.cli.ContainerRemove(rctx, created.ID, container.RemoveOptions{Force: true, RemoveVolumes: true})
+		_, _ = d.cli.ContainerRemove(rctx, created.ID, client.ContainerRemoveOptions{Force: true, RemoveVolumes: true})
 	}()
 
-	if err := d.cli.ContainerStart(ctx, created.ID, container.StartOptions{}); err != nil {
+	if _, err := d.cli.ContainerStart(ctx, created.ID, client.ContainerStartOptions{}); err != nil {
 		return 0, err
 	}
 

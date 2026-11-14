@@ -13,9 +13,9 @@ import (
 
 	"github.com/apex/log"
 	cerrdefs "github.com/containerd/errdefs"
-	containertypes "github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/client"
 	"github.com/google/uuid"
+	containertypes "github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/client"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 

@@ -6,7 +6,7 @@ import (
 	"errors"
 	"testing"
 
-	dockersystem "github.com/docker/docker/api/types/system"
+	dockersystem "github.com/moby/moby/api/types/system"
 )
 
 func TestHostOSNameUsesReleaseFallbacks(t *testing.T) {

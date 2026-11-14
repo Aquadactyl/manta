@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/client"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/client"
 )
 
 func dockerMountCheckerForTest(t *testing.T, handler http.Handler) *dockerMountChecker {
@@ -166,7 +166,10 @@ func TestDockerMountCheckerRunHonorsContextCancellation(t *testing.T) {
 	}))
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan error, 1)
-	go func() { _, err := checker.Run(ctx, &container.Config{}, &container.HostConfig{}); done <- err }()
+	go func() {
+		_, err := checker.Run(ctx, &container.Config{Image: mountCheckImage}, &container.HostConfig{})
+		done <- err
+	}()
 	select {
 	case <-started:
 	case <-time.After(5 * time.Second):
@@ -208,7 +211,7 @@ func TestDockerMountCheckerRunSelectsCanceledContextWhenWaitChannelsStayOpen(t *
 		return nil, nil
 	}
 
-	_, err := checker.Run(ctx, &container.Config{}, &container.HostConfig{})
+	_, err := checker.Run(ctx, &container.Config{Image: mountCheckImage}, &container.HostConfig{})
 	if err != context.Canceled {
 		t.Fatalf("Run() error = %v, want context.Canceled", err)
 	}

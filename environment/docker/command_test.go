@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/docker/api/types"
+	"github.com/moby/moby/client"
 
 	"github.com/Aquadactyl/manta/environment"
 	"github.com/Aquadactyl/manta/system"
@@ -21,7 +21,7 @@ func attachedEnvironment(t *testing.T) (*Environment, net.Conn) {
 		_ = remote.Close()
 	})
 	e := &Environment{meta: &Metadata{}, st: system.NewAtomicString(environment.ProcessRunningState)}
-	e.SetStream(&types.HijackedResponse{Conn: local})
+	e.SetStream(&client.HijackedResponse{Conn: local})
 	return e, remote
 }
 

@@ -12,8 +12,7 @@ import (
 	"syscall"
 	"testing"
 
-	"github.com/docker/docker/api/types"
-	dockersystem "github.com/docker/docker/api/types/system"
+	dockersystem "github.com/moby/moby/api/types/system"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -383,7 +382,7 @@ func TestBuildDiagnosticsReportComprehensive(t *testing.T) {
 	diagnosticsArgs.IncludeLogs = false
 	diagnosticsArgs.IncludeEndpoints = false
 	var out strings.Builder
-	buildDiagnosticsReport(&out, types.Version{}, dockersystem.Info{}, errors.New("cannot connect to docker daemon"))
+	buildDiagnosticsReport(&out, dockersystem.VersionResponse{}, dockersystem.Info{}, errors.New("cannot connect to docker daemon"))
 	assert.Contains(t, out.String(), "cannot connect to docker daemon")
 	assert.Contains(t, out.String(), "Logs redacted.")
 
@@ -392,7 +391,7 @@ func TestBuildDiagnosticsReportComprehensive(t *testing.T) {
 	diagnosticsArgs.IncludeEndpoints = true
 	diagnosticsArgs.LogLines = 10
 
-	v := types.Version{Version: "24.0.5"}
+	v := dockersystem.VersionResponse{Version: "24.0.5"}
 	info := dockersystem.Info{
 		ServerVersion: "24.0.5",
 		Driver:        "overlay2",
@@ -542,7 +541,7 @@ system:
 	diagnosticsArgs.IncludeLogs = false
 
 	var out strings.Builder
-	buildDiagnosticsReport(&out, types.Version{}, dockersystem.Info{}, errors.New("docker down"))
+	buildDiagnosticsReport(&out, dockersystem.VersionResponse{}, dockersystem.Info{}, errors.New("docker down"))
 	report := out.String()
 	assert.NotContains(t, report, "https://remote.panel.example")
 	assert.NotContains(t, report, "10.0.0.1")

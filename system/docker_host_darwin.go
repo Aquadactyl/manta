@@ -8,7 +8,7 @@ import (
 	"sync"
 
 	"github.com/apex/log"
-	"github.com/docker/docker/client"
+	"github.com/moby/moby/client"
 )
 
 // DockerClientOpts returns the options used to create every Docker client.

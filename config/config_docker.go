@@ -8,8 +8,8 @@ import (
 	"strings"
 
 	"github.com/distribution/reference"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/registry"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/registry"
 )
 
 type dockerNetworkInterfaces struct {

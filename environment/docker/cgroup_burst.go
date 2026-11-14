@@ -11,7 +11,7 @@ import (
 
 	"emperror.dev/errors"
 	"github.com/apex/log"
-	"github.com/docker/docker/client"
+	"github.com/moby/moby/client"
 
 	"github.com/Aquadactyl/manta/config"
 )
@@ -119,7 +119,8 @@ func SetCPUBurst(ctx context.Context, cli *client.Client, containerID string, qu
 	if !cfg.Enabled || quota <= 0 {
 		return
 	}
-	c, err := cli.ContainerInspect(ctx, containerID)
+	result, err := cli.ContainerInspect(ctx, containerID, client.ContainerInspectOptions{})
+	c := result.Container
 	if err != nil || c.State == nil {
 		return
 	}

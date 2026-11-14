@@ -4,9 +4,8 @@ import (
 	"context"
 	"runtime"
 
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/system"
-	"github.com/docker/docker/client"
+	dockersystem "github.com/moby/moby/api/types/system"
+	"github.com/moby/moby/client"
 )
 
 type Information struct {
@@ -120,22 +119,31 @@ func GetSystemInformation() (*Information, error) {
 }
 
 // GetDockerInfo returns the version and system info from the host Docker daemon.
-func GetDockerInfo(ctx context.Context) (types.Version, system.Info, error) {
+func GetDockerInfo(ctx context.Context) (dockersystem.VersionResponse, dockersystem.Info, error) {
 	c, err := client.NewClientWithOpts(DockerClientOpts()...)
 	if err != nil {
-		return types.Version{}, system.Info{}, err
+		return dockersystem.VersionResponse{}, dockersystem.Info{}, err
 	}
 	defer c.Close()
 
-	dockerVersion, err := c.ServerVersion(ctx)
+	dockerVersion, err := c.ServerVersion(ctx, client.ServerVersionOptions{})
 	if err != nil {
-		return types.Version{}, system.Info{}, err
+		return dockersystem.VersionResponse{}, dockersystem.Info{}, err
 	}
 
-	dockerInfo, err := c.Info(ctx)
+	dockerInfo, err := c.Info(ctx, client.InfoOptions{})
 	if err != nil {
-		return types.Version{}, system.Info{}, err
+		return dockersystem.VersionResponse{}, dockersystem.Info{}, err
 	}
 
-	return dockerVersion, dockerInfo, nil
+	return dockersystem.VersionResponse{
+		Platform:      dockersystem.PlatformInfo{Name: dockerVersion.Platform.Name},
+		Version:       dockerVersion.Version,
+		APIVersion:    dockerVersion.APIVersion,
+		MinAPIVersion: dockerVersion.MinAPIVersion,
+		Os:            dockerVersion.Os,
+		Arch:          dockerVersion.Arch,
+		Experimental:  dockerVersion.Experimental,
+		Components:    dockerVersion.Components,
+	}, dockerInfo.Info, nil
 }

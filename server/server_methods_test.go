@@ -17,8 +17,8 @@ import (
 	"time"
 
 	"github.com/buger/jsonparser"
-	"github.com/docker/docker/client"
 	"github.com/google/uuid"
+	"github.com/moby/moby/client"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 

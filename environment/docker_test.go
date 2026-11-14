@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/moby/moby/client"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -58,7 +59,7 @@ func TestConfigureDockerExistingNetwork(t *testing.T) {
 		c.Docker.Network.NetworkMTU = 1500
 	})
 	t.Cleanup(func() {
-		_ = cli.NetworkRemove(context.Background(), nwName)
+		_, _ = cli.NetworkRemove(context.Background(), nwName, client.NetworkRemoveOptions{})
 	})
 
 	err = ConfigureDocker(ctx)

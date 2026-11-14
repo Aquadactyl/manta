@@ -3,19 +3,16 @@ package docker
 import (
 	"context"
 	"encoding/json"
-	"io"
 	"net/http"
-	"reflect"
 	"strings"
 	"sync"
 
 	"emperror.dev/errors"
 	"github.com/containerd/errdefs/pkg/errhttp"
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/versions"
-	"github.com/docker/docker/client"
-	"github.com/docker/docker/errdefs"
+	"github.com/moby/moby/api/types/common"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/client"
+	"github.com/moby/moby/client/pkg/versions"
 
 	"github.com/Aquadactyl/manta/config"
 )
@@ -26,123 +23,42 @@ var (
 	fastEnabled bool
 )
 
-type cliSettings struct {
-	proto   string
-	host    string
-	scheme  string
-	version string
+type cliSettings struct{ version string }
+
+func configure(*client.Client) {
+	o.Do(func() { fastEnabled = config.Get().Docker.UsePerformantInspect })
 }
 
-func configure(c *client.Client) {
-	o.Do(func() {
-		fastEnabled = config.Get().Docker.UsePerformantInspect
-
-		r := reflect.ValueOf(c).Elem()
-		cli.proto = r.FieldByName("proto").String()
-		cli.host = r.FieldByName("addr").String()
-		cli.scheme = r.FieldByName("scheme").String()
-		cli.version = r.FieldByName("version").String()
-	})
-}
-
-// ContainerInspect is a rough equivalent of Docker's client.ContainerInspect()
-// but re-written to use a more performant JSON decoder. This is important since
-// a large number of requests to this endpoint are spawned by Wings, and the
-// standard "encoding/json" shows its performance woes badly even with single
-// containers running.
+// ContainerInspect fetches container details through the Moby API client.
 func (e *Environment) ContainerInspect(ctx context.Context) (container.InspectResponse, error) {
 	configure(e.client)
-
-	// Support feature flagging of this functionality so that if something goes
-	// wrong for now it is easy enough for people to switch back to the older method
-	// of fetching stats.
-	if !fastEnabled {
-		return e.client.ContainerInspect(ctx, e.ID)
-	}
-
-	var st container.InspectResponse
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "/containers/"+e.ID+"/json", nil)
-	if err != nil {
-		return st, errors.WithStack(err)
-	}
-
-	if cli.proto == "unix" || cli.proto == "npipe" {
-		req.Host = "docker"
-	}
-
-	req.URL.Host = cli.host
-	req.URL.Scheme = cli.scheme
-
-	res, err := e.client.HTTPClient().Do(req)
-	if err != nil {
-		if res == nil {
-			return st, errdefs.Unknown(err)
-		}
-		_ = res.Body.Close()
-		return st, statusError(err, res.StatusCode)
-	}
-	defer res.Body.Close()
-
-	body, err := io.ReadAll(res.Body)
-	if err != nil {
-		return st, errors.Wrap(err, "failed to read response body from Docker")
-	}
-	if err := parseErrorFromResponse(res, body); err != nil {
-		return st, statusError(err, res.StatusCode)
-	}
-	if err := json.Unmarshal(body, &st); err != nil {
-		return st, errors.WithStack(err)
-	}
-	return st, nil
+	result, err := e.client.ContainerInspect(ctx, e.ID, client.ContainerInspectOptions{})
+	return result.Container, err
 }
 
-// parseErrorFromResponse is a re-implementation of Docker's
-// client.checkResponseErr() function.
 func parseErrorFromResponse(res *http.Response, body []byte) error {
 	if res.StatusCode >= 200 && res.StatusCode < 400 {
 		return nil
 	}
-
-	var ct string
-	if res.Header != nil {
-		ct = res.Header.Get("Content-Type")
-	}
-
-	var emsg string
-	if (cli.version == "" || versions.GreaterThan(cli.version, "1.23")) && ct == "application/json" {
-		var errResp types.ErrorResponse
-		if err := json.Unmarshal(body, &errResp); err != nil {
+	if res.Header != nil && res.Header.Get("Content-Type") == "application/json" && (cli.version == "" || versions.GreaterThan(cli.version, "1.23")) {
+		var response common.ErrorResponse
+		if err := json.Unmarshal(body, &response); err != nil {
 			return errors.WithStack(err)
 		}
-		emsg = strings.TrimSpace(errResp.Message)
-	} else {
-		emsg = strings.TrimSpace(string(body))
+		return errors.Wrap(errors.New(strings.TrimSpace(response.Message)), "Error response from daemon")
 	}
-
-	return errors.Wrap(errors.New(emsg), "Error response from daemon")
+	return errors.Wrap(errors.New(strings.TrimSpace(string(body))), "Error response from daemon")
 }
 
-// httpStatusError keeps the original error message while matching the error
-// class (not found, conflict, etc.) for the response status code.
 type httpStatusError struct {
 	err    error
 	errdef error
 }
 
-func (e *httpStatusError) Error() string {
-	return e.err.Error()
-}
+func (e *httpStatusError) Error() string        { return e.err.Error() }
+func (e *httpStatusError) Unwrap() error        { return e.err }
+func (e *httpStatusError) Is(target error) bool { return errors.Is(e.errdef, target) }
 
-func (e *httpStatusError) Unwrap() error {
-	return e.err
-}
-
-func (e *httpStatusError) Is(target error) bool {
-	return errors.Is(e.errdef, target)
-}
-
-// statusError is the equivalent of the Docker client's own handling of error
-// responses, so callers can use cerrdefs.IsNotFound and friends on the result.
 func statusError(err error, statusCode int) error {
 	if err == nil {
 		return nil

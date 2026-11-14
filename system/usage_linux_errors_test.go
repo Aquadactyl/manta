@@ -7,7 +7,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/docker/docker/pkg/parsers/kernel"
+	"github.com/moby/moby/v2/pkg/parsers/kernel"
 	"github.com/stretchr/testify/require"
 )
 

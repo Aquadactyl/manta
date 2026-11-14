@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/apex/log"
-	"github.com/docker/docker/api/types"
+	"github.com/moby/moby/client"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -44,7 +44,7 @@ func TestDockerEnvironmentMethods(t *testing.T) {
 
 	// Stream and IsAttached
 	assert.False(t, env.IsAttached())
-	env.SetStream(&types.HijackedResponse{})
+	env.SetStream(&client.HijackedResponse{})
 	assert.True(t, env.IsAttached())
 	env.SetStream(nil)
 	assert.False(t, env.IsAttached())

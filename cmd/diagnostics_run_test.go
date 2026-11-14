@@ -12,9 +12,8 @@ import (
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/AlecAivazis/survey/v2/terminal"
-	"github.com/docker/docker/api/types"
-	dockersystem "github.com/docker/docker/api/types/system"
-	"github.com/docker/docker/client"
+	dockersystem "github.com/moby/moby/api/types/system"
+	"github.com/moby/moby/client"
 	"github.com/stretchr/testify/require"
 
 	"github.com/Aquadactyl/manta/config"
@@ -73,7 +72,7 @@ func TestBuildDiagnosticsReportReportsMissingCommandsAndLogs(t *testing.T) {
 	}
 	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
 	var output strings.Builder
-	buildDiagnosticsReport(&output, types.Version{}, dockersystem.Info{}, errors.New("docker unavailable"))
+	buildDiagnosticsReport(&output, dockersystem.VersionResponse{}, dockersystem.Info{}, errors.New("docker unavailable"))
 	require.Contains(t, output.String(), "docker unavailable")
 	require.Contains(t, output.String(), "Couldn't list containers")
 	require.Contains(t, output.String(), "No logs found or an error occurred.")
@@ -102,7 +101,7 @@ func TestBuildDiagnosticsReportIncludesCommandOutput(t *testing.T) {
 	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
 
 	var report strings.Builder
-	buildDiagnosticsReport(&report, types.Version{}, dockersystem.Info{}, errors.New("docker unavailable"))
+	buildDiagnosticsReport(&report, dockersystem.VersionResponse{}, dockersystem.Info{}, errors.New("docker unavailable"))
 	require.Contains(t, report.String(), "container-list")
 	require.Contains(t, report.String(), "log-lines")
 }
@@ -193,8 +192,8 @@ func TestDiagnosticsCommandRunPromptOutcomes(t *testing.T) {
 			require.Len(t, q, 3)
 			return nil
 		}
-		collectDockerInfo = func() (types.Version, dockersystem.Info, error) {
-			return types.Version{}, dockersystem.Info{}, errors.New("docker offline")
+		collectDockerInfo = func() (dockersystem.VersionResponse, dockersystem.Info, error) {
+			return dockersystem.VersionResponse{}, dockersystem.Info{}, errors.New("docker offline")
 		}
 		askDiagnosticsUpload = func(_ survey.Prompt, response interface{}, _ ...survey.AskOpt) error {
 			*(response.(*bool)) = false
@@ -216,8 +215,8 @@ func TestDiagnosticsCommandRunReviewsAndUploads(t *testing.T) {
 			setupDiagnosticsRunTest(t)
 			diagnosticsArgs.ReviewBeforeUpload = true
 			askDiagnosticsQuestions = func([]*survey.Question, interface{}, ...survey.AskOpt) error { return nil }
-			collectDockerInfo = func() (types.Version, dockersystem.Info, error) {
-				return types.Version{Version: "test"}, dockersystem.Info{ServerVersion: "test"}, nil
+			collectDockerInfo = func() (dockersystem.VersionResponse, dockersystem.Info, error) {
+				return dockersystem.VersionResponse{Version: "test"}, dockersystem.Info{ServerVersion: "test"}, nil
 			}
 			askDiagnosticsUpload = func(_ survey.Prompt, response interface{}, _ ...survey.AskOpt) error {
 				*(response.(*bool)) = true

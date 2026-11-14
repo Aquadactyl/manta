@@ -9,8 +9,7 @@ import (
 	"emperror.dev/errors"
 	"github.com/apex/log"
 	cerrdefs "github.com/containerd/errdefs"
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/client"
+	"github.com/moby/moby/client"
 
 	"github.com/Aquadactyl/manta/environment"
 	"github.com/Aquadactyl/manta/events"
@@ -46,7 +45,7 @@ type Environment struct {
 
 	// Controls the hijacked response stream which exists only when we're attached to
 	// the running container instance.
-	stream *types.HijackedResponse
+	stream *client.HijackedResponse
 
 	emitter *events.Bus
 
@@ -95,7 +94,7 @@ func (e *Environment) Type() string {
 // SetStream sets the current stream value from the Docker client. If a nil
 // value is provided we assume that the stream is no longer operational and the
 // instance is effectively offline.
-func (e *Environment) SetStream(s *types.HijackedResponse) {
+func (e *Environment) SetStream(s *client.HijackedResponse) {
 	e.mu.Lock()
 	e.stream = s
 	e.mu.Unlock()

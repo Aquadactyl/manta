@@ -9,15 +9,16 @@ import (
 	"emperror.dev/errors"
 	"github.com/apex/log"
 	cerrdefs "github.com/containerd/errdefs"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/client"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/client"
 
 	"github.com/Aquadactyl/manta/environment"
 	"github.com/Aquadactyl/manta/remote"
 )
 
 var waitForContainer = func(cli *client.Client, ctx context.Context, id string) (<-chan container.WaitResponse, <-chan error) {
-	return cli.ContainerWait(ctx, id, container.WaitConditionNotRunning)
+	result := cli.ContainerWait(ctx, id, client.ContainerWaitOptions{Condition: container.WaitConditionNotRunning})
+	return result.Result, result.Error
 }
 
 var dockerAttachForStart = func(e *Environment, ctx context.Context) error { return e.Attach(ctx) }
@@ -32,7 +33,7 @@ var dockerAttachForStart = func(e *Environment, ctx context.Context) error { ret
 // is running does not result in the server becoming un-bootable.
 func (e *Environment) OnBeforeStart(ctx context.Context) error {
 	// Always destroy and re-create the server container to ensure that synced data from the Panel is used.
-	if err := e.client.ContainerRemove(ctx, e.ID, container.RemoveOptions{RemoveVolumes: true}); err != nil {
+	if _, err := e.client.ContainerRemove(ctx, e.ID, client.ContainerRemoveOptions{RemoveVolumes: true}); err != nil {
 		if !cerrdefs.IsNotFound(err) {
 			return errors.WrapIf(err, "environment/docker: failed to remove container during pre-boot")
 		}
@@ -128,7 +129,7 @@ func (e *Environment) Start(ctx context.Context) error {
 		return errors.WrapIf(err, "environment/docker: failed to attach to container")
 	}
 
-	if err := e.client.ContainerStart(actx, e.ID, container.StartOptions{}); err != nil {
+	if _, err := e.client.ContainerStart(actx, e.ID, client.ContainerStartOptions{}); err != nil {
 		return errors.WrapIf(err, "environment/docker: failed to start container")
 	}
 
@@ -199,7 +200,7 @@ func (e *Environment) Stop(ctx context.Context) error {
 	// rather than forcefully terminating it.  Value is in seconds, but -1 is
 	// treated as indefinitely.
 	timeout := -1
-	if err := e.client.ContainerStop(ctx, e.ID, container.StopOptions{Timeout: &timeout}); err != nil {
+	if _, err := e.client.ContainerStop(ctx, e.ID, client.ContainerStopOptions{Timeout: &timeout}); err != nil {
 		// If the container does not exist just mark the process as stopped and return without
 		// an error.
 		if cerrdefs.IsNotFound(err) {
@@ -311,7 +312,7 @@ func (e *Environment) SignalContainer(ctx context.Context, signal string) error 
 
 	// We set it to stopping than offline to prevent crash detection from being triggered.
 	e.SetState(environment.ProcessStoppingState)
-	if err := e.client.ContainerKill(ctx, e.ID, signal); err != nil && !cerrdefs.IsNotFound(err) {
+	if _, err := e.client.ContainerKill(ctx, e.ID, client.ContainerKillOptions{Signal: signal}); err != nil && !cerrdefs.IsNotFound(err) {
 		return errors.WithStack(err)
 	}
 

@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net/netip"
 	"strconv"
 	"strings"
 	"time"
@@ -13,12 +14,11 @@ import (
 	"github.com/apex/log"
 	"github.com/buger/jsonparser"
 	cerrdefs "github.com/containerd/errdefs"
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/image"
-	"github.com/docker/docker/api/types/mount"
-	"github.com/docker/docker/api/types/network"
-	"github.com/docker/docker/client"
+	"github.com/docker/go-connections/nat"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/mount"
+	"github.com/moby/moby/api/types/network"
+	"github.com/moby/moby/client"
 
 	"github.com/Aquadactyl/manta/config"
 	"github.com/Aquadactyl/manta/environment"
@@ -31,12 +31,58 @@ var registryAuthBase64 = func(credentials *config.RegistryConfiguration) (string
 
 var ErrNotAttached = errors.Sentinel("not attached to instance")
 
+func toNetworkPortSet(ports nat.PortSet) (network.PortSet, error) {
+	out := make(network.PortSet, len(ports))
+	for port := range ports {
+		parsed, err := network.ParsePort(string(port))
+		if err != nil {
+			return nil, errors.Wrapf(err, "environment/docker: invalid exposed port %q", port)
+		}
+		out[parsed] = struct{}{}
+	}
+	return out, nil
+}
+
+func toNetworkPortMap(ports nat.PortMap) (network.PortMap, error) {
+	out := make(network.PortMap, len(ports))
+	for port, bindings := range ports {
+		key, err := network.ParsePort(string(port))
+		if err != nil {
+			return nil, errors.Wrapf(err, "environment/docker: invalid port binding %q", port)
+		}
+		for _, binding := range bindings {
+			var hostIP netip.Addr
+			if binding.HostIP != "" {
+				hostIP, err = netip.ParseAddr(binding.HostIP)
+				if err != nil {
+					return nil, errors.Wrapf(err, "environment/docker: invalid host IP %q", binding.HostIP)
+				}
+			}
+			out[key] = append(out[key], network.PortBinding{HostIP: hostIP, HostPort: binding.HostPort})
+		}
+	}
+	return out, nil
+}
+
+func parseDNSAddresses(addresses []string) ([]netip.Addr, error) {
+	out := make([]netip.Addr, 0, len(addresses))
+	for _, address := range addresses {
+		parsed, err := netip.ParseAddr(address)
+		if err != nil {
+			return nil, errors.Wrapf(err, "environment/docker: invalid DNS address %q", address)
+		}
+		out = append(out, parsed)
+	}
+	return out, nil
+}
+
 // commandWriteTimeout is the amount of time allowed for a command to be written
 // to the input of a server process.
 var commandWriteTimeout = time.Second * 10
 
-var dockerContainerAttach = func(ctx context.Context, cli *client.Client, id string, opts container.AttachOptions) (types.HijackedResponse, error) {
-	return cli.ContainerAttach(ctx, id, opts)
+var dockerContainerAttach = func(ctx context.Context, cli *client.Client, id string, opts client.ContainerAttachOptions) (client.HijackedResponse, error) {
+	result, err := cli.ContainerAttach(ctx, id, opts)
+	return result.HijackedResponse, err
 }
 
 var (
@@ -73,7 +119,7 @@ func (e *Environment) Attach(ctx context.Context) error {
 		return nil
 	}
 
-	opts := container.AttachOptions{
+	opts := client.ContainerAttachOptions{
 		Stdin:  true,
 		Stdout: true,
 		Stderr: true,
@@ -212,8 +258,9 @@ func (e *Environment) InSituUpdate() error {
 	// for removing memory limits, a container must be re-created.
 	//
 	// @see https://github.com/moby/moby/issues/41946
-	if _, err := e.client.ContainerUpdate(ctx, e.ID, container.UpdateConfig{
-		Resources: e.Configuration.Limits().AsContainerResources(),
+	resources := e.Configuration.Limits().AsContainerResources()
+	if _, err := e.client.ContainerUpdate(ctx, e.ID, client.ContainerUpdateOptions{
+		Resources: &resources,
 	}); err != nil {
 		return errors.Wrap(err, "environment/docker: could not update container")
 	}
@@ -252,6 +299,18 @@ func (e *Environment) Create() error {
 			evs[i] = "SERVER_IP=" + cfg.Docker.Network.Interface
 		}
 	}
+	exposedPorts, err := toNetworkPortSet(a.Exposed())
+	if err != nil {
+		return err
+	}
+	portBindings, err := toNetworkPortMap(a.DockerBindings())
+	if err != nil {
+		return err
+	}
+	dns, err := parseDNSAddresses(cfg.Docker.Network.DNS)
+	if err != nil {
+		return err
+	}
 
 	// Merge user-provided labels with system labels
 	confLabels := e.Configuration.Labels()
@@ -271,7 +330,7 @@ func (e *Environment) Create() error {
 		AttachStderr: true,
 		OpenStdin:    true,
 		Tty:          true,
-		ExposedPorts: a.Exposed(),
+		ExposedPorts: exposedPorts,
 		Image:        strings.TrimPrefix(e.meta.Image, "~"),
 		Env:          e.Configuration.EnvironmentVariables(),
 		Labels:       labels,
@@ -290,13 +349,13 @@ func (e *Environment) Create() error {
 		networkName := "ip-" + strings.ReplaceAll(strings.ReplaceAll(a.DefaultMapping.IP, ".", "-"), ":", "-")
 		networkMode = container.NetworkMode(networkName)
 
-		if _, err := e.client.NetworkInspect(ctx, networkName, network.InspectOptions{}); err != nil {
+		if _, err := e.client.NetworkInspect(ctx, networkName, client.NetworkInspectOptions{}); err != nil {
 			if !cerrdefs.IsNotFound(err) {
 				return err
 			}
 
 			enableIPv6 := false
-			if _, err := e.client.NetworkCreate(ctx, networkName, network.CreateOptions{
+			if _, err := e.client.NetworkCreate(ctx, networkName, client.NetworkCreateOptions{
 				Driver:     "bridge",
 				EnableIPv6: &enableIPv6,
 				Internal:   false,
@@ -315,7 +374,7 @@ func (e *Environment) Create() error {
 	}
 
 	hostConf := &container.HostConfig{
-		PortBindings: a.DockerBindings(),
+		PortBindings: portBindings,
 
 		// Configure the mounts for this container. First mount the server data directory
 		// into the container as an r/w bind.
@@ -331,7 +390,7 @@ func (e *Environment) Create() error {
 		// from the Panel.
 		Resources: e.Configuration.Limits().AsContainerResources(),
 
-		DNS: cfg.Docker.Network.DNS,
+		DNS: dns,
 
 		// Configure logging for the container to make it easier on the Daemon to grab
 		// the server output. Ensure that we don't use too much space on the host machine
@@ -357,7 +416,7 @@ func (e *Environment) Create() error {
 		hostConf.Binds = binds
 	}
 
-	if _, err := e.client.ContainerCreate(ctx, conf, hostConf, nil, nil, e.ID); err != nil {
+	if _, err := e.client.ContainerCreate(ctx, client.ContainerCreateOptions{Config: conf, HostConfig: hostConf, Name: e.ID}); err != nil {
 		return errors.Wrap(err, "environment/docker: failed to create container")
 	}
 
@@ -370,7 +429,7 @@ func (e *Environment) Destroy() error {
 	// We set it to stopping than offline to prevent crash detection from being triggered.
 	e.SetState(environment.ProcessStoppingState)
 
-	err := e.client.ContainerRemove(context.Background(), e.ID, container.RemoveOptions{
+	_, err := e.client.ContainerRemove(context.Background(), e.ID, client.ContainerRemoveOptions{
 		RemoveVolumes: true,
 		RemoveLinks:   false,
 		Force:         true,
@@ -427,7 +486,7 @@ func (e *Environment) SendCommand(c string) error {
 // is running or not, it will simply try to read the last X bytes of the file
 // and return them.
 func (e *Environment) Readlog(lines int) ([]string, error) {
-	r, err := e.client.ContainerLogs(context.Background(), e.ID, container.LogsOptions{
+	r, err := e.client.ContainerLogs(context.Background(), e.ID, client.ContainerLogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,
 		Tail:       strconv.Itoa(lines),
@@ -509,7 +568,7 @@ func (e *Environment) ensureImageExists(img string) error {
 	}
 
 	// Get the ImagePullOptions.
-	imagePullOptions := image.PullOptions{All: false}
+	imagePullOptions := client.ImagePullOptions{All: false}
 	if registryAuth != nil {
 		b64, err := registryAuthBase64(registryAuth)
 		if err != nil {
@@ -522,14 +581,14 @@ func (e *Environment) ensureImageExists(img string) error {
 
 	out, err := e.client.ImagePull(ctx, img, imagePullOptions)
 	if err != nil {
-		images, ierr := e.client.ImageList(ctx, image.ListOptions{})
+		images, ierr := e.client.ImageList(ctx, client.ImageListOptions{})
 		if ierr != nil {
 			// Well damn, something has gone really wrong here, just go ahead and abort there
 			// isn't much anything we can do to try and self-recover from this.
 			return errors.Wrap(ierr, "environment/docker: failed to list images")
 		}
 
-		for _, img2 := range images {
+		for _, img2 := range images.Items {
 			for _, t := range img2.RepoTags {
 				if t != img {
 					continue

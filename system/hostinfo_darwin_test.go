@@ -6,7 +6,7 @@ import (
 	"errors"
 	"testing"
 
-	dockersystem "github.com/docker/docker/api/types/system"
+	dockersystem "github.com/moby/moby/api/types/system"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sys/unix"

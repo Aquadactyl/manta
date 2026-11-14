@@ -8,7 +8,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/docker/docker/client"
+	"github.com/moby/moby/client"
 	"github.com/stretchr/testify/require"
 
 	"github.com/Aquadactyl/manta/config"
@@ -133,7 +133,7 @@ func TestSignalContainerReturnsDockerKillError(t *testing.T) {
 	o = sync.Once{}
 	api := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {
-		case r.Method == http.MethodGet && r.URL.Path == "/containers/container-id/json":
+		case r.Method == http.MethodGet && r.URL.Path == "/v1.51/containers/container-id/json":
 			_, _ = w.Write([]byte(`{"State":{"Running":true}}`))
 		case r.Method == http.MethodPost && r.URL.Path == "/v1.51/containers/container-id/kill":
 			http.Error(w, `{"message":"kill failed"}`, http.StatusInternalServerError)

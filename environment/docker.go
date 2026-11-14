@@ -2,14 +2,15 @@ package environment
 
 import (
 	"context"
+	"net/netip"
 	"strconv"
 	"sync"
 
 	"emperror.dev/errors"
 	"github.com/apex/log"
 	cerrdefs "github.com/containerd/errdefs"
-	"github.com/docker/docker/api/types/network"
-	"github.com/docker/docker/client"
+	"github.com/moby/moby/api/types/network"
+	"github.com/moby/moby/client"
 
 	"github.com/Aquadactyl/manta/config"
 	"github.com/Aquadactyl/manta/system"
@@ -41,7 +42,7 @@ func ConfigureDocker(ctx context.Context) error {
 	}
 
 	nw := config.Get().Docker.Network
-	resource, err := cli.NetworkInspect(ctx, nw.Name, network.InspectOptions{})
+	resource, err := cli.NetworkInspect(ctx, nw.Name, client.NetworkInspectOptions{})
 	if err != nil {
 		if !cerrdefs.IsNotFound(err) {
 			return err
@@ -54,7 +55,7 @@ func ConfigureDocker(ctx context.Context) error {
 	}
 
 	config.Update(func(c *config.Configuration) {
-		c.Docker.Network.Driver = resource.Driver
+		c.Docker.Network.Driver = resource.Network.Driver
 		switch c.Docker.Network.Driver {
 		case "host":
 			c.Docker.Network.Interface = "127.0.0.1"
@@ -75,18 +76,20 @@ func ConfigureDocker(ctx context.Context) error {
 func createDockerNetwork(ctx context.Context, cli *client.Client) error {
 	nw := config.Get().Docker.Network
 	enableIPv6 := nw.Interfaces.V6.Enabled
-	_, err := cli.NetworkCreate(ctx, nw.Name, network.CreateOptions{
+	ipamConfigV4, err := networkIPAMConfig(nw.Interfaces.V4.Subnet, nw.Interfaces.V4.Gateway)
+	if err != nil {
+		return errors.Wrap(err, "environment/docker: invalid IPv4 network configuration")
+	}
+	ipamConfigV6, err := networkIPAMConfig(nw.Interfaces.V6.Subnet, nw.Interfaces.V6.Gateway)
+	if err != nil {
+		return errors.Wrap(err, "environment/docker: invalid IPv6 network configuration")
+	}
+	_, err = cli.NetworkCreate(ctx, nw.Name, client.NetworkCreateOptions{
 		Driver:     nw.Driver,
 		EnableIPv6: &enableIPv6,
 		Internal:   nw.IsInternal,
 		IPAM: &network.IPAM{
-			Config: []network.IPAMConfig{{
-				Subnet:  nw.Interfaces.V4.Subnet,
-				Gateway: nw.Interfaces.V4.Gateway,
-			}, {
-				Subnet:  nw.Interfaces.V6.Subnet,
-				Gateway: nw.Interfaces.V6.Gateway,
-			}},
+			Config: []network.IPAMConfig{ipamConfigV4, ipamConfigV6},
 		},
 		Options: map[string]string{
 			"encryption": "false",
@@ -107,4 +110,23 @@ func createDockerNetwork(ctx context.Context, cli *client.Client) error {
 		})
 	}
 	return nil
+}
+
+func networkIPAMConfig(subnet, gateway string) (network.IPAMConfig, error) {
+	var config network.IPAMConfig
+	if subnet != "" {
+		prefix, err := netip.ParsePrefix(subnet)
+		if err != nil {
+			return config, err
+		}
+		config.Subnet = prefix
+	}
+	if gateway != "" {
+		address, err := netip.ParseAddr(gateway)
+		if err != nil {
+			return config, err
+		}
+		config.Gateway = address
+	}
+	return config, nil
 }

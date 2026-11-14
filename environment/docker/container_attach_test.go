@@ -15,9 +15,7 @@ import (
 	"github.com/Aquadactyl/manta/environment"
 	"github.com/Aquadactyl/manta/events"
 	"github.com/Aquadactyl/manta/system"
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/client"
+	"github.com/moby/moby/client"
 	"github.com/stretchr/testify/require"
 )
 
@@ -49,7 +47,7 @@ func TestAttachDoesNothingWhenAlreadyAttached(t *testing.T) {
 	defer clientSide.Close()
 	defer serverSide.Close()
 	env := &Environment{}
-	env.SetStream(&types.HijackedResponse{Conn: clientSide, Reader: bufio.NewReader(clientSide)})
+	env.SetStream(&client.HijackedResponse{Conn: clientSide, Reader: bufio.NewReader(clientSide)})
 
 	require.NoError(t, env.Attach(context.Background()))
 	require.True(t, env.IsAttached())
@@ -61,8 +59,8 @@ func TestAttachConsumesOutputAndClearsStoppedStream(t *testing.T) {
 	t.Cleanup(func() { dockerContainerAttach = oldAttach })
 	clientSide, serverSide := net.Pipe()
 	t.Cleanup(func() { _ = serverSide.Close() })
-	dockerContainerAttach = func(context.Context, *client.Client, string, container.AttachOptions) (types.HijackedResponse, error) {
-		return types.HijackedResponse{Conn: clientSide, Reader: bufio.NewReader(clientSide)}, nil
+	dockerContainerAttach = func(context.Context, *client.Client, string, client.ContainerAttachOptions) (client.HijackedResponse, error) {
+		return client.HijackedResponse{Conn: clientSide, Reader: bufio.NewReader(clientSide)}, nil
 	}
 
 	cli, err := client.NewClientWithOpts(client.WithHost("tcp://127.0.0.1:1"), client.WithVersion("1.51"))
@@ -105,8 +103,8 @@ func TestAttachScannerErrorKeepsStreamWhenReattachSucceeds(t *testing.T) {
 	clientSide, serverSide := net.Pipe()
 	t.Cleanup(func() { _ = clientSide.Close(); _ = serverSide.Close() })
 	want := errors.New("scanner read failed")
-	dockerContainerAttach = func(context.Context, *client.Client, string, container.AttachOptions) (types.HijackedResponse, error) {
-		return types.HijackedResponse{Conn: clientSide, Reader: bufio.NewReader(attachTestReader{err: want})}, nil
+	dockerContainerAttach = func(context.Context, *client.Client, string, client.ContainerAttachOptions) (client.HijackedResponse, error) {
+		return client.HijackedResponse{Conn: clientSide, Reader: bufio.NewReader(attachTestReader{err: want})}, nil
 	}
 	pollStarted := make(chan struct{})
 	pollContainerResources = func(_ *Environment, ctx context.Context) error {

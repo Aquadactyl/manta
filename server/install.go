@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"io"
+	"net/netip"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -14,10 +15,9 @@ import (
 	"emperror.dev/errors"
 	"github.com/apex/log"
 	cerrdefs "github.com/containerd/errdefs"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/image"
-	"github.com/docker/docker/api/types/mount"
-	"github.com/docker/docker/client"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/mount"
+	"github.com/moby/moby/client"
 
 	"github.com/Aquadactyl/manta/config"
 	"github.com/Aquadactyl/manta/environment"
@@ -27,7 +27,20 @@ import (
 )
 
 var waitForInstallerContainer = func(c *client.Client, ctx context.Context, id string, condition container.WaitCondition) (<-chan container.WaitResponse, <-chan error) {
-	return c.ContainerWait(ctx, id, condition)
+	result := c.ContainerWait(ctx, id, client.ContainerWaitOptions{Condition: condition})
+	return result.Result, result.Error
+}
+
+func parseInstallDNS(addresses []string) ([]netip.Addr, error) {
+	out := make([]netip.Addr, 0, len(addresses))
+	for _, address := range addresses {
+		parsed, err := netip.ParseAddr(address)
+		if err != nil {
+			return nil, errors.Wrapf(err, "invalid Docker DNS address %q", address)
+		}
+		out = append(out, parsed)
+	}
+	return out, nil
 }
 
 var (
@@ -258,7 +271,7 @@ func (s *Server) IsInProtectedState() bool {
 
 // RemoveContainer removes the installation container for the server.
 func (ip *InstallationProcess) RemoveContainer() error {
-	err := ip.client.ContainerRemove(ip.Server.Context(), ip.Server.ID()+"_installer", container.RemoveOptions{
+	_, err := ip.client.ContainerRemove(ip.Server.Context(), ip.Server.ID()+"_installer", client.ContainerRemoveOptions{
 		RemoveVolumes: true,
 		Force:         true,
 	})
@@ -381,7 +394,7 @@ func (ip *InstallationProcess) pullInstallationImage() error {
 	}
 
 	// Get the ImagePullOptions.
-	imagePullOptions := image.PullOptions{All: false}
+	imagePullOptions := client.ImagePullOptions{All: false}
 	if registryAuth != nil {
 		b64, err := encodeInstallRegistryAuth(registryAuth)
 		if err != nil {
@@ -394,14 +407,14 @@ func (ip *InstallationProcess) pullInstallationImage() error {
 
 	r, err := ip.client.ImagePull(ctx, img, imagePullOptions)
 	if err != nil {
-		images, ierr := ip.client.ImageList(ctx, image.ListOptions{})
+		images, ierr := ip.client.ImageList(ctx, client.ImageListOptions{})
 		if ierr != nil {
 			// Well damn, something has gone really wrong here, just go ahead and abort there
 			// isn't much anything we can do to try and self-recover from this.
 			return ierr
 		}
 
-		for _, img2 := range images {
+		for _, img2 := range images.Items {
 			for _, t := range img2.RepoTags {
 				if t != img {
 					continue
@@ -470,7 +483,7 @@ func (ip *InstallationProcess) AfterExecute(containerID string) error {
 	}()
 
 	ip.Server.Log().WithField("container_id", containerID).Debug("pulling installation logs for server")
-	reader, err := ip.client.ContainerLogs(ip.Server.Context(), containerID, container.LogsOptions{
+	reader, err := ip.client.ContainerLogs(ip.Server.Context(), containerID, client.ContainerLogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,
 		Follow:     false,
@@ -550,13 +563,17 @@ func (ip *InstallationProcess) Execute() (string, error) {
 			ReadOnly: true,
 		},
 	}
+	dns, err := parseInstallDNS(cfg.Docker.Network.DNS)
+	if err != nil {
+		return "", errors.WithMessage(err, "failed to parse Docker DNS configuration")
+	}
 	hostConf := &container.HostConfig{
 		Mounts:    installMounts,
 		Resources: ip.resourceLimits(),
 		Tmpfs: map[string]string{
 			"/tmp": "rw,exec,nosuid,size=" + tmpfsSize + "M",
 		},
-		DNS:         cfg.Docker.Network.DNS,
+		DNS:         dns,
 		LogConfig:   cfg.Docker.ContainerLogConfig(),
 		NetworkMode: container.NetworkMode(cfg.Docker.Network.Mode),
 		UsernsMode:  container.UsernsMode(cfg.Docker.UsernsMode),
@@ -597,13 +614,13 @@ func (ip *InstallationProcess) Execute() (string, error) {
 		}
 	}()
 
-	r, err := ip.client.ContainerCreate(ctx, conf, hostConf, nil, nil, ip.Server.ID()+"_installer")
+	r, err := ip.client.ContainerCreate(ctx, client.ContainerCreateOptions{Config: conf, HostConfig: hostConf, Name: ip.Server.ID() + "_installer"})
 	if err != nil {
 		return "", err
 	}
 
 	ip.Server.Log().WithField("container_id", r.ID).Info("running installation script for server in container")
-	if err := ip.client.ContainerStart(ctx, r.ID, container.StartOptions{}); err != nil {
+	if _, err := ip.client.ContainerStart(ctx, r.ID, client.ContainerStartOptions{}); err != nil {
 		return "", err
 	}
 
@@ -640,7 +657,7 @@ func (ip *InstallationProcess) Execute() (string, error) {
 // the server configuration directory, as well as to a websocket listener so
 // that the process can be viewed in the panel by administrators.
 func (ip *InstallationProcess) StreamOutput(ctx context.Context, id string) error {
-	opts := container.LogsOptions{ShowStdout: true, ShowStderr: true, Follow: true}
+	opts := client.ContainerLogsOptions{ShowStdout: true, ShowStderr: true, Follow: true}
 	reader, err := ip.client.ContainerLogs(ctx, id, opts)
 	if err != nil {
 		return err

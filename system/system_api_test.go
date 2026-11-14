@@ -10,8 +10,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/docker/docker/api/types"
-	dockersystem "github.com/docker/docker/api/types/system"
+	dockersystem "github.com/moby/moby/api/types/system"
 	"github.com/stretchr/testify/require"
 )
 
@@ -98,16 +97,16 @@ func TestGetSystemInformationPropagatesHostAndDockerErrors(t *testing.T) {
 	t.Run("docker error", func(t *testing.T) {
 		systemHostKernelVersion = func() (string, error) { return "kernel", nil }
 		want := errors.New("docker unavailable")
-		systemGetDockerInfo = func(context.Context) (types.Version, dockersystem.Info, error) {
-			return types.Version{}, dockersystem.Info{}, want
+		systemGetDockerInfo = func(context.Context) (dockersystem.VersionResponse, dockersystem.Info, error) {
+			return dockersystem.VersionResponse{}, dockersystem.Info{}, want
 		}
 		_, err := GetSystemInformation()
 		require.ErrorIs(t, err, want)
 	})
 	t.Run("os error", func(t *testing.T) {
 		systemHostKernelVersion = func() (string, error) { return "kernel", nil }
-		systemGetDockerInfo = func(context.Context) (types.Version, dockersystem.Info, error) {
-			return types.Version{}, dockersystem.Info{}, nil
+		systemGetDockerInfo = func(context.Context) (dockersystem.VersionResponse, dockersystem.Info, error) {
+			return dockersystem.VersionResponse{}, dockersystem.Info{}, nil
 		}
 		want := errors.New("os unavailable")
 		systemHostOSName = func(dockersystem.Info) (string, error) { return "", want }

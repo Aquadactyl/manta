@@ -4,8 +4,8 @@ package system
 
 import (
 	"github.com/acobaugh/osrelease"
-	dockersystem "github.com/docker/docker/api/types/system"
-	"github.com/docker/docker/pkg/parsers/kernel"
+	dockersystem "github.com/moby/moby/api/types/system"
+	"github.com/moby/moby/v2/pkg/parsers/kernel"
 )
 
 var (

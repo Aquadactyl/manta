@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/docker/docker/client"
+	"github.com/moby/moby/client"
 	"github.com/stretchr/testify/require"
 
 	"github.com/Aquadactyl/manta/environment"

@@ -17,10 +17,10 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/AlecAivazis/survey/v2/terminal"
 	"github.com/apex/log"
-	"github.com/docker/docker/api/types"
-	dockersystem "github.com/docker/docker/api/types/system"
-	"github.com/docker/docker/pkg/parsers/kernel"
-	"github.com/docker/docker/pkg/parsers/operatingsystem"
+	dockersystem "github.com/moby/moby/api/types/system"
+	"github.com/moby/moby/client"
+	"github.com/moby/moby/v2/pkg/parsers/kernel"
+	"github.com/moby/moby/v2/pkg/parsers/operatingsystem"
 	"github.com/spf13/cobra"
 
 	"github.com/Aquadactyl/manta/config"
@@ -126,7 +126,7 @@ func diagnosticsCmdRun(*cobra.Command, []string) {
 	}
 }
 
-func buildDiagnosticsReport(output *strings.Builder, dockerVersion types.Version, dockerInfo dockersystem.Info, dockerErr error) *config.Configuration {
+func buildDiagnosticsReport(output *strings.Builder, dockerVersion dockersystem.VersionResponse, dockerInfo dockersystem.Info, dockerErr error) *config.Configuration {
 	fmt.Fprintln(output, "Pterodactyl Wings - Diagnostics Report")
 	printHeader(output, "Versions")
 	fmt.Fprintln(output, "               Wings:", system.Version)
@@ -237,20 +237,29 @@ func writeConfiguration(w io.Writer) *config.Configuration {
 	return cfg
 }
 
-func getDockerInfo() (types.Version, dockersystem.Info, error) {
-	client, err := newDiagnosticsDockerClient()
+func getDockerInfo() (dockersystem.VersionResponse, dockersystem.Info, error) {
+	cli, err := newDiagnosticsDockerClient()
 	if err != nil {
-		return types.Version{}, dockersystem.Info{}, err
+		return dockersystem.VersionResponse{}, dockersystem.Info{}, err
 	}
-	dockerVersion, err := client.ServerVersion(context.Background())
+	dockerVersion, err := cli.ServerVersion(context.Background(), client.ServerVersionOptions{})
 	if err != nil {
-		return types.Version{}, dockersystem.Info{}, err
+		return dockersystem.VersionResponse{}, dockersystem.Info{}, err
 	}
-	dockerInfo, err := client.Info(context.Background())
+	dockerInfo, err := cli.Info(context.Background(), client.InfoOptions{})
 	if err != nil {
-		return types.Version{}, dockersystem.Info{}, err
+		return dockersystem.VersionResponse{}, dockersystem.Info{}, err
 	}
-	return dockerVersion, dockerInfo, nil
+	return dockersystem.VersionResponse{
+		Platform:      dockersystem.PlatformInfo{Name: dockerVersion.Platform.Name},
+		Version:       dockerVersion.Version,
+		APIVersion:    dockerVersion.APIVersion,
+		MinAPIVersion: dockerVersion.MinAPIVersion,
+		Os:            dockerVersion.Os,
+		Arch:          dockerVersion.Arch,
+		Experimental:  dockerVersion.Experimental,
+		Components:    dockerVersion.Components,
+	}, dockerInfo.Info, nil
 }
 
 func uploadToHastebin(hbURL, content string) (string, error) {

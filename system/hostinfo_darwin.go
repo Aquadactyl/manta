@@ -3,7 +3,7 @@
 package system
 
 import (
-	dockersystem "github.com/docker/docker/api/types/system"
+	dockersystem "github.com/moby/moby/api/types/system"
 	"golang.org/x/sys/unix"
 )
 

@@ -37,13 +37,11 @@ Reproduce the updated benchmark with:
 go test ./remote -run '^$' -bench BenchmarkRequestBody -benchmem -count=3
 ```
 
-## Dependency scan assessment
+## Dependency scan assessment, 14 November 2026
 
-`govulncheck` v1.9.0 reports two symbol-level findings against `github.com/docker/docker@v28.5.2+incompatible`: [GO-2026-4887](https://pkg.go.dev/vuln/GO-2026-4887) and [GO-2026-4883](https://pkg.go.dev/vuln/GO-2026-4883). Both database entries are unreviewed and apply broadly to the old module; neither lists a fixed version for that module path. The scan therefore exits nonzero and must not be reported as clean.
+The Docker SDK has been migrated from the legacy `github.com/docker/docker` module to Moby's split `github.com/moby/moby/client` and `github.com/moby/moby/api` modules. The remaining Moby v2 parser helpers use `github.com/moby/moby/v2`. The client calls now use the split API's option/result types, including inspect, attach, waits, stats, image, network, and container operations.
 
-The primary advisories describe [Docker Engine authorization plugin handling](https://github.com/moby/moby/security/advisories/GHSA-x744-4wpc-v9h2) and [Docker Engine plugin installation privilege checks](https://github.com/moby/moby/security/advisories/GHSA-pxq6-2prw-chj9). Both are patched in Engine 29.3.1. Manta's dependency graph excludes `github.com/docker/docker/daemon`, `github.com/docker/docker/pkg/authorization`, and `github.com/docker/docker/plugin`. Based on the advisory descriptions and this import graph, these are assessed as Engine deployment concerns rather than demonstrated vulnerabilities in Manta's embedded Docker client. Keep the host Engine patched independently of the Go SDK.
-
-The scan also reports four module-only findings whose vulnerable packages are not imported: GO-2026-5932 (OpenPGP), GO-2026-5746, GO-2026-5668, and GO-2026-5617 (Docker daemon archive/copy handling). This review does not suppress any findings or migrate the Docker SDK.
+`govulncheck ./...` completed with `No vulnerabilities found.` This scan covers the repository's imported Go symbols using the current vulnerability database; it does not assess the separately installed Docker Engine, so keep that host service updated independently.
 
 ## Deployment limits
 
