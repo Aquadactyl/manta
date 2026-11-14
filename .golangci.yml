@@ -32,7 +32,7 @@ linters:
           - staticcheck
         text: "QF1008:"
       # Filesystem flags intentionally mirror the names in Go's os and unix APIs.
-      - path: internal/ufs/(file\.go|sys_linux\.go)
+      - path: internal/ufs/(file\.go|sys_(linux|darwin)\.go)
         linters:
           - staticcheck
         text: "should not use ALL_CAPS in Go names"
