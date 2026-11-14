@@ -26,6 +26,7 @@ var burstWarning sync.Once
 
 var readCgroupFile = os.ReadFile
 var writeCgroupBurstFile = os.WriteFile
+var writeBurstFileForProcess = writeBurstFile
 
 // cpuBurstMicroseconds returns the burst allowance in microseconds for the given
 // CFS quota and configured percentage. The kernel rejects a burst larger than the
@@ -67,12 +68,16 @@ func resolveCgroupCpuFile(procCgroup string, v2 bool) (string, error) {
 // given process. This is expected to fail on kernels older than 5.14 or when the
 // cgroup hierarchy is not writable by Wings, so failures are only logged.
 func writeCpuBurst(l *log.Entry, pid int, burst int64) {
+	writeCpuBurstForPlatform(l, pid, burst, runtime.GOOS)
+}
+
+func writeCpuBurstForPlatform(l *log.Entry, pid int, burst int64, goos string) {
 	// Only Linux has the cgroup hierarchy. Elsewhere the container runs in a
 	// virtual machine whose processes can not be reached through the host.
-	if pid <= 0 || runtime.GOOS != "linux" {
+	if pid <= 0 || goos != "linux" {
 		return
 	}
-	if err := writeBurstFile(pid, burst); err != nil {
+	if err := writeBurstFileForProcess(pid, burst); err != nil {
 		logBurstFailure(l.WithField("error", err), burst)
 		return
 	}

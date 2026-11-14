@@ -143,8 +143,8 @@ jobs:
           go test -coverprofile=coverage-darwin-app.out ./cmd/... ./parser/... ./remote/... ./router/... ./server/... ./sftp/... ./loggers/cli/...
           go test -coverprofile=coverage-darwin-cmd.out -run 'Darwin|MountCheck' ./cmd/
           go test -coverprofile=coverage-darwin-system.out -run 'Darwin|MemoryUsed|CPUPercent|VMStat|GetDockerInfoAPI|GetDockerInfoRejectsInvalidTLSConfiguration|GetSystemInformationAPI|GetSystemInformationPropagates' ./system/...
-          go test -coverprofile=coverage-darwin-environment.out -run 'VariablesGet|ConfigureDockerErrorAndOverlayNetwork|CheckDataMount|CheckMount|MountCheck|DockerMountChecker' ./environment/
-          go test -coverprofile=coverage-darwin-docker.out -run 'Test(AttachReturnsDockerAttachError|AttachDoesNothingWhenAlreadyAttached|AttachConsumesOutputAndClearsStoppedStream|AttachScannerErrorKeepsStreamWhenReattachSucceeds|ReportAttachPollError|WriteBurstFileReadAndWritePaths|SetCpuBurstWithInspectedContainer|WaitForStopWaitErrorAndForcedTermination|WaitForStopParentCancellationAfterStop|EnsureImageExistsPullPolicies|ReadlogReturnsScannerErrorForOversizedLine|PollResourcesErrorAndStopPaths)$' ./environment/docker/
+          go test -coverprofile=coverage-darwin-environment.out -run 'VariablesGet|ConfigureDockerErrorAndOverlayNetwork|ConfigureDockerNetworkCreationError|CheckDataMount|CheckMount|MountCheck|DockerMountChecker' ./environment/
+          go test -coverprofile=coverage-darwin-docker.out -run 'Test(AttachReturnsDockerAttachError|AttachDoesNothingWhenAlreadyAttached|AttachConsumesOutputAndClearsStoppedStream|AttachScannerErrorKeepsStreamWhenReattachSucceeds|ReportAttachPollError|WriteBurstFileReadAndWritePaths|WriteCpuBurstPlatformIndependent|SetCpuBurstWithInspectedContainer|WaitForStopWaitErrorAndForcedTermination|WaitForStopParentCancellationAfterStop|EnsureImageExistsPullPolicies|ReadlogReturnsScannerErrorForOversizedLine|PollResourcesErrorAndStopPaths)$' ./environment/docker/
 
       - name: Upload Darwin coverage
         if: always() && matrix.goarch == 'arm64' && matrix.go == '1.27.2'

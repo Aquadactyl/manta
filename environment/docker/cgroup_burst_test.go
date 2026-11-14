@@ -1,6 +1,28 @@
 package docker
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/apex/log"
+)
+
+func TestWriteCpuBurstPlatformIndependent(t *testing.T) {
+	previous := writeBurstFileForProcess
+	t.Cleanup(func() { writeBurstFileForProcess = previous })
+	called := false
+	writeBurstFileForProcess = func(pid int, burst int64) error {
+		called = true
+		if pid != 123 || burst != 500 {
+			t.Errorf("unexpected burst write: pid=%d burst=%d", pid, burst)
+		}
+		return nil
+	}
+
+	writeCpuBurstForPlatform(log.WithField("test", true), 123, 500, "linux")
+	if !called {
+		t.Fatal("expected the Linux burst writer to be called")
+	}
+}
 
 func TestCpuBurstMicroseconds(t *testing.T) {
 	tests := []struct {

@@ -53,6 +53,46 @@ func TestConfigureDockerErrorAndOverlayNetwork(t *testing.T) {
 	require.True(t, config.Get().Docker.Network.ISPN)
 }
 
+func TestConfigureDockerNetworkCreationError(t *testing.T) {
+	initialConfig, err := config.NewAtPath("")
+	require.NoError(t, err)
+	config.Set(initialConfig)
+	previousConfig, previousFactory := config.Get(), dockerClientFactory
+	t.Cleanup(func() {
+		config.Set(previousConfig)
+		dockerClientFactory = previousFactory
+	})
+
+	api := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/v1.41/networks/test-network":
+			w.WriteHeader(http.StatusNotFound)
+			_, _ = w.Write([]byte(`{"message":"network not found"}`))
+		case r.Method == http.MethodPost && r.URL.Path == "/v1.41/networks/create":
+			w.WriteHeader(http.StatusInternalServerError)
+			_, _ = w.Write([]byte(`{"message":"network creation denied"}`))
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer api.Close()
+
+	cli, err := client.NewClientWithOpts(
+		client.WithHost(api.URL),
+		client.WithVersion("1.41"),
+		client.WithHTTPClient(api.Client()),
+	)
+	require.NoError(t, err)
+	defer cli.Close()
+	dockerClientFactory = func() (*client.Client, error) { return cli, nil }
+	cfg := &config.Configuration{}
+	cfg.Docker.Network.Name = "test-network"
+	cfg.Docker.Network.Driver = "bridge"
+	config.Set(cfg)
+
+	require.ErrorContains(t, ConfigureDocker(context.Background()), "network creation denied")
+}
+
 func TestCreateDockerNetworkDrivers(t *testing.T) {
 	config.Set(&config.Configuration{})
 	previous := config.Get()
