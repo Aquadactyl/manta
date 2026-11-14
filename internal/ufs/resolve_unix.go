@@ -153,19 +153,16 @@ func userspaceOpenBeneath(dirfd int, name string, flag int, mode uint32) (int, e
 		if err == nil {
 			// A descriptor opened with O_PATH does not fail on a link, it is the
 			// link, so look at what was opened.
-			if oPath != 0 && flag&oPath != 0 && !userNoFollow {
-				var st unix.Stat_t
-				if unix.Fstat(fd, &st) == nil && st.Mode&unix.S_IFMT == unix.S_IFLNK {
-					_ = unix.Close(fd)
-					if isLink, lerr := followLink(comp); lerr != nil {
-						closeOwned()
-						return -1, lerr
-					} else if isLink {
-						continue
-					}
+			if openedPathIsSymlink(fd, flag, userNoFollow) {
+				_ = unix.Close(fd)
+				if isLink, lerr := followLink(comp); lerr != nil {
 					closeOwned()
-					return -1, unix.ENOENT
+					return -1, lerr
+				} else if isLink {
+					continue
 				}
+				closeOwned()
+				return -1, unix.ENOENT
 			}
 			closeOwned()
 			return fd, nil

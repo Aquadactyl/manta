@@ -93,12 +93,18 @@ func (p *Progress) Progress(width int) string {
 	// Ensure that we never get a negative number of ticks, this will prevent strings#Repeat
 	// from panicking.  A negative number of ticks is likely to happen when the total size is
 	// inaccurate, such as when we are going off of rough disk usage calculation.
-	if ticks < 0 {
-		ticks = 0
-	} else if ticks > width {
-		ticks = width
-	}
+	ticks = clampTicks(ticks, width)
 
 	bar := strings.Repeat("=", ticks) + strings.Repeat(" ", width-ticks)
 	return "[" + bar + "] " + system.FormatBytes(current) + " / " + system.FormatBytes(total)
+}
+
+func clampTicks(ticks, width int) int {
+	if ticks < 0 {
+		return 0
+	}
+	if ticks > width {
+		return width
+	}
+	return ticks
 }

@@ -956,3 +956,20 @@ func TestMoreCompressAndQuotaFileEdges(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, int64(0), fsZero.MaxDisk())
 }
+
+func TestTruncateRootDirectoryReturnsRemoveError(t *testing.T) {
+	fs, _ := NewFs()
+	old := removeFilesystemContents
+	want := errors.New("remove contents failed")
+	removeFilesystemContents = func(*ufs.Quota) error { return want }
+	t.Cleanup(func() { removeFilesystemContents = old })
+	require.ErrorIs(t, fs.TruncateRootDirectory(), want)
+}
+
+func TestChtimesUsesUnixFilesystemOutsideTestMode(t *testing.T) {
+	fs, root := NewFs()
+	require.NoError(t, root.CreateServerFile("timestamps.txt", []byte("contents")))
+	fs.isTest = false
+	now := time.Now().Truncate(time.Second)
+	require.NoError(t, fs.Chtimes("timestamps.txt", now, now))
+}

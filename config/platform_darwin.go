@@ -23,7 +23,7 @@ import (
 
 // supportDirectory returns the directory holding the configuration and data.
 func supportDirectory() string {
-	home, err := os.UserHomeDir()
+	home, err := platformUserHomeDir()
 	if err != nil || home == "" {
 		// Without a home directory nothing sensible can be derived, so keep the
 		// location every other platform uses.
@@ -34,7 +34,7 @@ func supportDirectory() string {
 
 // logDirectory returns the directory holding the log files.
 func logDirectory() string {
-	home, err := os.UserHomeDir()
+	home, err := platformUserHomeDir()
 	if err != nil || home == "" {
 		return "/var/log/pterodactyl"
 	}
@@ -65,7 +65,7 @@ func applyPlatformDefaults(c *Configuration) {
 // presents them as owned by that user, so no separate system user is created,
 // and none could be as Manta does not run as root.
 func ensurePlatformUser() (bool, error) {
-	u, err := user.Current()
+	u, err := platformCurrentUser()
 	if err != nil {
 		return true, err
 	}
@@ -79,7 +79,7 @@ func ensurePlatformUser() (bool, error) {
 // detectPlatformTimezone reads the timezone from the link macOS keeps to the
 // zone information file in use.
 func detectPlatformTimezone() (string, bool) {
-	target, err := filepath.EvalSymlinks("/etc/localtime")
+	target, err := evalPlatformTimezoneTarget("/etc/localtime")
 	if err != nil {
 		return "", false
 	}
@@ -90,3 +90,9 @@ func detectPlatformTimezone() (string, bool) {
 	}
 	return zone, true
 }
+
+var (
+	platformUserHomeDir        = os.UserHomeDir
+	platformCurrentUser        = user.Current
+	evalPlatformTimezoneTarget = filepath.EvalSymlinks
+)

@@ -28,6 +28,8 @@ const (
 	AT_EMPTY_PATH = unix.AT_FDCWD
 )
 
+func openedPathIsSymlink(_ int, _ int, _ bool) bool { return false }
+
 const (
 	// oPath is zero as macOS has no O_PATH. Descriptors that are only described
 	// are opened by statResolved instead.

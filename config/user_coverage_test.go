@@ -1,5 +1,3 @@
-//go:build !darwin
-
 package config
 
 import (
@@ -28,7 +26,9 @@ func TestEnsurePterodactylUserPlatformAndCreationPaths(t *testing.T) {
 		readOSRelease = func() (map[string]string, error) { return map[string]string{"ID": systemID}, nil }
 		currentSystemUser = user.Current
 		lookupSystemUser = user.Lookup
-		ensurePlatformUserFn = ensurePlatformUser
+		// Exercise the portable user setup flow on every platform; platform-specific
+		// behavior is covered separately in the platform tests.
+		ensurePlatformUserFn = func() (bool, error) { return false, nil }
 		runUserCommand = oldRunCommand
 		cfg := &Configuration{}
 		cfg.System.Username = "coverage-user"

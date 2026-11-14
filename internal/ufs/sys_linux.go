@@ -31,6 +31,16 @@ const (
 	AT_EMPTY_PATH = unix.AT_EMPTY_PATH
 )
 
+var statOpenedPath = unix.Fstat
+
+func openedPathIsSymlink(fd, flag int, userNoFollow bool) bool {
+	if flag&oPath == 0 || userNoFollow {
+		return false
+	}
+	var st unix.Stat_t
+	return statOpenedPath(fd, &st) == nil && st.Mode&unix.S_IFMT == unix.S_IFLNK
+}
+
 const (
 	// oPath opens a path without reading from or writing to the file.
 	oPath = unix.O_PATH

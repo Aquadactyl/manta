@@ -48,6 +48,24 @@ func TestOpenatResolvedTypeRetriesInterruptedOpen(t *testing.T) {
 	require.NoError(t, unix.Close(fd))
 }
 
+func TestOpenatResolvedTypeReturnsDescriptorAfterPathCheck(t *testing.T) {
+	root := t.TempDir()
+	require.NoError(t, os.WriteFile(root+"/file", []byte("content"), 0o600))
+	fs, err := NewUnixFS(root, false)
+	require.NoError(t, err)
+	fs.useOpenat2 = false
+	parent, err := os.Open(root)
+	require.NoError(t, err)
+	defer parent.Close()
+
+	old := checkOpenedPathForOpen
+	checkOpenedPathForOpen = func(*UnixFS, int, string) error { return nil }
+	t.Cleanup(func() { checkOpenedPathForOpen = old })
+	fd, err := fs.openatResolvedType(int(parent.Fd()), "file", unix.O_RDONLY, 0, false)
+	require.NoError(t, err)
+	require.NoError(t, unix.Close(fd))
+}
+
 func TestOpenatResolvedTypeClosesFileWhenTypeCheckFails(t *testing.T) {
 	root := t.TempDir()
 	require.NoError(t, os.WriteFile(root+"/file", []byte("content"), 0o600))

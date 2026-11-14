@@ -32,6 +32,9 @@ var ufsOpenat = unix.Openat
 var ufsRenameat = unix.Renameat
 var ufsMkdirat = unix.Mkdirat
 var ufsSetNonblock = unix.SetNonblock
+var checkOpenedPathForOpen = func(fs *UnixFS, fd int, name string) error {
+	return fs.checkOpenedPath(fd, name)
+}
 var renameLstatat = func(fs *UnixFS, dirfd int, name string) (FileInfo, error) {
 	return fs.Lstatat(dirfd, name)
 }
@@ -761,7 +764,7 @@ func (fs *UnixFS) openatResolvedType(dirfd int, name string, flag int, mode File
 	// that openat2 is using `RESOLVE_BENEATH` to avoid the same security
 	// issue. The file is closed if the check fails, since callers only use the
 	// file descriptor when there is no error.
-	if err := fs.checkOpenedPath(fd, name); err != nil {
+	if err := checkOpenedPathForOpen(fs, fd, name); err != nil {
 		_ = unix.Close(fd)
 		return 0, err
 	}

@@ -46,6 +46,8 @@ type Filesystem struct {
 	isTest bool
 }
 
+var removeFilesystemContents = func(fs *ufs.Quota) error { return fs.RemoveContents(".") }
+
 var (
 	filesystemNewUnixFS = ufs.NewUnixFS
 	filesystemIsRoot    = func() bool { return os.Geteuid() == 0 }
@@ -518,7 +520,7 @@ func (fs *Filesystem) Copy(p string) error {
 // data directory and resets the used disk space to zero. The directory itself
 // is kept, since it is mounted into the server's container.
 func (fs *Filesystem) TruncateRootDirectory() error {
-	if err := fs.unixFS.RemoveContents("."); err != nil {
+	if err := removeFilesystemContents(fs.unixFS); err != nil {
 		return err
 	}
 	fs.mu.Lock()
