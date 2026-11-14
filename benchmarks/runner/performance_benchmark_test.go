@@ -11,6 +11,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/assert"
@@ -242,12 +243,14 @@ func TestHarnessResources(t *testing.T) {
 	prevWait := resourceSampleWait
 	prevPing := resourcePingCount
 	prevLog := resourceLogWait
+	prevLoadTick := resourceLoadTickWait
 	defer func() {
 		resourceInitialWait = prevInitial
 		resourceSampleCount = prevCount
 		resourceSampleWait = prevWait
 		resourcePingCount = prevPing
 		resourceLogWait = prevLog
+		resourceLoadTickWait = prevLoadTick
 	}()
 
 	resourceInitialWait = 0
@@ -255,6 +258,8 @@ func TestHarnessResources(t *testing.T) {
 	resourceSampleWait = 0
 	resourcePingCount = 1
 	resourceLogWait = 0
+	resourceLoadTickWait = time.Millisecond
+	resourceSampleWait = 5 * time.Millisecond
 
 	// 1. Mock Minecraft TCP Server
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
@@ -380,4 +385,11 @@ func TestHarnessResources(t *testing.T) {
 		h.resources()
 	})
 	assert.FileExists(t, outPath)
+
+	// A failed game status query aborts the measurement rather than recording a
+	// misleading latency sample.
+	badNode := h.Nodes["manta"]
+	badNode.Servers[0].Port = 0
+	h.Nodes["manta"] = badNode
+	assert.Panics(t, func() { h.resources() })
 }

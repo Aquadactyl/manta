@@ -49,3 +49,27 @@ func TestQueuedDiskUsageLookupUsesRefreshedCache(t *testing.T) {
 	require.NoError(t, <-done)
 	assert.Equal(t, int64(12345), fs.CachedUsage())
 }
+
+func TestDiskUsageFailuresAreLogged(t *testing.T) {
+	fs, rfs := NewFs()
+	t.Cleanup(func() { _ = os.RemoveAll(rfs.root) })
+	require.NoError(t, os.RemoveAll(fs.Path()))
+	fs.SetDiskLimit(10)
+
+	// Foreground callers receive false only if the cached size exceeds the limit;
+	// a failed walk logs its error while leaving the cache usable.
+	assert.True(t, fs.HasSpaceAvailable(false))
+
+	// An allow-stale lookup starts a background walk when no lookup is active.
+	fs.lastLookupTime.Set(time.Time{})
+	_, err := fs.DiskUsage(true)
+	require.NoError(t, err)
+	deadline := time.Now().Add(time.Second)
+	for time.Now().Before(deadline) {
+		if !fs.lastLookupTime.Get().IsZero() && !fs.lookupInProgress.Load() {
+			return
+		}
+		time.Sleep(time.Millisecond)
+	}
+	t.Fatal("background disk usage lookup did not finish")
+}

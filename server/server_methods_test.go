@@ -31,6 +31,7 @@ import (
 	"github.com/pterodactyl/wings/remote"
 	"github.com/pterodactyl/wings/server/backup"
 	"github.com/pterodactyl/wings/server/filesystem"
+	"github.com/pterodactyl/wings/system"
 )
 
 func init() {
@@ -100,6 +101,24 @@ func TestServerNewReturnsDefaultingErrors(t *testing.T) {
 		require.ErrorIs(t, err, want)
 		require.Equal(t, 2, calls)
 	})
+}
+
+func TestSinkMissingNameTerminatesWithDiagnostic(t *testing.T) {
+	const childEnv = "WINGS_TEST_MISSING_SINK_CHILD"
+	if os.Getenv(childEnv) == "1" {
+		s, err := New(nil)
+		if err != nil {
+			os.Exit(2)
+		}
+		s.Sink(system.SinkName("missing"))
+		os.Exit(0)
+	}
+
+	cmd := exec.Command(os.Args[0], "-test.run=^TestSinkMissingNameTerminatesWithDiagnostic$")
+	cmd.Env = append(os.Environ(), childEnv+"=1")
+	output, err := cmd.CombinedOutput()
+	require.Error(t, err)
+	assert.Contains(t, string(output), "attempt to access nil sink: missing")
 }
 
 func TestServerStateAndActivities(t *testing.T) {

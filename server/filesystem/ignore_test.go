@@ -94,7 +94,7 @@ func TestIgnore(t *testing.T) {
 		g.It("allows for the slower regexp matching on macOS", func() {
 			linux := newIgnoreMatchBudgetFor("linux", 100)
 			darwin := newIgnoreMatchBudgetFor("darwin", 100)
-			g.Assert(darwin.perFile).Equal(ignoreMatchPerFileBudget + 2*100*ignoreMatchPerPatternBudget)
+			g.Assert(darwin.perFile).Equal(ignoreMatchPerFileBudget + 3*100*ignoreMatchPerPatternBudget)
 			g.Assert(linux.perFile).Equal(ignoreMatchPerFileBudget + 100*ignoreMatchPerPatternBudget)
 		})
 

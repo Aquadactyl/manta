@@ -43,11 +43,12 @@ func (h *harness) stats(container string) snapshot {
 }
 
 var (
-	resourceInitialWait = 5 * time.Second
-	resourceSampleCount = 15
-	resourceSampleWait  = 2 * time.Second
-	resourcePingCount   = 50
-	resourceLogWait     = 500 * time.Millisecond
+	resourceInitialWait  = 5 * time.Second
+	resourceSampleCount  = 15
+	resourceSampleWait   = 2 * time.Second
+	resourcePingCount    = 50
+	resourceLogWait      = 500 * time.Millisecond
+	resourceLoadTickWait = 200 * time.Millisecond
 )
 
 func (h *harness) resources() {
@@ -70,7 +71,7 @@ func (h *harness) resources() {
 				wg.Add(1)
 				go func() {
 					defer wg.Done()
-					ticker := time.NewTicker(200 * time.Millisecond)
+					ticker := time.NewTicker(resourceLoadTickWait)
 					defer ticker.Stop()
 					i := 0
 					for {

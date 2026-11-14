@@ -96,10 +96,11 @@ func (p *transferTestPanel) SetBackupStatus(context.Context, string, remote.Back
 // container is needed.
 type transferTestEnvironment struct {
 	environment.ProcessEnvironment
-	st       *system.AtomicString
-	waitErr  error
-	waitHit  chan struct{}
-	waitGate chan struct{}
+	st         *system.AtomicString
+	waitErr    error
+	destroyErr error
+	waitHit    chan struct{}
+	waitGate   chan struct{}
 }
 
 func (transferTestEnvironment) Create() error { return nil }
@@ -111,7 +112,7 @@ func (e transferTestEnvironment) State() string {
 	return environment.ProcessOfflineState
 }
 
-func (transferTestEnvironment) Destroy() error { return nil }
+func (e transferTestEnvironment) Destroy() error { return e.destroyErr }
 
 func (transferTestEnvironment) Readlog(int) ([]string, error) { return []string{"line1", "line2"}, nil }
 
@@ -546,6 +547,56 @@ func TestTransferInvalidContentType(t *testing.T) {
 	assert.Contains(t, []int{http.StatusBadRequest, http.StatusInternalServerError}, w.Code)
 }
 
+func TestTransferRejectsMalformedMultipartHeaders(t *testing.T) {
+	h := newTransferHarness(t, &transferTestPanel{})
+	newUUID := "99999999-aaaa-4444-8888-999999999999"
+	h.panel.config.Settings, _ = json.Marshal(map[string]string{"uuid": newUUID})
+	body := bytes.NewBufferString("--transfer-boundary\r\nnot a MIME header\r\n\r\nvalue")
+	w := h.postTransfer(body, "multipart/form-data; boundary=transfer-boundary", signTransferTestToken(t, newUUID))
+	assert.Contains(t, []int{http.StatusBadRequest, http.StatusInternalServerError}, w.Code)
+}
+
+func TestTransferRejectsUnrecognizedArchive(t *testing.T) {
+	h := newTransferHarness(t, &transferTestPanel{})
+	archive := []byte("not an archive")
+	checksum := sha256.Sum256(archive)
+	body, contentType := transferTestMultipart(t, archive, hex.EncodeToString(checksum[:]))
+	newUUID := "99999999-bbbb-4444-8888-999999999999"
+	h.panel.config.Settings, _ = json.Marshal(map[string]string{"uuid": newUUID})
+	w := h.postTransfer(body, contentType, signTransferTestToken(t, newUUID))
+	assert.Contains(t, []int{http.StatusBadRequest, http.StatusInternalServerError}, w.Code)
+}
+
+func TestTransferRejectsTruncatedChecksumPart(t *testing.T) {
+	h := newTransferHarness(t, &transferTestPanel{})
+	archive := buildTransferTestArchive(t, map[string]string{"file.txt": "data"})
+	var body bytes.Buffer
+	mw := multipart.NewWriter(&body)
+	archivePart, err := mw.CreateFormFile("archive", "archive.tar.gz")
+	require.NoError(t, err)
+	_, err = archivePart.Write(archive)
+	require.NoError(t, err)
+	checksum := sha256.Sum256(archive)
+	require.NoError(t, mw.WriteField("checksum", hex.EncodeToString(checksum[:])))
+	// Leave the final boundary unwritten so reading the checksum part fails.
+	newUUID := "99999999-cccc-4444-8888-999999999999"
+	h.panel.config.Settings, _ = json.Marshal(map[string]string{"uuid": newUUID})
+	w := h.postTransfer(&body, mw.FormDataContentType(), signTransferTestToken(t, newUUID))
+	assert.Contains(t, []int{http.StatusBadRequest, http.StatusInternalServerError}, w.Code)
+}
+
+func TestCompleteIncomingTransferLogsCleanupErrors(t *testing.T) {
+	h := newTransferHarness(t, &transferTestPanel{})
+	s := h.seedServer()
+	s.Environment = transferTestEnvironment{destroyErr: errors.New("environment cleanup failed")}
+	trnsfr := transfer.New(context.Background(), s)
+	previousRemove := removeTransferServerFiles
+	removeTransferServerFiles = func(string) error { return errors.New("data cleanup failed") }
+	t.Cleanup(func() { removeTransferServerFiles = previousRemove })
+
+	completeIncomingTransfer(h.mgr, trnsfr, false)
+}
+
 type failConfigPanel struct {
 	transferTestPanel
 }
@@ -584,4 +635,47 @@ func TestTransferSuccessFlow(t *testing.T) {
 	body, contentType := transferTestMultipart(t, archive, checksum)
 	w := h.postTransfer(body, contentType, signTransferTestToken(t, newUUID))
 	assert.Equal(t, http.StatusOK, w.Code)
+}
+
+func TestTransferEnvironmentConfigurationFailure(t *testing.T) {
+	h := newTransferHarness(t, &transferTestPanel{})
+	previousCreate := createTransferEnvironment
+	createTransferEnvironment = func(*wserver.Server) error { return errors.New("environment configuration failed") }
+	t.Cleanup(func() { createTransferEnvironment = previousCreate })
+
+	archive := buildTransferTestArchive(t, map[string]string{"file.txt": "content123"})
+	sum := sha256.Sum256(archive)
+	body, contentType := transferTestMultipart(t, archive, hex.EncodeToString(sum[:]))
+	newUUID := "88888888-aaaa-4444-8888-999999999999"
+	h.panel.config.Settings, _ = json.Marshal(map[string]string{"uuid": newUUID})
+
+	w := h.postTransfer(body, contentType, signTransferTestToken(t, newUUID))
+	assert.Contains(t, []int{http.StatusBadRequest, http.StatusInternalServerError}, w.Code)
+}
+
+func TestTransferStopsReadingWhenRequestIsCancelled(t *testing.T) {
+	panel := &transferTestPanel{configHit: make(chan struct{}, 1), configGate: make(chan struct{})}
+	h := newTransferHarness(t, panel)
+	archive := buildTransferTestArchive(t, map[string]string{"file.txt": "content123"})
+	sum := sha256.Sum256(archive)
+	body, contentType := transferTestMultipart(t, archive, hex.EncodeToString(sum[:]))
+	newUUID := "88888888-bbbb-4444-8888-999999999999"
+	panel.config.Settings, _ = json.Marshal(map[string]string{"uuid": newUUID})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	req := httptest.NewRequest(http.MethodPost, "/api/transfers", body).WithContext(ctx)
+	req.Header.Set("Content-Type", contentType)
+	req.Header.Set("Authorization", "Bearer "+signTransferTestToken(t, newUUID))
+	w := httptest.NewRecorder()
+	done := make(chan struct{})
+	go func() {
+		h.router.ServeHTTP(w, req)
+		close(done)
+	}()
+	<-panel.configHit
+	cancel()
+	close(panel.configGate)
+	<-done
+	assert.Contains(t, []int{http.StatusBadRequest, http.StatusInternalServerError}, w.Code)
 }

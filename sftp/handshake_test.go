@@ -128,10 +128,16 @@ func TestAcceptInboundCompletesAuthenticatedSession(t *testing.T) {
 	acceptResult := make(chan error, 1)
 	go func() { acceptResult <- sftpServer.AcceptInbound(serverConn, serverConfig) }()
 
-	client, channels, requests, err := ssh.NewClientConn(clientConn, "pipe", clientConfig)
+	serverConnection, channels, requests, err := ssh.NewClientConn(clientConn, "pipe", clientConfig)
 	require.NoError(t, err)
 	require.NotNil(t, channels)
 	require.NotNil(t, requests)
+	client := ssh.NewClient(serverConnection, channels, requests)
+	// The server's discarded-request handler is started only after handshake has
+	// cleared the connection deadline. Wait for its reply before closing so the
+	// client cannot race the final SetDeadline call.
+	_, _, err = client.SendRequest("keepalive@openssh.com", true, nil)
+	require.NoError(t, err)
 	require.NoError(t, client.Close())
 	require.NoError(t, <-acceptResult)
 }

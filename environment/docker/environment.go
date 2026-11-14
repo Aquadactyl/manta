@@ -23,6 +23,8 @@ type Metadata struct {
 	Stop  remote.ProcessStopConfiguration
 }
 
+var dockerClientForEnvironment = environment.Docker
+
 // Ensure that the Docker environment is always implementing all the methods
 // from the base environment interface.
 var _ environment.ProcessEnvironment = (*Environment)(nil)
@@ -65,7 +67,7 @@ type Environment struct {
 // unique per-server (we use the UUID by default). The container does not need
 // to exist at this point.
 func New(id string, m *Metadata, c *environment.Configuration) (*Environment, error) {
-	cli, err := environment.Docker()
+	cli, err := dockerClientForEnvironment()
 	if err != nil {
 		return nil, err
 	}

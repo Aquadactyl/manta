@@ -26,7 +26,8 @@ import (
 )
 
 // postTransfers .
-var createTransferEnvironment = func(s *server.Server) error { return s.CreateEnvironment() }
+var createTransferEnvironment = (*server.Server).CreateEnvironment
+var removeTransferServerFiles = os.RemoveAll
 
 func postTransfers(c *gin.Context) {
 	auth := strings.SplitN(c.GetHeader("Authorization"), " ", 2)
@@ -272,7 +273,7 @@ func completeIncomingTransfer(manager *server.Manager, trnsfr *transfer.Transfer
 		if err := trnsfr.Server.Environment.Destroy(); err != nil {
 			trnsfr.Log().WithError(err).Warn("failed to remove server environment")
 		}
-		if err := os.RemoveAll(trnsfr.Server.Filesystem().Path()); err != nil && !os.IsNotExist(err) {
+		if err := removeTransferServerFiles(trnsfr.Server.Filesystem().Path()); err != nil && !os.IsNotExist(err) {
 			trnsfr.Log().WithError(err).Warn("failed to delete local server files")
 		}
 	}

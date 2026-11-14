@@ -8,6 +8,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -517,6 +518,28 @@ func TestBedrockPing(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestBedrockPingShortStatus(t *testing.T) {
+	pc, err := net.ListenPacket("udp", "127.0.0.1:0")
+	require.NoError(t, err)
+	defer pc.Close()
+
+	port := pc.LocalAddr().(*net.UDPAddr).Port
+	go func() {
+		buf := make([]byte, 2048)
+		_, addr, err := pc.ReadFrom(buf)
+		if err != nil {
+			return
+		}
+		response := append(make([]byte, 35), []byte("MCPE;short")...)
+		response[0] = 0x1c
+		_, _ = pc.WriteTo(response, addr)
+	}()
+
+	status, err := bedrockPing("127.0.0.1", port)
+	require.NoError(t, err)
+	assert.Equal(t, "MCPE;short", status)
+}
+
 func TestHarnessEventStreams(t *testing.T) {
 	upgrader := websocket.Upgrader{
 		CheckOrigin: func(r *http.Request) bool { return true },
@@ -835,6 +858,14 @@ func TestJavaPingBadPacketLength(t *testing.T) {
 	_, err = javaPing(host, port)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "bad packet length")
+}
+
+func TestReadVarRejectsOverlongValues(t *testing.T) {
+	_, err := readVar(bytes.NewReader([]byte{0x80, 0x80, 0x80, 0x80, 0x80}))
+	require.EqualError(t, err, "bad varint")
+
+	_, err = readVar(bytes.NewReader(nil))
+	require.ErrorIs(t, err, io.EOF)
 }
 
 func TestDkNon200(t *testing.T) {

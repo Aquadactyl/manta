@@ -437,6 +437,26 @@ func TestDecompressZipAndSingleFile(t *testing.T) {
 	fs.SetDiskLimit(1024 * 1024 * 1024)
 }
 
+func TestDecompressSingleFileReportsInvalidGzipStreams(t *testing.T) {
+	dir := t.TempDir()
+	fs, err := New(dir, 1024*1024, []string{})
+	require.NoError(t, err)
+
+	// A recognized gzip signature with a truncated header fails to open its
+	// decompressor.
+	require.NoError(t, fs.Writefile("header.txt.gz", bytes.NewReader([]byte{0x1f, 0x8b, 0x08})))
+	assert.Error(t, fs.DecompressFile(context.Background(), "/", "header.txt.gz"))
+
+	// A complete header and stream with a corrupted trailer fails while copying
+	// the decompressed content into the destination file.
+	corrupt := gzipBytes(t, []byte("payload"))
+	corrupt[len(corrupt)-1] ^= 0xff
+	require.NoError(t, fs.Writefile("checksum.txt.gz", bytes.NewReader(corrupt)))
+	err = fs.DecompressFile(context.Background(), "/", "checksum.txt.gz")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "checksum")
+}
+
 func TestDiskSpaceBackgroundLookup(t *testing.T) {
 	dir := t.TempDir()
 	fs, err := New(dir, 1024*1024, []string{})

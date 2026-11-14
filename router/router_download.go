@@ -15,6 +15,8 @@ import (
 	"github.com/pterodactyl/wings/server/backup"
 )
 
+var openLocalBackup = os.Open
+
 // Handle a download request for a server backup.
 func getDownloadBackup(c *gin.Context) {
 	client := middleware.ExtractApiClient(c)
@@ -59,7 +61,7 @@ func getDownloadBackup(c *gin.Context) {
 
 	// The use of `os` here is safe as backups are not stored within server
 	// accessible directories.
-	f, err := os.Open(b.Path())
+	f, err := openLocalBackup(b.Path())
 	if err != nil {
 		middleware.CaptureAndAbort(c, err)
 		return

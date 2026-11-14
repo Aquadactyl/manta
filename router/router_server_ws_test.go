@@ -12,6 +12,8 @@ import (
 
 	"github.com/gbrlsnchs/jwt/v3"
 	ws "github.com/gorilla/websocket"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/pterodactyl/wings/config"
 	"github.com/pterodactyl/wings/environment"
@@ -30,6 +32,12 @@ type runningEnvironment struct {
 func (runningEnvironment) State() string {
 	return environment.ProcessRunningState
 }
+
+type panicStateEnvironment struct {
+	runningEnvironment
+}
+
+func (panicStateEnvironment) State() string { panic("injected state panic") }
 
 func startWebsocketTestServer(t *testing.T) string {
 	t.Helper()
@@ -239,5 +247,110 @@ func TestAuthenticatedWebsocketsAreLimited(t *testing.T) {
 	}
 	if _, err := dialWebsocket(t, url); err == nil {
 		t.Fatal("expected new connections to be refused once the limit is reached")
+	}
+}
+
+func TestWebsocketHandlerRejectsNonUpgradeRequest(t *testing.T) {
+	url := startWebsocketTestServer(t)
+	resp, err := http.Get(strings.Replace(url, "ws://", "http://", 1))
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	assert.NotEqual(t, http.StatusSwitchingProtocols, resp.StatusCode)
+}
+
+func TestWebsocketHandlerClosesForSuspensionAndServerCancellation(t *testing.T) {
+	t.Run("suspended", func(t *testing.T) {
+		url, s := startWebsocketTestServerFor(t)
+		s.Config().SetSuspended(true)
+		conn, err := dialWebsocket(t, url)
+		require.NoError(t, err)
+		_ = conn.SetReadDeadline(time.Now().Add(time.Second))
+		_, _, err = conn.ReadMessage()
+		var closeErr *ws.CloseError
+		require.ErrorAs(t, err, &closeErr)
+		assert.Equal(t, 4409, closeErr.Code)
+	})
+
+	t.Run("server context canceled", func(t *testing.T) {
+		url, s := startWebsocketTestServerFor(t)
+		conn, err := dialWebsocket(t, url)
+		require.NoError(t, err)
+		s.CtxCancel()
+		_ = conn.SetReadDeadline(time.Now().Add(time.Second))
+		_, _, err = conn.ReadMessage()
+		assert.Error(t, err)
+	})
+}
+
+func TestWebsocketIgnoresMalformedAndBinaryMessages(t *testing.T) {
+	url := startWebsocketTestServer(t)
+	conn, err := dialWebsocket(t, url)
+	require.NoError(t, err)
+	require.NoError(t, conn.WriteMessage(ws.BinaryMessage, []byte(`{"event":"auth"}`)))
+	require.NoError(t, conn.WriteMessage(ws.TextMessage, []byte("{")))
+	assert.True(t, authenticate(t, conn))
+}
+
+func TestWebsocketRecoversFromInboundMessagePanic(t *testing.T) {
+	url, s := startWebsocketTestServerFor(t)
+	s.Environment = panicStateEnvironment{}
+	conn, err := dialWebsocket(t, url)
+	require.NoError(t, err)
+	assert.True(t, authenticate(t, conn))
+	_ = conn.SetReadDeadline(time.Now().Add(time.Second))
+	_, _, err = conn.ReadMessage()
+	assert.Error(t, err)
+
+	deadline := time.Now().Add(time.Second)
+	for s.Websockets().Len() != 0 && time.Now().Before(deadline) {
+		time.Sleep(time.Millisecond)
+	}
+	assert.Zero(t, s.Websockets().Len())
+}
+
+func TestWebsocketUnexpectedCloseCodeIsHandled(t *testing.T) {
+	url := startWebsocketTestServer(t)
+	conn, err := dialWebsocket(t, url)
+	require.NoError(t, err)
+	require.NoError(t, conn.WriteControl(ws.CloseMessage, ws.FormatCloseMessage(4000, "unexpected"), time.Now().Add(time.Second)))
+	_ = conn.SetReadDeadline(time.Now().Add(time.Second))
+	_, _, err = conn.ReadMessage()
+	assert.Error(t, err)
+}
+
+func TestWebsocketClosesWhenServerBecomesSuspended(t *testing.T) {
+	url, s := startWebsocketTestServerFor(t)
+	conn, err := dialWebsocket(t, url)
+	require.NoError(t, err)
+	require.True(t, authenticate(t, conn))
+	s.Config().SetSuspended(true)
+	require.NoError(t, conn.WriteJSON(websocket.Message{Event: websocket.SendStatsEvent}))
+	_ = conn.SetReadDeadline(time.Now().Add(time.Second))
+	for {
+		_, _, err = conn.ReadMessage()
+		if err != nil {
+			break
+		}
+	}
+	assert.Error(t, err)
+}
+
+func TestWebsocketConnectionCloseErrorIsLogged(t *testing.T) {
+	previousClose := closeServerWebsocketConnection
+	closeCalled := make(chan struct{}, 1)
+	closeServerWebsocketConnection = func(*ws.Conn) error {
+		closeCalled <- struct{}{}
+		return assert.AnError
+	}
+	t.Cleanup(func() { closeServerWebsocketConnection = previousClose })
+
+	url := startWebsocketTestServer(t)
+	conn, err := dialWebsocket(t, url)
+	require.NoError(t, err)
+	require.NoError(t, conn.Close())
+	select {
+	case <-closeCalled:
+	case <-time.After(time.Second):
+		t.Fatal("server did not attempt to close the websocket")
 	}
 }

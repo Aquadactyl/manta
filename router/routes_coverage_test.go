@@ -1427,6 +1427,40 @@ func TestDownloadAndUploadAdvanced(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 	assert.Equal(t, "tar-gz-content", w.Body.String())
 
+	bpNoServer := bpValid
+	bpNoServer.ServerUuid, bpNoServer.UniqueId = uuid.New().String(), "unique-bp-no-server"
+	tokenNoServer, err := jwt.Sign(&bpNoServer, config.GetJwtAlgorithm())
+	require.NoError(t, err)
+	req = httptest.NewRequest(http.MethodGet, "/download/backup?token="+string(tokenNoServer), nil)
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusNotFound, w.Code)
+
+	// A backup path that resolves to a directory is a non-not-found lookup error.
+	bUUIDDirectory := uuid.New().String()
+	require.NoError(t, os.Mkdir(filepath.Join(config.Get().System.BackupDirectory, bUUIDDirectory+".tar.gz"), 0o755))
+	bpDirectory := bpValid
+	bpDirectory.BackupUuid, bpDirectory.UniqueId = bUUIDDirectory, "unique-bp-directory"
+	tokenDirectory, err := jwt.Sign(&bpDirectory, config.GetJwtAlgorithm())
+	require.NoError(t, err)
+	req = httptest.NewRequest(http.MethodGet, "/download/backup?token="+string(tokenDirectory), nil)
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+
+	// The file can disappear after LocateLocal has completed but before it opens.
+	previousOpen := openLocalBackup
+	openLocalBackup = func(string) (*os.File, error) { return nil, errors.New("backup open failed") }
+	bpOpenFailure := bpValid
+	bpOpenFailure.UniqueId = "unique-bp-open-failure"
+	tokenOpenFailure, err := jwt.Sign(&bpOpenFailure, config.GetJwtAlgorithm())
+	require.NoError(t, err)
+	req = httptest.NewRequest(http.MethodGet, "/download/backup?token="+string(tokenOpenFailure), nil)
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	openLocalBackup = previousOpen
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+
 	// 4. getDownloadFile downloading directory (404)
 	fpDir := tokens.FilePayload{
 		ServerUuid: s.ID(),
@@ -1470,6 +1504,16 @@ func TestDownloadAndUploadAdvanced(t *testing.T) {
 	h.router.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusOK, w.Code)
 	assert.Equal(t, "download content", w.Body.String())
+
+	// 5b. getDownloadFile when the token references a missing file.
+	fpMissing := fpFile
+	fpMissing.FilePath, fpMissing.UniqueId = "/missing.txt", "unique-fp-missing"
+	tokenMissing, err := jwt.Sign(&fpMissing, config.GetJwtAlgorithm())
+	require.NoError(t, err)
+	req = httptest.NewRequest(http.MethodGet, "/download/file?token="+string(tokenMissing), nil)
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
 
 	// 6. postServerUploadFiles not multipart (400)
 	upBad := tokens.UploadPayload{
@@ -2076,6 +2120,64 @@ func TestServerTransferAndLifecycleBranches(t *testing.T) {
 	assert.Equal(t, http.StatusAccepted, w.Code)
 	time.Sleep(10 * time.Millisecond)
 	s.SetTransferring(false)
+
+	// A destination that consumes and accepts the multipart transfer exercises
+	// the successful asynchronous completion path.
+	require.NoError(t, s.Filesystem().Writefile("transfer-success.txt", strings.NewReader("transfer payload")))
+	destination := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = io.Copy(io.Discard, r.Body)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer destination.Close()
+	req = httptest.NewRequest(http.MethodPost, "/api/servers/"+s.ID()+"/transfer", strings.NewReader(`{"url":"`+destination.URL+`/api/transfers","token":"test-token"}`))
+	req.Header.Set("Authorization", "Bearer test-token")
+	req.Header.Set("Content-Type", "application/json")
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusAccepted, w.Code)
+	deadline := time.Now().Add(time.Second)
+	for transfer.Outgoing().Get(s.ID()) != nil && time.Now().Before(deadline) {
+		time.Sleep(time.Millisecond)
+	}
+	assert.Nil(t, transfer.Outgoing().Get(s.ID()))
+	s.SetTransferring(false)
+
+	// Cancel a transfer after its destination has accepted the request, exercising
+	// the context-canceled completion path.
+	destinationStarted := make(chan struct{})
+	destinationCanceled := make(chan struct{})
+	cancelDestination := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+		close(destinationStarted)
+		<-r.Context().Done()
+		close(destinationCanceled)
+	}))
+	defer cancelDestination.Close()
+	req = httptest.NewRequest(http.MethodPost, "/api/servers/"+s.ID()+"/transfer", strings.NewReader(`{"url":"`+cancelDestination.URL+`/api/transfers","token":"test-token"}`))
+	req.Header.Set("Authorization", "Bearer test-token")
+	req.Header.Set("Content-Type", "application/json")
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusAccepted, w.Code)
+	select {
+	case <-destinationStarted:
+	case <-time.After(time.Second):
+		t.Fatal("destination did not receive the transfer")
+	}
+	req = httptest.NewRequest(http.MethodDelete, "/api/servers/"+s.ID()+"/transfer", nil)
+	req.Header.Set("Authorization", "Bearer test-token")
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusAccepted, w.Code)
+	select {
+	case <-destinationCanceled:
+	case <-time.After(time.Second):
+		t.Fatal("destination request was not canceled")
+	}
+	deadline = time.Now().Add(time.Second)
+	for transfer.Outgoing().Get(s.ID()) != nil && time.Now().Before(deadline) {
+		time.Sleep(time.Millisecond)
+	}
+	assert.Nil(t, transfer.Outgoing().Get(s.ID()))
 
 	// 7. deleteTransfer (/api/transfers/:server)
 	// Transfer not found -> 409

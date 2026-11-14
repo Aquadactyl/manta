@@ -196,6 +196,26 @@ func TestParallelWritesRespectDiskLimit(t *testing.T) {
 	}
 }
 
+func TestReservationDuringDiskWalkIsIncludedInWalkSnapshot(t *testing.T) {
+	fs, rfs := NewFs()
+	t.Cleanup(func() { _ = os.RemoveAll(rfs.root) })
+
+	fs.mu.Lock()
+	fs.walking = true
+	fs.mu.Unlock()
+	if err := fs.reserveDisk(37); err != nil {
+		t.Fatal(err)
+	}
+
+	fs.mu.Lock()
+	walkReserved := fs.walkReserved
+	fs.walking = false
+	fs.mu.Unlock()
+	if walkReserved != 37 {
+		t.Fatalf("expected 37 bytes reserved for the active walk, got %d", walkReserved)
+	}
+}
+
 // Writes that finish while the disk usage is being recalculated were already
 // counted by the walk, so they must not be counted again.
 func TestWritesFinishedDuringDiskUsageWalkAreCountedOnce(t *testing.T) {

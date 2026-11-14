@@ -25,6 +25,8 @@ var expectedCloseCodes = []int{
 }
 
 var (
+	closeServerWebsocketConnection = (*ws.Conn).Close
+
 	// maxWebsocketConnections is the maximum number of authenticated websocket
 	// connections a server can have open at once.
 	maxWebsocketConnections = 30
@@ -114,7 +116,7 @@ func handleServerWebsocket(c *gin.Context, maxConnections int, authTimeout time.
 		// suspension) close the connection itself.
 		<-ctx.Done()
 		handler.Logger().Debug("closing connection to server websocket")
-		if err := handler.Connection.Close(); err != nil {
+		if err := closeServerWebsocketConnection(handler.Connection); err != nil {
 			handler.Logger().WithError(err).Error("failed to close websocket connection")
 		}
 	}()
