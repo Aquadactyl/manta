@@ -63,25 +63,36 @@ func TestScheduler(t *testing.T) {
 	s, err = Scheduler(context.Background(), server.NewEmptyManager(remote.New(gateServer.URL)))
 	assert.NoError(t, err)
 	assert.NotNil(t, s)
-	defer s.Clear()
+	s.Start()
+	defer func() { assert.NoError(t, s.Shutdown()) }()
+	runByTag := func(tag string) error {
+		for _, job := range s.Jobs() {
+			for _, jobTag := range job.Tags() {
+				if jobTag == tag {
+					return job.RunNow()
+				}
+			}
+		}
+		return fmt.Errorf("no cron job found with tag %q", tag)
+	}
 
 	// Run scheduled jobs concurrently to trigger ErrCronRunning in Scheduler callbacks
 	insertActivity(t, "server:console.command", validIP, "blocked-cmd")
-	go func() { _ = s.RunByTag("activity") }()
+	go func() { _ = runByTag("activity") }()
 	time.Sleep(20 * time.Millisecond)
-	_ = s.RunByTag("activity")
+	_ = runByTag("activity")
 
 	insertActivity(t, "server:sftp.write", validIP, `{"files":["/blocked-sftp"]}`)
-	go func() { _ = s.RunByTag("sftp") }()
+	go func() { _ = runByTag("sftp") }()
 	time.Sleep(20 * time.Millisecond)
-	_ = s.RunByTag("sftp")
+	_ = runByTag("sftp")
 
 	close(blockCh)
 	time.Sleep(30 * time.Millisecond)
 
 	// Run scheduled jobs
-	_ = s.RunByTag("activity")
-	_ = s.RunByTag("sftp")
+	_ = runByTag("activity")
+	_ = runByTag("sftp")
 
 	// Test ErrCronRunning branch for activityCron
 	ac := &activityCron{mu: system.NewAtomicBool(true)}
@@ -218,9 +229,9 @@ func TestCronEdgeCasesAndDeliveryErrors(t *testing.T) {
 
 	sched, err := Scheduler(ctxCancel, mgr403)
 	assert.NoError(t, err)
-	sched.StartAsync()
+	sched.Start()
 	time.Sleep(150 * time.Millisecond)
-	sched.Stop()
+	assert.NoError(t, sched.Shutdown())
 
 	// 7. pruneActivity with rows exceeding max
 	insertActivity(t, "server:console.command", validIP, "prune-1")

@@ -33,7 +33,7 @@ try {
     Invoke-BenchmarkDocker run --rm --mount "type=bind,source=$workspacePath,target=/workspace" `
         --mount 'type=volume,source=manta-go-mod,target=/go/pkg/mod' `
         --mount 'type=volume,source=manta-go-build,target=/root/.cache/go-build' `
-        -w /workspace golang:1.27.3-bookworm go build -o /workspace/build/manta-benchmark ./benchmarks/runner
+        -w /workspace golang:1.27.4-bookworm go build -o /workspace/build/manta-benchmark ./benchmarks/runner
     foreach ($phase in $Phases) {
         if ($phase -eq 'security') {
             $probe=@'
@@ -57,7 +57,7 @@ printf '%s' "$!" > /tmp/manta-benchmark-probe/pid
             --mount "type=bind,source=$privatePath,target=/private/manifest.json,readonly" `
             --mount "type=bind,source=$resultsPath,target=/results" `
             --mount 'type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock' `
-            --entrypoint /runner golang:1.27.3-bookworm -phase $phase
+            --entrypoint /runner golang:1.27.4-bookworm -phase $phase
         if ($phase -eq 'resources') {
             Invoke-BenchmarkDocker network connect manta-test_servers $containerId
             Invoke-BenchmarkDocker network connect manta-benchmark-wings_servers $containerId

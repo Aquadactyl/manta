@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"emperror.dev/errors"
-	"github.com/cenkalti/backoff/v4"
+	"github.com/cenkalti/backoff/v7"
 	"github.com/juju/ratelimit"
 	"github.com/mholt/archives"
 
@@ -192,12 +192,13 @@ func newS3FileUploader(file io.ReaderAt) *s3FileUploader {
 
 // backoff returns a new expoential backoff implementation using a context that
 // will also stop the backoff if it is canceled.
-func (fu *s3FileUploader) backoff(ctx context.Context) backoff.BackOffContext {
+func (fu *s3FileUploader) backoff() []backoff.RetryOption {
 	b := backoff.NewExponentialBackOff()
 	b.Multiplier = 2
-	b.MaxElapsedTime = time.Minute
-
-	return backoff.WithContext(b, ctx)
+	return []backoff.RetryOption{
+		backoff.WithBackOff(b),
+		backoff.WithMaxElapsedTime(time.Minute),
+	}
 }
 
 // uploadPart attempts to upload a given S3 file part to the S3 system. If a
@@ -207,12 +208,12 @@ func (fu *s3FileUploader) backoff(ctx context.Context) backoff.BackOffContext {
 // Once uploaded the ETag is returned to the caller.
 func (fu *s3FileUploader) uploadPart(ctx context.Context, part string, offset, size int64) (string, error) {
 	var etag string
-	err := backoff.Retry(func() error {
+	_, err := backoff.Retry(ctx, func() (struct{}, error) {
 		// The request is created again for each attempt so that a retry sends
 		// the part from its first byte, not what is left of a consumed body.
 		r, err := http.NewRequestWithContext(ctx, http.MethodPut, part, io.NewSectionReader(fu.ReaderAt, offset, size))
 		if err != nil {
-			return backoff.Permanent(errors.Wrap(err, "backup: could not create request for S3"))
+			return struct{}{}, backoff.Permanent(errors.Wrap(err, "backup: could not create request for S3"))
 		}
 
 		r.ContentLength = size
@@ -222,11 +223,11 @@ func (fu *s3FileUploader) uploadPart(ctx context.Context, part string, offset, s
 		res, err := fu.client.Do(r)
 		if err != nil {
 			if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
-				return backoff.Permanent(err)
+				return struct{}{}, backoff.Permanent(err)
 			}
 			// Don't use a permanent error here, if there is a temporary resolution error with
 			// the URL due to DNS issues we want to keep re-trying.
-			return errors.Wrap(err, "backup: S3 HTTP request failed")
+			return struct{}{}, errors.Wrap(err, "backup: S3 HTTP request failed")
 		}
 		_ = res.Body.Close()
 
@@ -236,17 +237,17 @@ func (fu *s3FileUploader) uploadPart(ctx context.Context, part string, offset, s
 			// the S3 endpoint. Any 4xx error should be treated as an error that a retry
 			// would not fix.
 			if res.StatusCode >= http.StatusInternalServerError {
-				return err
+				return struct{}{}, err
 			}
-			return backoff.Permanent(err)
+			return struct{}{}, backoff.Permanent(err)
 		}
 
 		// Get the ETag from the uploaded part, this should be sent with the
 		// CompleteMultipartUpload request.
 		etag = res.Header.Get("ETag")
 
-		return nil
-	}, fu.backoff(ctx))
+		return struct{}{}, nil
+	}, fu.backoff()...)
 	if err != nil {
 		return "", err
 	}

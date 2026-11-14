@@ -63,7 +63,7 @@ var (
 			return err
 		}
 		log.WithField("subsystem", "cron").Info("starting cron processes")
-		s.StartAsync()
+		s.Start()
 		return nil
 	}
 	serveRootSFTP = func(manager *server.Manager, maxConnections int) error {

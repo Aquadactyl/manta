@@ -6,7 +6,7 @@ import (
 
 	"emperror.dev/errors"
 	"github.com/apex/log"
-	"github.com/go-co-op/gocron"
+	"github.com/go-co-op/gocron/v2"
 
 	"github.com/pterodactyl/wings/config"
 	"github.com/pterodactyl/wings/server"
@@ -20,7 +20,7 @@ var o system.AtomicBool
 // Scheduler configures the internal cronjob system for Wings and returns the scheduler
 // instance to the caller. This should only be called once per application lifecycle, additional
 // calls will result in an error being returned.
-func Scheduler(ctx context.Context, m *server.Manager) (*gocron.Scheduler, error) {
+func Scheduler(ctx context.Context, m *server.Manager) (gocron.Scheduler, error) {
 	if !o.SwapIf(true) {
 		return nil, errors.New("cron: cannot call scheduler more than once in application lifecycle")
 	}
@@ -41,25 +41,34 @@ func Scheduler(ctx context.Context, m *server.Manager) (*gocron.Scheduler, error
 		max:     config.Get().System.ActivitySendCount,
 	}
 
-	s := gocron.NewScheduler(location)
+	s, err := gocron.NewScheduler(gocron.WithLocation(location))
+	if err != nil {
+		return nil, errors.Wrap(err, "cron: failed to create scheduler")
+	}
 	l := log.WithField("subsystem", "cron")
 
 	interval := time.Duration(config.Get().System.ActivitySendInterval) * time.Second
 	l.WithField("interval", interval).Info("configuring system crons")
 
-	_, _ = s.Tag("activity").Every(interval).Do(func() {
+	_, err = s.NewJob(gocron.DurationJob(interval), gocron.NewTask(func() {
 		l.WithField("cron", "activity").Debug("sending internal activity events to Panel")
 		if err := activity.Run(ctx); err != nil {
 			logRunError(l, "activity", "activity process is already running, skipping...", "activity process failed to execute", err)
 		}
-	})
+	}), gocron.WithTags("activity"))
+	if err != nil {
+		return nil, errors.Wrap(err, "cron: failed to schedule activity job")
+	}
 
-	_, _ = s.Tag("sftp").Every(interval).Do(func() {
+	_, err = s.NewJob(gocron.DurationJob(interval), gocron.NewTask(func() {
 		l.WithField("cron", "sftp").Debug("sending sftp events to Panel")
 		if err := sftp.Run(ctx); err != nil {
 			logRunError(l, "sftp", "sftp events process already running, skipping...", "sftp events process failed to execute", err)
 		}
-	})
+	}), gocron.WithTags("sftp"))
+	if err != nil {
+		return nil, errors.Wrap(err, "cron: failed to schedule sftp job")
+	}
 
 	return s, nil
 }

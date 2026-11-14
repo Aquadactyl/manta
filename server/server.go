@@ -14,7 +14,7 @@ import (
 
 	"emperror.dev/errors"
 	"github.com/apex/log"
-	"github.com/asaskevich/govalidator"
+	"github.com/asaskevich/govalidator/v12"
 	"github.com/creasty/defaults"
 
 	"github.com/pterodactyl/wings/config"

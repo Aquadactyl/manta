@@ -16,7 +16,7 @@ import (
 
 	"emperror.dev/errors"
 	"github.com/apex/log"
-	"github.com/cenkalti/backoff/v4"
+	"github.com/cenkalti/backoff/v7"
 
 	"github.com/pterodactyl/wings/system"
 )
@@ -170,7 +170,7 @@ func (c *client) requestOnce(ctx context.Context, method, path string, body io.R
 // type of response from the API that can be parsed.
 func (c *client) request(ctx context.Context, method, path string, body *bytes.Buffer, opts ...func(r *http.Request)) (*Response, error) {
 	var res *Response
-	err := backoff.Retry(func() error {
+	_, err := backoff.Retry(ctx, func() (struct{}, error) {
 		var b io.Reader
 		if body != nil {
 			// Each attempt needs its own cursor, but can share the immutable
@@ -180,9 +180,9 @@ func (c *client) request(ctx context.Context, method, path string, body *bytes.B
 		r, err := c.requestOnce(ctx, method, path, b, opts...)
 		if err != nil {
 			if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-				return backoff.Permanent(err)
+				return struct{}{}, backoff.Permanent(err)
 			}
-			return errors.WrapIf(err, "http: request creation failed")
+			return struct{}{}, errors.WrapIf(err, "http: request creation failed")
 		}
 		res = r
 		if r.HasError() {
@@ -191,12 +191,12 @@ func (c *client) request(ctx context.Context, method, path string, body *bytes.B
 			// Only retry server failures (5XX). Redirects refused by the
 			// security policy and client errors will not improve with retries.
 			if r.StatusCode < 500 {
-				return backoff.Permanent(r.Error())
+				return struct{}{}, backoff.Permanent(r.Error())
 			}
-			return r.Error()
+			return struct{}{}, r.Error()
 		}
-		return nil
-	}, c.backoff(ctx))
+		return struct{}{}, nil
+	}, c.backoffOptions()...)
 	if err != nil {
 		return nil, err
 	}
@@ -226,14 +226,17 @@ func (c *client) request(ctx context.Context, method, path string, body *bytes.B
 // call(): 14.593421816s
 // call(): 20.202045293s
 // call(): 27.36567952s <-- Stops here as MaxElapsedTime is 30 seconds
-func (c *client) backoff(ctx context.Context) backoff.BackOffContext {
+func (c *client) backoffOptions() []backoff.RetryOption {
 	b := backoff.NewExponentialBackOff()
 	b.MaxInterval = time.Second * 12
-	b.MaxElapsedTime = time.Second * 30
-	if c.maxAttempts > 0 {
-		return backoff.WithContext(backoff.WithMaxRetries(b, uint64(c.maxAttempts)), ctx)
+	opts := []backoff.RetryOption{
+		backoff.WithBackOff(b),
+		backoff.WithMaxElapsedTime(time.Second * 30),
 	}
-	return backoff.WithContext(b, ctx)
+	if c.maxAttempts > 0 {
+		opts = append(opts, backoff.WithMaxTries(uint(c.maxAttempts+1)))
+	}
+	return opts
 }
 
 // Response is a custom response type that allows for commonly used error

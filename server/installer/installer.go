@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"emperror.dev/errors"
-	"github.com/asaskevich/govalidator"
+	"github.com/asaskevich/govalidator/v12"
 
 	"github.com/pterodactyl/wings/remote"
 	"github.com/pterodactyl/wings/server"
