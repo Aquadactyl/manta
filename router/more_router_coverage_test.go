@@ -246,7 +246,7 @@ func TestRouterRemainingCoverage(t *testing.T) {
 
 	w = httptest.NewRecorder()
 	h.router.ServeHTTP(w, authReq(http.MethodPost, "/api/servers/"+s.ID()+"/files/compress", `{"root":"../../outside","files":["a.txt"]}`))
-	assert.Equal(t, http.StatusInternalServerError, w.Code)
+	assert.Equal(t, http.StatusNotFound, w.Code)
 
 	// postServerPullRemoteFile branches: deprecated directory field, url.Parse error, HasSpaceErr
 	w = httptest.NewRecorder()

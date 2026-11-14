@@ -55,7 +55,7 @@ func getServerFileContents(c *gin.Context) {
 	// Don't allow a named pipe to be opened.
 	//
 	// @see https://github.com/Aquadactyl/aquadactyl/issues/4059
-	if st.Mode()&os.ModeNamedPipe != 0 {
+	if !st.Mode().IsRegular() {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
 			"error": "Cannot open files of this type.",
 		})

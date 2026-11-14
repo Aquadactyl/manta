@@ -1,8 +1,9 @@
 package filesystem
 
 import (
+	"errors"
+	fsys "io/fs"
 	"os"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -17,7 +18,9 @@ func TestFailedDiskUsageWalkDoesNotLowerUsage(t *testing.T) {
 	t.Cleanup(func() { _ = os.RemoveAll(rfs.root) })
 
 	fs.diskUsed.Store(12345)
-	require.NoError(t, os.RemoveAll(filepath.Join(rfs.root, "server")))
+	oldWalk := walkDirectoryForSize
+	walkDirectoryForSize = func(fsys.FS, string, fsys.WalkDirFunc) error { return errors.New("walk failed") }
+	t.Cleanup(func() { walkDirectoryForSize = oldWalk })
 
 	_, err := fs.DiskUsage(false)
 	require.Error(t, err)

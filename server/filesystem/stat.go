@@ -57,6 +57,9 @@ func statFromFile(f filesystemFile) (Stat, error) {
 	if err != nil {
 		return Stat{}, err
 	}
+	if !s.IsDir() && !s.Mode().IsRegular() {
+		return Stat{FileInfo: s, Mimetype: "application/octet-stream"}, nil
+	}
 	var m *mimetype.MIME
 	if !s.IsDir() {
 		m, err = detectFileMIME(f)

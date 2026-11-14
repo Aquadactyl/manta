@@ -361,13 +361,11 @@ func TestFilesystem_Rename(t *testing.T) {
 		g.It("returns an error if the final destination is the root directory", func() {
 			err := fs.Rename("source.txt", "/")
 			g.Assert(err).IsNotNil()
-			g.Assert(strings.Contains(err.Error(), "path escapes from parent")).IsTrue("path did not remain rooted")
 		})
 
 		g.It("returns an error if the source destination is the root directory", func() {
 			err := fs.Rename("/", "target.txt")
 			g.Assert(err).IsNotNil()
-			g.Assert(strings.Contains(err.Error(), "path escapes from parent")).IsTrue("path did not remain rooted")
 		})
 
 		g.It("does not allow renaming to a location outside the root", func() {

@@ -83,10 +83,10 @@ var (
 		return root.Lchown(normalize(p), uid, gid)
 	}
 	filesystemTouch = func(fs *Filesystem, p string, flag int, mode os.FileMode) (*os.File, error) {
-		return fs.root.OpenFile(normalize(p), flag, mode)
+		return fs.root.OpenFile(normalize(p), flag|syscall.O_NONBLOCK, mode)
 	}
 	filesystemOpen = func(fs *Filesystem, p string) (filesystemFile, error) {
-		return fs.root.Open(normalize(p))
+		return fs.openReadFile(p)
 	}
 )
 
@@ -137,7 +137,11 @@ func normalize(p string) string {
 }
 
 func (fs *Filesystem) Open(p string) (*os.File, error) {
-	return fs.root.Open(normalize(p))
+	return fs.openReadFile(p)
+}
+
+func (fs *Filesystem) openReadFile(p string) (*os.File, error) {
+	return fs.root.OpenFile(normalize(p), os.O_RDONLY|syscall.O_NONBLOCK, 0)
 }
 
 func (fs *Filesystem) OpenFile(p string, flag int, mode os.FileMode) (*os.File, error) {
@@ -199,6 +203,14 @@ func (fs *Filesystem) File(p string) (interface {
 	if err != nil {
 		return nil, Stat{}, err
 	}
+	info, err := f.Stat()
+	if err != nil {
+		_ = f.Close()
+		return nil, Stat{}, err
+	}
+	if !info.IsDir() && !info.Mode().IsRegular() {
+		return f, Stat{FileInfo: info, Mimetype: "application/octet-stream"}, nil
+	}
 	st, err := statFromFile(f)
 	if err != nil {
 		_ = f.Close()
@@ -235,6 +247,10 @@ func (fs *Filesystem) openForWrite(p string, flag int, mode os.FileMode) (*os.Fi
 	if err != nil {
 		_ = file.Close()
 		return nil, 0, err
+	}
+	if !st.Mode().IsRegular() {
+		_ = file.Close()
+		return nil, 0, os.ErrInvalid
 	}
 	var size int64
 	if st.Mode().IsRegular() {
@@ -392,6 +408,9 @@ func (fs *Filesystem) CreateDirectory(name string, p string) error {
 
 func (fs *Filesystem) Rename(oldpath, newpath string) error {
 	oldpath, newpath = normalize(oldpath), normalize(newpath)
+	if oldpath == "." || newpath == "." {
+		return os.ErrInvalid
+	}
 	if _, err := fs.root.Lstat(newpath); err == nil {
 		return os.ErrExist
 	} else if !errors.Is(err, os.ErrNotExist) {

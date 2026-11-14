@@ -2503,9 +2503,7 @@ func TestFileOperationsComprehensiveCoverage(t *testing.T) {
 
 	// 10. completeIncomingTransfer and deleteTransfer
 	tr := h.startInFlightReceive(s)
-	completeIncomingTransfer(h.mgr, tr, false)
-	tr2 := h.startInFlightReceive(s)
-	completeIncomingTransfer(h.mgr, tr2, true)
+	completeIncomingTransfer(h.mgr, tr, true)
 
 	// deleteTransfer when not transferring (409)
 	req = httptest.NewRequest(http.MethodDelete, "/api/transfers/"+s.ID(), nil)
@@ -2522,6 +2520,7 @@ func TestFileOperationsComprehensiveCoverage(t *testing.T) {
 	w = httptest.NewRecorder()
 	h.router.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusAccepted, w.Code)
+	transfer.Incoming().Remove(tr3)
 
 	// 11. Named pipe rejection in getServerFileContents
 	fifoPath := filepath.Join(s.Filesystem().Path(), "namedfifo")
@@ -2536,8 +2535,6 @@ func TestFileOperationsComprehensiveCoverage(t *testing.T) {
 	}
 
 	// 12. postServerUploadFiles error paths
-	h.mgr.AddIfMissing(s)
-
 	// Invalid token
 	req = httptest.NewRequest(http.MethodPost, "/upload/file?token=invalid.jwt.token", nil)
 	w = httptest.NewRecorder()
@@ -2695,4 +2692,8 @@ func TestFileOperationsComprehensiveCoverage(t *testing.T) {
 	h.router.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 	assert.Contains(t, w.Body.String(), "has reached its limit of 3 simultaneous remote file downloads")
+
+	// Failed transfer cleanup removes the server's data directory.
+	failedTransfer := h.startInFlightReceive(s)
+	completeIncomingTransfer(h.mgr, failedTransfer, false)
 }

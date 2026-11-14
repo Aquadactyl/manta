@@ -27,6 +27,7 @@ func TestChownPaths(t *testing.T) {
 	fs, err := New(root, 1<<20, nil)
 	require.NoError(t, err)
 	defer fs.Close()
+	fs.SetTest(false)
 	require.NoError(t, os.WriteFile(filepath.Join(root, "file"), []byte("contents"), 0o600))
 	require.NoError(t, os.Mkdir(filepath.Join(root, "directory"), 0o700))
 	require.NoError(t, os.WriteFile(filepath.Join(root, "directory", "child"), []byte("child"), 0o600))
@@ -37,7 +38,9 @@ func TestChownPaths(t *testing.T) {
 		filesystemIsRoot = func() bool { return true }
 	})
 	t.Run("unsafe path", func(t *testing.T) {
+		filesystemLchown = oldLchown
 		require.Error(t, fs.Chown("../outside"))
+		filesystemLchown = func(*os.Root, string, int, int) error { return nil }
 	})
 	t.Run("path ownership error", func(t *testing.T) {
 		want := errors.New("lchown failed")
@@ -73,6 +76,7 @@ func TestWriteOperationsReturnOwnershipErrors(t *testing.T) {
 			fs, err := New(t.TempDir(), 1<<20, nil)
 			require.NoError(t, err)
 			defer fs.Close()
+			fs.SetTest(false)
 			require.ErrorIs(t, operation.call(fs), want)
 		})
 	}

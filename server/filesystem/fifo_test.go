@@ -3,6 +3,7 @@ package filesystem
 import (
 	"bytes"
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -11,37 +12,42 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-// File operations return an error for named pipes rather than opening them.
+// Named pipes can be inspected without blocking, and write operations reject them.
 func TestNamedPipesAreNeverOpened(t *testing.T) {
 	fs, rfs := NewFs()
 	t.Cleanup(func() { _ = os.RemoveAll(rfs.root) })
 	fs.SetDiskLimit(1024 * 1024 * 1024)
 
 	ops := []struct {
-		name string
-		op   func(p string) error
+		name      string
+		wantError bool
+		op        func(p string) error
 	}{
-		{"File", func(p string) error {
-			f, _, err := fs.File(p)
-			if err == nil {
-				_ = f.Close()
+		{"File", false, func(p string) error {
+			f, st, err := fs.File(p)
+			if err != nil {
+				return err
 			}
-			return err
+			defer f.Close()
+			if st.Mode()&os.ModeNamedPipe == 0 {
+				return errors.New("file is not a named pipe")
+			}
+			return nil
 		}},
-		{"Touch", func(p string) error {
+		{"Touch", true, func(p string) error {
 			f, err := fs.Touch(p, os.O_RDWR)
 			if err == nil {
 				_ = f.Close()
 			}
 			return err
 		}},
-		{"Write", func(p string) error {
+		{"Write", true, func(p string) error {
 			b := make([]byte, 1<<20)
 			return fs.Write(p, bytes.NewReader(b), int64(len(b)), 0o644)
 		}},
-		{"Copy", func(p string) error { return fs.Copy(p) }},
-		{"DecompressFile", func(p string) error { return fs.DecompressFile(context.Background(), "/", p) }},
-		{"SpaceAvailableForDecompression", func(p string) error {
+		{"Copy", true, func(p string) error { return fs.Copy(p) }},
+		{"DecompressFile", true, func(p string) error { return fs.DecompressFile(context.Background(), "/", p) }},
+		{"SpaceAvailableForDecompression", true, func(p string) error {
 			return fs.SpaceAvailableForDecompression(context.Background(), "/", p)
 		}},
 	}
@@ -58,8 +64,11 @@ func TestNamedPipesAreNeverOpened(t *testing.T) {
 			go func() { done <- tt.op(p) }()
 			select {
 			case err := <-done:
-				if err == nil {
+				if tt.wantError && err == nil {
 					t.Fatal("expected an error for a named pipe")
+				}
+				if !tt.wantError && err != nil {
+					t.Fatalf("unexpected error inspecting named pipe: %v", err)
 				}
 			case <-time.After(time.Second * 2):
 				t.Fatal("blocked on a named pipe")
