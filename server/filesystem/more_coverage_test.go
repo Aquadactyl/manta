@@ -783,6 +783,19 @@ func (dummyArchiveFormat) Match(context.Context, string, io.Reader) (archives.Ma
 	return archives.MatchResult{}, nil
 }
 
+type oneEntryArchive struct {
+	dummyArchiveFormat
+	entry archives.FileInfo
+}
+
+func (a oneEntryArchive) Extract(ctx context.Context, _ io.Reader, handle archives.FileHandler) error {
+	return handle(ctx, a.entry)
+}
+
+type symlinkArchiveInfo struct{ os.FileInfo }
+
+func (symlinkArchiveInfo) Mode() os.FileMode { return os.ModeSymlink | 0o777 }
+
 func TestCompressAndDecompressCancelAndFormat(t *testing.T) {
 	dir := t.TempDir()
 	fs, err := New(dir, 1024*1024*1024, []string{})
@@ -820,6 +833,36 @@ func TestCompressAndDecompressCancelAndFormat(t *testing.T) {
 	assert.Len(t, entries, 2)
 	assert.True(t, entries[0].IsDir())
 	assert.False(t, entries[1].IsDir())
+}
+
+func TestExtractStreamReturnsSymlinkCreationError(t *testing.T) {
+	fs, err := New(t.TempDir(), 1024*1024, []string{})
+	require.NoError(t, err)
+	regularFile := filepath.Join(t.TempDir(), "entry")
+	require.NoError(t, os.WriteFile(regularFile, []byte("x"), 0o600))
+	info, err := os.Stat(regularFile)
+	require.NoError(t, err)
+	format := oneEntryArchive{entry: archives.FileInfo{
+		FileInfo:      symlinkArchiveInfo{info},
+		NameInArchive: "bad\x00link",
+		LinkTarget:    "valid-target",
+	}}
+	err = fs.extractStream(context.Background(), extractStreamOptions{
+		Directory: "/",
+		Format:    format,
+		Reader:    strings.NewReader(""),
+	})
+	assert.Error(t, err)
+
+	// Creating a symlink below a regular file fails while creating its parent.
+	require.NoError(t, fs.Writefile("blocked", strings.NewReader("file")))
+	format.entry.NameInArchive = "blocked/link"
+	err = fs.extractStream(context.Background(), extractStreamOptions{
+		Directory: "/",
+		Format:    format,
+		Reader:    strings.NewReader(""),
+	})
+	assert.Error(t, err)
 }
 
 func TestDiskSpaceBackgroundLookupGoroutine(t *testing.T) {
@@ -898,8 +941,13 @@ func TestMoreCompressAndQuotaFileEdges(t *testing.T) {
 	assert.NoError(t, fs.DecompressFile(context.Background(), "/", "single.txt.gz"))
 
 	// ExtractTransfer with unknown archive format
-	err = fs.ExtractTransfer(context.Background(), strings.NewReader("bad bytes"))
-	assert.Error(t, err)
+	oldIdentify := identifyTransferArchive
+	identifyTransferArchive = func(context.Context, string, io.Reader) (archives.Format, io.Reader, error) {
+		return nil, nil, archives.NoMatch
+	}
+	t.Cleanup(func() { identifyTransferArchive = oldIdentify })
+	err = fs.ExtractTransfer(context.Background(), strings.NewReader("plain text not archive"))
+	assert.True(t, IsErrorCode(err, ErrCodeUnknownArchive))
 
 	// New with zero disk limit
 	fsZero, err := New(t.TempDir(), 0, []string{})

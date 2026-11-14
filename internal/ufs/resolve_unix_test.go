@@ -168,6 +168,18 @@ func TestUserspaceOpenBeneathNoFollow(t *testing.T) {
 	assert.Equal(t, "shared", readFD(t, fd))
 }
 
+func TestUserspaceOpenBeneathOPathFollowsFinalSymlink(t *testing.T) {
+	base, dirfd := layout(t)
+	require.NoError(t, os.Symlink("shared/data.txt", filepath.Join(base, "opath-link")))
+
+	fd, err := userspaceOpenBeneath(dirfd, "opath-link", oPath, 0)
+	require.NoError(t, err)
+	defer unix.Close(fd)
+	var st unix.Stat_t
+	require.NoError(t, unix.Fstat(fd, &st))
+	assert.Equal(t, uint32(unix.S_IFREG), st.Mode&unix.S_IFMT)
+}
+
 // Creating a file through a link that points at nothing creates it where the
 // link points, as long as that is inside the base.
 func TestUserspaceOpenBeneathCreatesThroughLinks(t *testing.T) {

@@ -165,6 +165,25 @@ func TestRootCmdRunLifecycle(t *testing.T) {
 		}
 		second.Environment = &rootLifecycleEnvironment{createErr: errors.New("environment create failed")}
 		manager.Add(second)
+		thirdUUID := "a2519516-1ed8-4536-8f50-689b2c2912bb"
+		thirdSettings, err := json.Marshal(map[string]any{
+			"uuid":             thirdUUID,
+			"skip_egg_scripts": true,
+			"build":            map[string]any{"memory_limit": 128, "disk_space": 128},
+			"container":        map[string]any{"image": "~alpine:latest"},
+		})
+		if err != nil {
+			return nil, err
+		}
+		third, err := manager.InitServer(thirdUUID, remote.ServerConfigurationResponse{
+			Settings:             thirdSettings,
+			ProcessConfiguration: &remote.ProcessConfiguration{},
+		})
+		if err != nil {
+			return nil, err
+		}
+		third.Environment = &rootLifecycleEnvironment{}
+		manager.Add(third)
 		return manager, nil
 	}
 

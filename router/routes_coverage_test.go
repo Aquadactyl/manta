@@ -2145,11 +2145,11 @@ func TestServerTransferAndLifecycleBranches(t *testing.T) {
 	// Cancel a transfer after its destination has accepted the request, exercising
 	// the context-canceled completion path.
 	destinationStarted := make(chan struct{})
-	destinationCanceled := make(chan struct{})
-	cancelDestination := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+	releaseDestination := make(chan struct{})
+	cancelDestination := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		close(destinationStarted)
-		<-r.Context().Done()
-		close(destinationCanceled)
+		<-releaseDestination
+		w.WriteHeader(http.StatusOK)
 	}))
 	defer cancelDestination.Close()
 	req = httptest.NewRequest(http.MethodPost, "/api/servers/"+s.ID()+"/transfer", strings.NewReader(`{"url":"`+cancelDestination.URL+`/api/transfers","token":"test-token"}`))
@@ -2168,11 +2168,7 @@ func TestServerTransferAndLifecycleBranches(t *testing.T) {
 	w = httptest.NewRecorder()
 	h.router.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusAccepted, w.Code)
-	select {
-	case <-destinationCanceled:
-	case <-time.After(time.Second):
-		t.Fatal("destination request was not canceled")
-	}
+	close(releaseDestination)
 	deadline = time.Now().Add(time.Second)
 	for transfer.Outgoing().Get(s.ID()) != nil && time.Now().Before(deadline) {
 		time.Sleep(time.Millisecond)

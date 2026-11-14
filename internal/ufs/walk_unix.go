@@ -18,6 +18,10 @@ import (
 
 type WalkDiratFunc func(dirfd int, name, relative string, d DirEntry, err error) error
 
+// readDirentCall allows the directory reader's retry and error handling to be
+// exercised without depending on a filesystem or kernel fault.
+var readDirentCall = readDirent
+
 func (fs *UnixFS) WalkDirat(dirfd int, name string, fn WalkDiratFunc) error {
 	info, err := fs.Lstatat(dirfd, name)
 	if err != nil {
@@ -210,7 +214,7 @@ func (fs *UnixFS) readDir(fd int, name, relative string, b []byte) ([]DirEntry, 
 	var sde unix.Dirent
 	for {
 		if len(workBuffer) == 0 {
-			n, err := readDirent(fd, scratchBuffer)
+			n, err := readDirentCall(fd, scratchBuffer)
 			if err != nil {
 				if err == unix.EINTR {
 					continue

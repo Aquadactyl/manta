@@ -99,7 +99,7 @@ func postServerTransfer(c *gin.Context) {
 		if _, err := trnsfr.PushArchiveToTarget(data.URL, data.Token); err != nil {
 			notifyPanelOfFailure()
 
-			if err == context.Canceled {
+			if errors.Is(err, context.Canceled) {
 				trnsfr.Log().Debug("canceled")
 				trnsfr.SendMessage("Canceled.")
 				return

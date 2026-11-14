@@ -33,6 +33,8 @@ import (
 // server and sending a flood of usernames.
 var validUsernameRegexp = regexp.MustCompile(`^(?i)(.+)\.([a-z0-9]{8}|[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}|serv_[a-z2-7]{26})$`)
 
+var generateED25519Key = ed25519.GenerateKey
+
 // connectionLimits are the limits applied to connections.
 type connectionLimits struct {
 	// handshakeTimeout is the amount of time a connection has to complete the
@@ -419,7 +421,7 @@ func (c *SFTPServer) Handle(conn *ssh.ServerConn, srv *server.Server, channel ss
 // Generates a new ED25519 private key that is used for host authentication when
 // a user connects to the SFTP server.
 func (c *SFTPServer) generateED25519PrivateKey() error {
-	_, priv, err := ed25519.GenerateKey(rand.Reader)
+	_, priv, err := generateED25519Key(rand.Reader)
 	if err != nil {
 		return errors.Wrap(err, "sftp: failed to generate ED25519 private key")
 	}

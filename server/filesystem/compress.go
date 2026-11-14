@@ -19,6 +19,8 @@ import (
 	"github.com/pterodactyl/wings/internal/ufs"
 )
 
+var identifyTransferArchive = archives.Identify
+
 // CompressFiles compresses all the files matching the given paths in the
 // specified directory. This function also supports passing nested paths to only
 // compress certain files and folders when working in a larger directory. This
@@ -192,7 +194,7 @@ func (fs *Filesystem) DecompressFile(ctx context.Context, dir string, file strin
 // this node into the server's directory. Every file is kept, including ones the
 // denylist would refuse, since they are the server's own files.
 func (fs *Filesystem) ExtractTransfer(ctx context.Context, r io.Reader) error {
-	format, input, err := archives.Identify(ctx, "archive.tar.gz", r)
+	format, input, err := identifyTransferArchive(ctx, "archive.tar.gz", r)
 	if err != nil {
 		if errors.Is(err, archives.NoMatch) {
 			return newFilesystemError(ErrCodeUnknownArchive, err)

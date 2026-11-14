@@ -2,6 +2,7 @@ package sftp
 
 import (
 	"context"
+	"errors"
 	"io"
 	"net"
 	"os"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/crypto/ed25519"
 
 	"github.com/apex/log"
 	pkgsftp "github.com/pkg/sftp"
@@ -316,6 +318,17 @@ func TestSFTPServerPrivateKeyAndUtils(t *testing.T) {
 	// 5. droppedLog
 	dl := &droppedLog{}
 	dl.log("testing dropped log", "test-key")
+}
+
+func TestGenerateED25519PrivateKeyPropagatesEntropyError(t *testing.T) {
+	oldGenerate := generateED25519Key
+	generateED25519Key = func(io.Reader) (ed25519.PublicKey, ed25519.PrivateKey, error) {
+		return nil, nil, errors.New("entropy unavailable")
+	}
+	t.Cleanup(func() { generateED25519Key = oldGenerate })
+
+	s := &SFTPServer{BasePath: t.TempDir()}
+	require.ErrorContains(t, s.generateED25519PrivateKey(), "failed to generate ED25519 private key")
 }
 
 type mockConnMetadata struct {

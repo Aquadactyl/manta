@@ -13,6 +13,7 @@ import (
 	"github.com/apex/log"
 	"github.com/buger/jsonparser"
 	cerrdefs "github.com/containerd/errdefs"
+	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/api/types/mount"
@@ -33,6 +34,10 @@ var ErrNotAttached = errors.Sentinel("not attached to instance")
 // commandWriteTimeout is the amount of time allowed for a command to be written
 // to the input of a server process.
 var commandWriteTimeout = time.Second * 10
+
+var dockerContainerAttach = func(ctx context.Context, cli *client.Client, id string, opts container.AttachOptions) (types.HijackedResponse, error) {
+	return cli.ContainerAttach(ctx, id, opts)
+}
 
 // A custom console writer that allows us to keep a function blocked until the
 // given stream is properly closed. This does nothing special, only exists to
@@ -67,7 +72,7 @@ func (e *Environment) Attach(ctx context.Context) error {
 	}
 
 	// Set the stream again with the container.
-	if st, err := e.client.ContainerAttach(ctx, e.Id, opts); err != nil {
+	if st, err := dockerContainerAttach(ctx, e.client, e.Id, opts); err != nil {
 		return errors.WrapIf(err, "environment/docker: error while attaching to container")
 	} else {
 		e.SetStream(&st)

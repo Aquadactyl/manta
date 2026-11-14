@@ -61,6 +61,15 @@ type harness struct {
 
 var lifecycleDelay = time.Sleep
 
+var (
+	collectRunnerMetadata = (*harness).metadata
+	runLifecyclePhase     = (*harness).lifecycle
+	runPerformancePhase   = (*harness).performance
+	runSecurityPhase      = (*harness).security
+	runResourcesPhase     = (*harness).resources
+	runEventsPhase        = (*harness).eventStreams
+)
+
 func must(err error) {
 	if err != nil {
 		panic(err)
@@ -98,18 +107,18 @@ func main() {
 			panic(p)
 		}
 	}()
-	h.metadata()
+	collectRunnerMetadata(h)
 	switch *phase {
 	case "lifecycle":
-		h.lifecycle()
+		runLifecyclePhase(h)
 	case "performance":
-		h.performance()
+		runPerformancePhase(h)
 	case "security":
-		h.security()
+		runSecurityPhase(h)
 	case "resources":
-		h.resources()
+		runResourcesPhase(h)
 	case "events":
-		h.eventStreams()
+		runEventsPhase(h)
 	default:
 		panic("unknown phase")
 	}
