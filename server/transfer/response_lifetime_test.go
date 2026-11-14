@@ -9,9 +9,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/pterodactyl/wings/config"
-	"github.com/pterodactyl/wings/internal/progress"
-	"github.com/pterodactyl/wings/server/filesystem"
+	"github.com/Aquadactyl/manta/config"
+	"github.com/Aquadactyl/manta/internal/progress"
+	"github.com/Aquadactyl/manta/server/filesystem"
 )
 
 type transferRoundTripper func(*http.Request) (*http.Response, error)

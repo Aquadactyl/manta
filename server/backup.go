@@ -12,10 +12,10 @@ import (
 	"github.com/apex/log"
 	cerrdefs "github.com/containerd/errdefs"
 
-	"github.com/pterodactyl/wings/environment"
-	"github.com/pterodactyl/wings/remote"
-	"github.com/pterodactyl/wings/server/backup"
-	"github.com/pterodactyl/wings/server/filesystem"
+	"github.com/Aquadactyl/manta/environment"
+	"github.com/Aquadactyl/manta/remote"
+	"github.com/Aquadactyl/manta/server/backup"
+	"github.com/Aquadactyl/manta/server/filesystem"
 )
 
 var readServerwideIgnoreFile = io.ReadAll

@@ -10,7 +10,7 @@ import (
 
 	"github.com/klauspost/compress/zip"
 	"github.com/mholt/archives"
-	"github.com/pterodactyl/wings/internal/ufs"
+	"github.com/Aquadactyl/manta/internal/ufs"
 	"github.com/stretchr/testify/require"
 )
 

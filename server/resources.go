@@ -3,8 +3,8 @@ package server
 import (
 	"sync"
 
-	"github.com/pterodactyl/wings/environment"
-	"github.com/pterodactyl/wings/system"
+	"github.com/Aquadactyl/manta/environment"
+	"github.com/Aquadactyl/manta/system"
 )
 
 // ResourceUsage defines the current resource usage for a given server instance. If a server is offline you

@@ -11,9 +11,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/require"
 
-	"github.com/pterodactyl/wings/config"
-	"github.com/pterodactyl/wings/remote"
-	"github.com/pterodactyl/wings/server"
+	"github.com/Aquadactyl/manta/config"
+	"github.com/Aquadactyl/manta/remote"
+	"github.com/Aquadactyl/manta/server"
 )
 
 func loggerTestManager(t *testing.T) (*server.Manager, *server.Server) {

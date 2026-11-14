@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/pterodactyl/wings/environment"
+	"github.com/Aquadactyl/manta/environment"
 )
 
 // loopStatsReader models a persistent Docker stream without creating a new

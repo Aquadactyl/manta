@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"unicode/utf8"
 
-	"github.com/pterodactyl/wings/events"
+	"github.com/Aquadactyl/manta/events"
 )
 
 type Event string

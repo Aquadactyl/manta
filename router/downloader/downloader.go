@@ -21,9 +21,9 @@ import (
 	"github.com/apex/log"
 	"github.com/google/uuid"
 
-	"github.com/pterodactyl/wings/config"
-	wnet "github.com/pterodactyl/wings/internal/network"
-	"github.com/pterodactyl/wings/server"
+	"github.com/Aquadactyl/manta/config"
+	wnet "github.com/Aquadactyl/manta/internal/network"
+	"github.com/Aquadactyl/manta/server"
 )
 
 var client *http.Client

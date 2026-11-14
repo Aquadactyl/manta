@@ -8,10 +8,10 @@ import (
 
 	"emperror.dev/errors"
 
-	"github.com/pterodactyl/wings/internal/database"
-	"github.com/pterodactyl/wings/internal/models"
-	"github.com/pterodactyl/wings/server"
-	"github.com/pterodactyl/wings/system"
+	"github.com/Aquadactyl/manta/internal/database"
+	"github.com/Aquadactyl/manta/internal/models"
+	"github.com/Aquadactyl/manta/server"
+	"github.com/Aquadactyl/manta/system"
 )
 
 const (

@@ -9,7 +9,7 @@ import (
 	"github.com/apex/log"
 	"github.com/stretchr/testify/require"
 
-	"github.com/pterodactyl/wings/config"
+	"github.com/Aquadactyl/manta/config"
 )
 
 // Grouping authentication must preserve protection and live credential rotation

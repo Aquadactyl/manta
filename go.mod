@@ -1,4 +1,4 @@
-module github.com/pterodactyl/wings
+module github.com/Aquadactyl/manta
 
 go 1.27.0
 

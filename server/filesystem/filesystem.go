@@ -18,8 +18,8 @@ import (
 	"github.com/gabriel-vasile/mimetype"
 	ignore "github.com/sabhiram/go-gitignore"
 
-	"github.com/pterodactyl/wings/config"
-	"github.com/pterodactyl/wings/internal/ufs"
+	"github.com/Aquadactyl/manta/config"
+	"github.com/Aquadactyl/manta/internal/ufs"
 )
 
 type Filesystem struct {

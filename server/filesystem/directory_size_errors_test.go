@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/pterodactyl/wings/internal/ufs"
+	"github.com/Aquadactyl/manta/internal/ufs"
 	"github.com/stretchr/testify/require"
 )
 

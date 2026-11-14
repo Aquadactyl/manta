@@ -1,6 +1,6 @@
 goos: linux
 goarch: amd64
-pkg: github.com/pterodactyl/wings/system
+pkg: github.com/Aquadactyl/manta/system
 cpu: Intel(R) Core(TM) i7-14700KF
 BenchmarkSinkPoolReady/0-4 	62726277	         9.844 ns/op	       0 B/op	       0 allocs/op
 BenchmarkSinkPoolReady/0-4 	62372448	         9.820 ns/op	       0 B/op	       0 allocs/op
@@ -23,4 +23,4 @@ BenchmarkSinkPoolReady/64-4         	  382753	      1544 ns/op	       0 B/op	   
 BenchmarkSinkPoolReady/64-4         	  366286	      1564 ns/op	       0 B/op	       0 allocs/op
 BenchmarkSinkPoolReady/64-4         	  388852	      1548 ns/op	       0 B/op	       0 allocs/op
 PASS
-ok  	github.com/pterodactyl/wings/system	11.996s
+ok  	github.com/Aquadactyl/manta/system	11.996s

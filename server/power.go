@@ -8,10 +8,10 @@ import (
 	"emperror.dev/errors"
 	"github.com/google/uuid"
 
-	"github.com/pterodactyl/wings/config"
-	"github.com/pterodactyl/wings/environment"
-	"github.com/pterodactyl/wings/server/filesystem"
-	"github.com/pterodactyl/wings/system"
+	"github.com/Aquadactyl/manta/config"
+	"github.com/Aquadactyl/manta/environment"
+	"github.com/Aquadactyl/manta/server/filesystem"
+	"github.com/Aquadactyl/manta/system"
 )
 
 var chownServerRootForBoot = (*filesystem.Filesystem).Chown

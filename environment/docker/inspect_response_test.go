@@ -15,8 +15,8 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/stretchr/testify/require"
 
-	"github.com/pterodactyl/wings/config"
-	"github.com/pterodactyl/wings/environment"
+	"github.com/Aquadactyl/manta/config"
+	"github.com/Aquadactyl/manta/environment"
 )
 
 func TestFastInspectClosesResponseWhenRedirectFails(t *testing.T) {

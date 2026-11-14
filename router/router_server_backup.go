@@ -18,12 +18,12 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 
-	"github.com/pterodactyl/wings/config"
-	wnet "github.com/pterodactyl/wings/internal/network"
-	"github.com/pterodactyl/wings/router/middleware"
-	"github.com/pterodactyl/wings/server"
-	"github.com/pterodactyl/wings/server/backup"
-	"github.com/pterodactyl/wings/server/filesystem"
+	"github.com/Aquadactyl/manta/config"
+	wnet "github.com/Aquadactyl/manta/internal/network"
+	"github.com/Aquadactyl/manta/router/middleware"
+	"github.com/Aquadactyl/manta/server"
+	"github.com/Aquadactyl/manta/server/backup"
+	"github.com/Aquadactyl/manta/server/filesystem"
 )
 
 type backupDownloadError string

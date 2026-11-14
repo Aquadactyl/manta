@@ -10,7 +10,7 @@ import (
 	"github.com/gbrlsnchs/jwt/v3"
 	"github.com/stretchr/testify/require"
 
-	"github.com/pterodactyl/wings/server"
+	"github.com/Aquadactyl/manta/server"
 )
 
 func TestListenForExpirationMessages(t *testing.T) {

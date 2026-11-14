@@ -1,6 +1,6 @@
 goos: linux
 goarch: amd64
-pkg: github.com/pterodactyl/wings/server
+pkg: github.com/Aquadactyl/manta/server
 cpu: Intel(R) Core(TM) i7-14700KF
 BenchmarkManagerLookup/1/missing=false-4         	17878596	        32.71 ns/op	       0 B/op	       0 allocs/op
 BenchmarkManagerLookup/1/missing=false-4         	18255458	        33.06 ns/op	       0 B/op	       0 allocs/op
@@ -33,4 +33,4 @@ BenchmarkManagerLookup/1000/missing=true-4       	   27715	     21462 ns/op	    
 BenchmarkManagerLookup/1000/missing=true-4       	   28479	     21351 ns/op	       0 B/op	       0 allocs/op
 BenchmarkManagerLookup/1000/missing=true-4       	   28015	     21384 ns/op	       0 B/op	       0 allocs/op
 PASS
-ok  	github.com/pterodactyl/wings/server	18.062s
+ok  	github.com/Aquadactyl/manta/server	18.062s

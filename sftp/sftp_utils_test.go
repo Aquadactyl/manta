@@ -18,12 +18,12 @@ import (
 	pkgsftp "github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
 
-	"github.com/pterodactyl/wings/config"
-	"github.com/pterodactyl/wings/internal/database"
-	"github.com/pterodactyl/wings/internal/models"
-	"github.com/pterodactyl/wings/remote"
-	"github.com/pterodactyl/wings/server"
-	"github.com/pterodactyl/wings/server/filesystem"
+	"github.com/Aquadactyl/manta/config"
+	"github.com/Aquadactyl/manta/internal/database"
+	"github.com/Aquadactyl/manta/internal/models"
+	"github.com/Aquadactyl/manta/remote"
+	"github.com/Aquadactyl/manta/server"
+	"github.com/Aquadactyl/manta/server/filesystem"
 )
 
 type dummyFileInfo struct {

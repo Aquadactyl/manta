@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/ssh"
 
-	"github.com/pterodactyl/wings/server"
+	"github.com/Aquadactyl/manta/server"
 )
 
 type deadlineFailureConn struct {

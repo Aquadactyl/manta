@@ -16,7 +16,7 @@ Showing top 20 nodes out of 165
      0.09s  2.09% 59.16%      0.09s  2.09%  internal/poll.(*fdMutex).rwlock
      0.07s  1.62% 60.79%      0.07s  1.62%  runtime.memclrNoHeapPointers
      0.05s  1.16% 61.95%      0.05s  1.16%  encoding/json.stateInString
-     0.05s  1.16% 63.11%      2.93s 67.98%  github.com/pterodactyl/wings/server/filesystem.(*Filesystem).ListDirectory.func1
+     0.05s  1.16% 63.11%      2.93s 67.98%  github.com/Aquadactyl/manta/server/filesystem.(*Filesystem).ListDirectory.func1
      0.04s  0.93% 64.04%      0.06s  1.39%  runtime.tryDeferToSpanScan
      0.03s   0.7% 64.73%      0.06s  1.39%  bytes.IndexAny
      0.03s   0.7% 65.43%      0.06s  1.39%  encoding/json.appendString[go.shape.string]

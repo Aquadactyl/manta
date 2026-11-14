@@ -7,9 +7,9 @@ import (
 
 	"github.com/apex/log"
 
-	"github.com/pterodactyl/wings/config"
-	"github.com/pterodactyl/wings/environment"
-	"github.com/pterodactyl/wings/remote"
+	"github.com/Aquadactyl/manta/config"
+	"github.com/Aquadactyl/manta/environment"
+	"github.com/Aquadactyl/manta/remote"
 )
 
 func BenchmarkConsoleInspection(b *testing.B) {

@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"emperror.dev/errors"
-	"github.com/pterodactyl/wings/internal/models"
+	"github.com/Aquadactyl/manta/internal/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/pterodactyl/wings/system"
+	"github.com/Aquadactyl/manta/system"
 )
 
 func TestConfigOperations(t *testing.T) {

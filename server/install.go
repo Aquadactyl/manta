@@ -19,11 +19,11 @@ import (
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/client"
 
-	"github.com/pterodactyl/wings/config"
-	"github.com/pterodactyl/wings/environment"
-	"github.com/pterodactyl/wings/environment/docker"
-	"github.com/pterodactyl/wings/remote"
-	"github.com/pterodactyl/wings/system"
+	"github.com/Aquadactyl/manta/config"
+	"github.com/Aquadactyl/manta/environment"
+	"github.com/Aquadactyl/manta/environment/docker"
+	"github.com/Aquadactyl/manta/remote"
+	"github.com/Aquadactyl/manta/system"
 )
 
 var waitForInstallerContainer = func(c *client.Client, ctx context.Context, id string, condition container.WaitCondition) (<-chan container.WaitResponse, <-chan error) {

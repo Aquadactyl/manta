@@ -10,7 +10,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/pterodactyl/wings/config"
+	"github.com/Aquadactyl/manta/config"
 )
 
 // The report describes the configuration file Wings was started with.

@@ -10,10 +10,10 @@ import (
 
 	"github.com/apex/log"
 
-	"github.com/pterodactyl/wings/events"
-	"github.com/pterodactyl/wings/system"
+	"github.com/Aquadactyl/manta/events"
+	"github.com/Aquadactyl/manta/system"
 
-	"github.com/pterodactyl/wings/environment"
+	"github.com/Aquadactyl/manta/environment"
 )
 
 type diskSpaceLimiter struct {

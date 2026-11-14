@@ -1,6 +1,6 @@
 goos: linux
 goarch: amd64
-pkg: github.com/pterodactyl/wings/router/websocket
+pkg: github.com/Aquadactyl/manta/router/websocket
 cpu: Intel(R) Core(TM) i7-14700KF
 BenchmarkEventMessage/stats/viewers_1-4         	  306164	      1843 ns/op	     816 B/op	      13 allocs/op
 BenchmarkEventMessage/stats/viewers_1-4         	  332925	      1804 ns/op	     816 B/op	      13 allocs/op
@@ -23,4 +23,4 @@ BenchmarkEventMessage/status-4                  	  736674	       810.1 ns/op	   
 BenchmarkEventMessage/status-4                  	  620467	       884.2 ns/op	     392 B/op	      11 allocs/op
 BenchmarkEventMessage/status-4                  	  785828	       831.5 ns/op	     392 B/op	      11 allocs/op
 PASS
-ok  	github.com/pterodactyl/wings/router/websocket	11.888s
+ok  	github.com/Aquadactyl/manta/router/websocket	11.888s

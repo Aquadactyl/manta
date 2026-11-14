@@ -14,7 +14,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pterodactyl/wings/internal/progress"
+	"github.com/Aquadactyl/manta/internal/progress"
 )
 
 var validTransferURLRegexp = regexp.MustCompile(`^https?://[a-zA-Z0-9.\-_~%:\[\]]+(/[^?#\s]*)?(\?[^#\s]*)?$`)

@@ -6,9 +6,9 @@ import (
 	"emperror.dev/errors"
 	"github.com/gammazero/workerpool"
 
-	"github.com/pterodactyl/wings/internal/ufs"
-	"github.com/pterodactyl/wings/parser"
-	"github.com/pterodactyl/wings/server/filesystem"
+	"github.com/Aquadactyl/manta/internal/ufs"
+	"github.com/Aquadactyl/manta/parser"
+	"github.com/Aquadactyl/manta/server/filesystem"
 )
 
 var (

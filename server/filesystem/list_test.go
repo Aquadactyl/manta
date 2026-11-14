@@ -10,7 +10,7 @@ import (
 	"github.com/gabriel-vasile/mimetype"
 	"golang.org/x/sys/unix"
 
-	"github.com/pterodactyl/wings/config"
+	"github.com/Aquadactyl/manta/config"
 )
 
 func newListingTestFS(t *testing.T) *Filesystem {

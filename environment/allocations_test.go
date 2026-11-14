@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/pterodactyl/wings/config"
+	"github.com/Aquadactyl/manta/config"
 )
 
 // Loopback bindings are removed when ISPN is enabled, including a port that is

@@ -7,9 +7,9 @@ import (
 
 	"emperror.dev/errors"
 
-	"github.com/pterodactyl/wings/system"
+	"github.com/Aquadactyl/manta/system"
 
-	"github.com/pterodactyl/wings/server"
+	"github.com/Aquadactyl/manta/server"
 )
 
 var expirationPollInterval = 30 * time.Second

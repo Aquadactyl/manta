@@ -3,7 +3,7 @@ package router
 import (
 	"testing"
 
-	"github.com/pterodactyl/wings/config"
+	"github.com/Aquadactyl/manta/config"
 )
 
 func TestConfigurePanicsOnInvalidTrustedProxy(t *testing.T) {

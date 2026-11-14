@@ -6,7 +6,7 @@ import (
 	"strings"
 	"sync/atomic"
 
-	"github.com/pterodactyl/wings/system"
+	"github.com/Aquadactyl/manta/system"
 )
 
 // Progress is used to track the progress of any I/O operation that are being

@@ -13,9 +13,9 @@ import (
 
 	. "github.com/franela/goblin"
 
-	"github.com/pterodactyl/wings/internal/ufs"
+	"github.com/Aquadactyl/manta/internal/ufs"
 
-	"github.com/pterodactyl/wings/config"
+	"github.com/Aquadactyl/manta/config"
 )
 
 func NewFs() (*Filesystem, *rootFs) {

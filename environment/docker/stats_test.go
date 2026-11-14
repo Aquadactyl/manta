@@ -11,7 +11,7 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/stretchr/testify/require"
 
-	"github.com/pterodactyl/wings/environment"
+	"github.com/Aquadactyl/manta/environment"
 )
 
 // Preserve the former full-SDK calculation as an independent regression oracle.

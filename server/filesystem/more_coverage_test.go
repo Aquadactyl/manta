@@ -22,9 +22,9 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/mholt/archives"
-	"github.com/pterodactyl/wings/config"
-	"github.com/pterodactyl/wings/internal/progress"
-	"github.com/pterodactyl/wings/internal/ufs"
+	"github.com/Aquadactyl/manta/config"
+	"github.com/Aquadactyl/manta/internal/progress"
+	"github.com/Aquadactyl/manta/internal/ufs"
 )
 
 func init() {

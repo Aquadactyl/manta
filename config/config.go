@@ -24,7 +24,7 @@ import (
 	"github.com/gbrlsnchs/jwt/v3"
 	"gopkg.in/yaml.v2"
 
-	"github.com/pterodactyl/wings/system"
+	"github.com/Aquadactyl/manta/system"
 )
 
 // DefaultTLSConfig sets sane defaults to use when configuring the internal

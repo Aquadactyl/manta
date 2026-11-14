@@ -13,9 +13,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/require"
 
-	"github.com/pterodactyl/wings/config"
-	"github.com/pterodactyl/wings/remote"
-	wserver "github.com/pterodactyl/wings/server"
+	"github.com/Aquadactyl/manta/config"
+	"github.com/Aquadactyl/manta/remote"
+	wserver "github.com/Aquadactyl/manta/server"
 )
 
 // A restore of a backup that cannot be found does not delete the server's

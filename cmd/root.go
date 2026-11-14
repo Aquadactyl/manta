@@ -26,17 +26,17 @@ import (
 	"golang.org/x/crypto/acme"
 	"golang.org/x/crypto/acme/autocert"
 
-	"github.com/pterodactyl/wings/config"
-	"github.com/pterodactyl/wings/environment"
-	"github.com/pterodactyl/wings/internal/cron"
-	"github.com/pterodactyl/wings/internal/database"
-	"github.com/pterodactyl/wings/internal/network"
-	"github.com/pterodactyl/wings/loggers/cli"
-	"github.com/pterodactyl/wings/remote"
-	"github.com/pterodactyl/wings/router"
-	"github.com/pterodactyl/wings/server"
-	"github.com/pterodactyl/wings/sftp"
-	"github.com/pterodactyl/wings/system"
+	"github.com/Aquadactyl/manta/config"
+	"github.com/Aquadactyl/manta/environment"
+	"github.com/Aquadactyl/manta/internal/cron"
+	"github.com/Aquadactyl/manta/internal/database"
+	"github.com/Aquadactyl/manta/internal/network"
+	"github.com/Aquadactyl/manta/loggers/cli"
+	"github.com/Aquadactyl/manta/remote"
+	"github.com/Aquadactyl/manta/router"
+	"github.com/Aquadactyl/manta/server"
+	"github.com/Aquadactyl/manta/sftp"
+	"github.com/Aquadactyl/manta/system"
 )
 
 var (

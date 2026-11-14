@@ -11,7 +11,7 @@
   "percent": 91.69697,
   "files": [
     {
-      "file": "github.com/pterodactyl/wings/benchmarks/runner/events.go",
+      "file": "github.com/Aquadactyl/manta/benchmarks/runner/events.go",
       "statements": 50,
       "covered": 41,
       "uncoveredBlocks": [
@@ -50,7 +50,7 @@
       ]
     },
     {
-      "file": "github.com/pterodactyl/wings/benchmarks/runner/main.go",
+      "file": "github.com/Aquadactyl/manta/benchmarks/runner/main.go",
       "statements": 161,
       "covered": 134,
       "uncoveredBlocks": [
@@ -137,7 +137,7 @@
       ]
     },
     {
-      "file": "github.com/pterodactyl/wings/benchmarks/runner/performance.go",
+      "file": "github.com/Aquadactyl/manta/benchmarks/runner/performance.go",
       "statements": 133,
       "covered": 127,
       "uncoveredBlocks": [
@@ -168,7 +168,7 @@
       ]
     },
     {
-      "file": "github.com/pterodactyl/wings/benchmarks/runner/resources.go",
+      "file": "github.com/Aquadactyl/manta/benchmarks/runner/resources.go",
       "statements": 166,
       "covered": 151,
       "uncoveredBlocks": [
@@ -223,7 +223,7 @@
       ]
     },
     {
-      "file": "github.com/pterodactyl/wings/benchmarks/runner/security.go",
+      "file": "github.com/Aquadactyl/manta/benchmarks/runner/security.go",
       "statements": 141,
       "covered": 137,
       "uncoveredBlocks": [
@@ -246,7 +246,7 @@
       ]
     },
     {
-      "file": "github.com/pterodactyl/wings/cmd/configure.go",
+      "file": "github.com/Aquadactyl/manta/cmd/configure.go",
       "statements": 91,
       "covered": 69,
       "uncoveredBlocks": [
@@ -313,7 +313,7 @@
       ]
     },
     {
-      "file": "github.com/pterodactyl/wings/cmd/diagnostics.go",
+      "file": "github.com/Aquadactyl/manta/cmd/diagnostics.go",
       "statements": 139,
       "covered": 111,
       "uncoveredBlocks": [
@@ -388,7 +388,7 @@
       ]
     },
     {
-      "file": "github.com/pterodactyl/wings/cmd/root.go",
+      "file": "github.com/Aquadactyl/manta/cmd/root.go",
       "statements": 214,
       "covered": 138,
       "uncoveredBlocks": [
@@ -611,7 +611,7 @@
       ]
     },
     {
-      "file": "github.com/pterodactyl/wings/config/config.go",
+      "file": "github.com/Aquadactyl/manta/config/config.go",
       "statements": 259,
       "covered": 223,
       "uncoveredBlocks": [
@@ -698,7 +698,7 @@
       ]
     },
     {
-      "file": "github.com/pterodactyl/wings/config/config_docker.go",
+      "file": "github.com/Aquadactyl/manta/config/config_docker.go",
       "statements": 73,
       "covered": 71,
       "uncoveredBlocks": [
@@ -713,19 +713,19 @@
       ]
     },
     {
-      "file": "github.com/pterodactyl/wings/environment/allocations.go",
+      "file": "github.com/Aquadactyl/manta/environment/allocations.go",
       "statements": 27,
       "covered": 27,
       "uncoveredBlocks": []
     },
     {
-      "file": "github.com/pterodactyl/wings/environment/config.go",
+      "file": "github.com/Aquadactyl/manta/environment/config.go",
       "statements": 22,
       "covered": 22,
       "uncoveredBlocks": []
     },
     {
-      "file": "github.com/pterodactyl/wings/environment/docker.go",
+      "file": "github.com/Aquadactyl/manta/environment/docker.go",
       "statements": 34,
       "covered": 28,
       "uncoveredBlocks": [
@@ -752,7 +752,7 @@
       ]
     },
     {
-      "file": "github.com/pterodactyl/wings/environment/docker/api.go",
+      "file": "github.com/Aquadactyl/manta/environment/docker/api.go",
       "statements": 52,
       "covered": 50,
       "uncoveredBlocks": [
@@ -763,7 +763,7 @@
       ]
     },
     {
-      "file": "github.com/pterodactyl/wings/environment/docker/cgroup_burst.go",
+      "file": "github.com/Aquadactyl/manta/environment/docker/cgroup_burst.go",
       "statements": 50,
       "covered": 47,
       "uncoveredBlocks": [
@@ -782,7 +782,7 @@
       ]
     },
     {
-      "file": "github.com/pterodactyl/wings/environment/docker/container.go",
+      "file": "github.com/Aquadactyl/manta/environment/docker/container.go",
       "statements": 181,
       "covered": 158,
       "uncoveredBlocks": [
@@ -873,7 +873,7 @@
       ]
     },
     {
-      "file": "github.com/pterodactyl/wings/environment/docker/environment.go",
+      "file": "github.com/Aquadactyl/manta/environment/docker/environment.go",
       "statements": 48,
       "covered": 45,
       "uncoveredBlocks": [
@@ -892,7 +892,7 @@
       ]
     },
     {
-      "file": "github.com/pterodactyl/wings/environment/docker/power.go",
+      "file": "github.com/Aquadactyl/manta/environment/docker/power.go",
       "statements": 107,
       "covered": 90,
       "uncoveredBlocks": [
@@ -967,7 +967,7 @@
       ]
     },
     {
-      "file": "github.com/pterodactyl/wings/environment/docker/stats.go",
+      "file": "github.com/Aquadactyl/manta/environment/docker/stats.go",
       "statements": 66,
       "covered": 60,
       "uncoveredBlocks": [
@@ -994,7 +994,7 @@
       ]
     },
     {
-      "file": "github.com/pterodactyl/wings/environment/settings.go",
+      "file": "github.com/Aquadactyl/manta/environment/settings.go",
       "statements": 42,
       "covered": 38,
       "uncoveredBlocks": [
@@ -1017,13 +1017,13 @@
       ]
     },
     {
-      "file": "github.com/pterodactyl/wings/events/events.go",
+      "file": "github.com/Aquadactyl/manta/events/events.go",
       "statements": 15,
       "covered": 15,
       "uncoveredBlocks": []
     },
     {
-      "file": "github.com/pterodactyl/wings/internal/cron/activity_cron.go",
+      "file": "github.com/Aquadactyl/manta/internal/cron/activity_cron.go",
       "statements": 32,
       "covered": 31,
       "uncoveredBlocks": [
@@ -1034,7 +1034,7 @@
       ]
     },
     {
-      "file": "github.com/pterodactyl/wings/internal/cron/cron.go",
+      "file": "github.com/Aquadactyl/manta/internal/cron/cron.go",
       "statements": 24,
       "covered": 22,
       "uncoveredBlocks": [
@@ -1049,7 +1049,7 @@
       ]
     },
     {
-      "file": "github.com/pterodactyl/wings/internal/cron/delivery.go",
+      "file": "github.com/Aquadactyl/manta/internal/cron/delivery.go",
       "statements": 46,
       "covered": 45,
       "uncoveredBlocks": [
@@ -1060,7 +1060,7 @@
       ]
     },
     {
-      "file": "github.com/pterodactyl/wings/internal/cron/sftp_cron.go",
+      "file": "github.com/Aquadactyl/manta/internal/cron/sftp_cron.go",
       "statements": 82,
       "covered": 80,
       "uncoveredBlocks": [
@@ -1075,7 +1075,7 @@
       ]
     },
     {
-      "file": "github.com/pterodactyl/wings/internal/database/database.go",
+      "file": "github.com/Aquadactyl/manta/internal/database/database.go",
       "statements": 21,
       "covered": 18,
       "uncoveredBlocks": [
@@ -1094,7 +1094,7 @@
       ]
     },
     {
-      "file": "github.com/pterodactyl/wings/internal/models/activity.go",
+      "file": "github.com/Aquadactyl/manta/internal/models/activity.go",
       "statements": 16,
       "covered": 14,
       "uncoveredBlocks": [
@@ -1109,55 +1109,55 @@
       ]
     },
     {
-      "file": "github.com/pterodactyl/wings/internal/models/models.go",
+      "file": "github.com/Aquadactyl/manta/internal/models/models.go",
       "statements": 10,
       "covered": 10,
       "uncoveredBlocks": []
     },
     {
-      "file": "github.com/pterodactyl/wings/internal/network/address.go",
+      "file": "github.com/Aquadactyl/manta/internal/network/address.go",
       "statements": 10,
       "covered": 10,
       "uncoveredBlocks": []
     },
     {
-      "file": "github.com/pterodactyl/wings/internal/network/allowlist.go",
+      "file": "github.com/Aquadactyl/manta/internal/network/allowlist.go",
       "statements": 13,
       "covered": 13,
       "uncoveredBlocks": []
     },
     {
-      "file": "github.com/pterodactyl/wings/internal/network/limit_listener.go",
+      "file": "github.com/Aquadactyl/manta/internal/network/limit_listener.go",
       "statements": 16,
       "covered": 16,
       "uncoveredBlocks": []
     },
     {
-      "file": "github.com/pterodactyl/wings/internal/progress/progress.go",
+      "file": "github.com/Aquadactyl/manta/internal/progress/progress.go",
       "statements": 23,
       "covered": 23,
       "uncoveredBlocks": []
     },
     {
-      "file": "github.com/pterodactyl/wings/internal/ufs/error.go",
+      "file": "github.com/Aquadactyl/manta/internal/ufs/error.go",
       "statements": 32,
       "covered": 32,
       "uncoveredBlocks": []
     },
     {
-      "file": "github.com/pterodactyl/wings/internal/ufs/file_posix.go",
+      "file": "github.com/Aquadactyl/manta/internal/ufs/file_posix.go",
       "statements": 12,
       "covered": 12,
       "uncoveredBlocks": []
     },
     {
-      "file": "github.com/pterodactyl/wings/internal/ufs/fs_quota.go",
+      "file": "github.com/Aquadactyl/manta/internal/ufs/fs_quota.go",
       "statements": 58,
       "covered": 58,
       "uncoveredBlocks": []
     },
     {
-      "file": "github.com/pterodactyl/wings/internal/ufs/fs_unix.go",
+      "file": "github.com/Aquadactyl/manta/internal/ufs/fs_unix.go",
       "statements": 339,
       "covered": 320,
       "uncoveredBlocks": [
@@ -1240,7 +1240,7 @@
       ]
     },
     {
-      "file": "github.com/pterodactyl/wings/internal/ufs/mkdir_unix.go",
+      "file": "github.com/Aquadactyl/manta/internal/ufs/mkdir_unix.go",
       "statements": 29,
       "covered": 24,
       "uncoveredBlocks": [
@@ -1263,7 +1263,7 @@
       ]
     },
     {
-      "file": "github.com/pterodactyl/wings/internal/ufs/path_unix.go",
+      "file": "github.com/Aquadactyl/manta/internal/ufs/path_unix.go",
       "statements": 28,
       "covered": 27,
       "uncoveredBlocks": [
@@ -1274,13 +1274,13 @@
       ]
     },
     {
-      "file": "github.com/pterodactyl/wings/internal/ufs/quota_writer.go",
+      "file": "github.com/Aquadactyl/manta/internal/ufs/quota_writer.go",
       "statements": 30,
       "covered": 30,
       "uncoveredBlocks": []
     },
     {
-      "file": "github.com/pterodactyl/wings/internal/ufs/removeall_unix.go",
+      "file": "github.com/Aquadactyl/manta/internal/ufs/removeall_unix.go",
       "statements": 108,
       "covered": 93,
       "uncoveredBlocks": [
@@ -1343,19 +1343,19 @@
       ]
     },
     {
-      "file": "github.com/pterodactyl/wings/internal/ufs/stat_unix.go",
+      "file": "github.com/Aquadactyl/manta/internal/ufs/stat_unix.go",
       "statements": 23,
       "covered": 23,
       "uncoveredBlocks": []
     },
     {
-      "file": "github.com/pterodactyl/wings/internal/ufs/walk.go",
+      "file": "github.com/Aquadactyl/manta/internal/ufs/walk.go",
       "statements": 25,
       "covered": 25,
       "uncoveredBlocks": []
     },
     {
-      "file": "github.com/pterodactyl/wings/internal/ufs/walk_unix.go",
+      "file": "github.com/Aquadactyl/manta/internal/ufs/walk_unix.go",
       "statements": 119,
       "covered": 112,
       "uncoveredBlocks": [
@@ -1390,13 +1390,13 @@
       ]
     },
     {
-      "file": "github.com/pterodactyl/wings/loggers/cli/cli.go",
+      "file": "github.com/Aquadactyl/manta/loggers/cli/cli.go",
       "statements": 39,
       "covered": 39,
       "uncoveredBlocks": []
     },
     {
-      "file": "github.com/pterodactyl/wings/parser/helpers.go",
+      "file": "github.com/Aquadactyl/manta/parser/helpers.go",
       "statements": 84,
       "covered": 80,
       "uncoveredBlocks": [
@@ -1419,7 +1419,7 @@
       ]
     },
     {
-      "file": "github.com/pterodactyl/wings/parser/parser.go",
+      "file": "github.com/Aquadactyl/manta/parser/parser.go",
       "statements": 253,
       "covered": 241,
       "uncoveredBlocks": [
@@ -1470,13 +1470,13 @@
       ]
     },
     {
-      "file": "github.com/pterodactyl/wings/remote/errors.go",
+      "file": "github.com/Aquadactyl/manta/remote/errors.go",
       "statements": 16,
       "covered": 16,
       "uncoveredBlocks": []
     },
     {
-      "file": "github.com/pterodactyl/wings/remote/http.go",
+      "file": "github.com/Aquadactyl/manta/remote/http.go",
       "statements": 119,
       "covered": 118,
       "uncoveredBlocks": [
@@ -1487,19 +1487,19 @@
       ]
     },
     {
-      "file": "github.com/pterodactyl/wings/remote/servers.go",
+      "file": "github.com/Aquadactyl/manta/remote/servers.go",
       "statements": 103,
       "covered": 103,
       "uncoveredBlocks": []
     },
     {
-      "file": "github.com/pterodactyl/wings/remote/types.go",
+      "file": "github.com/Aquadactyl/manta/remote/types.go",
       "statements": 17,
       "covered": 17,
       "uncoveredBlocks": []
     },
     {
-      "file": "github.com/pterodactyl/wings/router/downloader/downloader.go",
+      "file": "github.com/Aquadactyl/manta/router/downloader/downloader.go",
       "statements": 156,
       "covered": 151,
       "uncoveredBlocks": [
@@ -1526,31 +1526,31 @@
       ]
     },
     {
-      "file": "github.com/pterodactyl/wings/router/middleware.go",
+      "file": "github.com/Aquadactyl/manta/router/middleware.go",
       "statements": 1,
       "covered": 1,
       "uncoveredBlocks": []
     },
     {
-      "file": "github.com/pterodactyl/wings/router/middleware/json.go",
+      "file": "github.com/Aquadactyl/manta/router/middleware/json.go",
       "statements": 18,
       "covered": 18,
       "uncoveredBlocks": []
     },
     {
-      "file": "github.com/pterodactyl/wings/router/middleware/middleware.go",
+      "file": "github.com/Aquadactyl/manta/router/middleware/middleware.go",
       "statements": 105,
       "covered": 105,
       "uncoveredBlocks": []
     },
     {
-      "file": "github.com/pterodactyl/wings/router/middleware/request_error.go",
+      "file": "github.com/Aquadactyl/manta/router/middleware/request_error.go",
       "statements": 41,
       "covered": 41,
       "uncoveredBlocks": []
     },
     {
-      "file": "github.com/pterodactyl/wings/router/router.go",
+      "file": "github.com/Aquadactyl/manta/router/router.go",
       "statements": 69,
       "covered": 68,
       "uncoveredBlocks": [
@@ -1561,7 +1561,7 @@
       ]
     },
     {
-      "file": "github.com/pterodactyl/wings/router/router_download.go",
+      "file": "github.com/Aquadactyl/manta/router/router_download.go",
       "statements": 51,
       "covered": 43,
       "uncoveredBlocks": [
@@ -1584,7 +1584,7 @@
       ]
     },
     {
-      "file": "github.com/pterodactyl/wings/router/router_server.go",
+      "file": "github.com/Aquadactyl/manta/router/router_server.go",
       "statements": 103,
       "covered": 88,
       "uncoveredBlocks": [
@@ -1647,7 +1647,7 @@
       ]
     },
     {
-      "file": "github.com/pterodactyl/wings/router/router_server_backup.go",
+      "file": "github.com/Aquadactyl/manta/router/router_server_backup.go",
       "statements": 178,
       "covered": 158,
       "uncoveredBlocks": [
@@ -1710,7 +1710,7 @@
       ]
     },
     {
-      "file": "github.com/pterodactyl/wings/router/router_server_files.go",
+      "file": "github.com/Aquadactyl/manta/router/router_server_files.go",
       "statements": 306,
       "covered": 261,
       "uncoveredBlocks": [
@@ -1821,7 +1821,7 @@
       ]
     },
     {
-      "file": "github.com/pterodactyl/wings/router/router_server_transfer.go",
+      "file": "github.com/Aquadactyl/manta/router/router_server_transfer.go",
       "statements": 49,
       "covered": 44,
       "uncoveredBlocks": [
@@ -1840,7 +1840,7 @@
       ]
     },
     {
-      "file": "github.com/pterodactyl/wings/router/router_server_ws.go",
+      "file": "github.com/Aquadactyl/manta/router/router_server_ws.go",
       "statements": 74,
       "covered": 61,
       "uncoveredBlocks": [
@@ -1883,7 +1883,7 @@
       ]
     },
     {
-      "file": "github.com/pterodactyl/wings/router/router_system.go",
+      "file": "github.com/Aquadactyl/manta/router/router_system.go",
       "statements": 93,
       "covered": 74,
       "uncoveredBlocks": [
@@ -1938,7 +1938,7 @@
       ]
     },
     {
-      "file": "github.com/pterodactyl/wings/router/router_transfer.go",
+      "file": "github.com/Aquadactyl/manta/router/router_transfer.go",
       "statements": 137,
       "covered": 113,
       "uncoveredBlocks": [
@@ -2001,61 +2001,61 @@
       ]
     },
     {
-      "file": "github.com/pterodactyl/wings/router/tokens/backup.go",
+      "file": "github.com/Aquadactyl/manta/router/tokens/backup.go",
       "statements": 3,
       "covered": 3,
       "uncoveredBlocks": []
     },
     {
-      "file": "github.com/pterodactyl/wings/router/tokens/file.go",
+      "file": "github.com/Aquadactyl/manta/router/tokens/file.go",
       "statements": 3,
       "covered": 3,
       "uncoveredBlocks": []
     },
     {
-      "file": "github.com/pterodactyl/wings/router/tokens/parser.go",
+      "file": "github.com/Aquadactyl/manta/router/tokens/parser.go",
       "statements": 7,
       "covered": 7,
       "uncoveredBlocks": []
     },
     {
-      "file": "github.com/pterodactyl/wings/router/tokens/token.go",
+      "file": "github.com/Aquadactyl/manta/router/tokens/token.go",
       "statements": 5,
       "covered": 5,
       "uncoveredBlocks": []
     },
     {
-      "file": "github.com/pterodactyl/wings/router/tokens/token_store.go",
+      "file": "github.com/Aquadactyl/manta/router/tokens/token_store.go",
       "statements": 13,
       "covered": 13,
       "uncoveredBlocks": []
     },
     {
-      "file": "github.com/pterodactyl/wings/router/tokens/transfer.go",
+      "file": "github.com/Aquadactyl/manta/router/tokens/transfer.go",
       "statements": 1,
       "covered": 1,
       "uncoveredBlocks": []
     },
     {
-      "file": "github.com/pterodactyl/wings/router/tokens/upload.go",
+      "file": "github.com/Aquadactyl/manta/router/tokens/upload.go",
       "statements": 3,
       "covered": 3,
       "uncoveredBlocks": []
     },
     {
-      "file": "github.com/pterodactyl/wings/router/tokens/websocket.go",
+      "file": "github.com/Aquadactyl/manta/router/tokens/websocket.go",
       "statements": 28,
       "covered": 28,
       "uncoveredBlocks": []
     },
     {
-      "file": "github.com/pterodactyl/wings/router/websocket/limiter.go",
+      "file": "github.com/Aquadactyl/manta/router/websocket/limiter.go",
       "statements": 33,
       "covered": 33,
       "uncoveredBlocks": []
     },
     {
-      "file": "github.com/pterodactyl/wings/router/websocket/listeners.go",
+      "file": "github.com/Aquadactyl/manta/router/websocket/listeners.go",
       "statements": 57,
       "covered": 50,
       "uncoveredBlocks": [
@@ -2086,13 +2086,13 @@
       ]
     },
     {
-      "file": "github.com/pterodactyl/wings/router/websocket/message.go",
+      "file": "github.com/Aquadactyl/manta/router/websocket/message.go",
       "statements": 10,
       "covered": 10,
       "uncoveredBlocks": []
     },
     {
-      "file": "github.com/pterodactyl/wings/router/websocket/websocket.go",
+      "file": "github.com/Aquadactyl/manta/router/websocket/websocket.go",
       "statements": 187,
       "covered": 176,
       "uncoveredBlocks": [
@@ -2127,13 +2127,13 @@
       ]
     },
     {
-      "file": "github.com/pterodactyl/wings/server/activity.go",
+      "file": "github.com/Aquadactyl/manta/server/activity.go",
       "statements": 11,
       "covered": 11,
       "uncoveredBlocks": []
     },
     {
-      "file": "github.com/pterodactyl/wings/server/backup.go",
+      "file": "github.com/Aquadactyl/manta/server/backup.go",
       "statements": 73,
       "covered": 71,
       "uncoveredBlocks": [
@@ -2148,7 +2148,7 @@
       ]
     },
     {
-      "file": "github.com/pterodactyl/wings/server/backup/backup.go",
+      "file": "github.com/Aquadactyl/manta/server/backup/backup.go",
       "statements": 52,
       "covered": 51,
       "uncoveredBlocks": [
@@ -2159,7 +2159,7 @@
       ]
     },
     {
-      "file": "github.com/pterodactyl/wings/server/backup/backup_local.go",
+      "file": "github.com/Aquadactyl/manta/server/backup/backup_local.go",
       "statements": 42,
       "covered": 40,
       "uncoveredBlocks": [
@@ -2174,7 +2174,7 @@
       ]
     },
     {
-      "file": "github.com/pterodactyl/wings/server/backup/backup_s3.go",
+      "file": "github.com/Aquadactyl/manta/server/backup/backup_s3.go",
       "statements": 96,
       "covered": 87,
       "uncoveredBlocks": [
@@ -2213,7 +2213,7 @@
       ]
     },
     {
-      "file": "github.com/pterodactyl/wings/server/config_parser.go",
+      "file": "github.com/Aquadactyl/manta/server/config_parser.go",
       "statements": 26,
       "covered": 24,
       "uncoveredBlocks": [
@@ -2228,37 +2228,37 @@
       ]
     },
     {
-      "file": "github.com/pterodactyl/wings/server/configuration.go",
+      "file": "github.com/Aquadactyl/manta/server/configuration.go",
       "statements": 18,
       "covered": 18,
       "uncoveredBlocks": []
     },
     {
-      "file": "github.com/pterodactyl/wings/server/connections.go",
+      "file": "github.com/Aquadactyl/manta/server/connections.go",
       "statements": 5,
       "covered": 5,
       "uncoveredBlocks": []
     },
     {
-      "file": "github.com/pterodactyl/wings/server/console.go",
+      "file": "github.com/Aquadactyl/manta/server/console.go",
       "statements": 19,
       "covered": 19,
       "uncoveredBlocks": []
     },
     {
-      "file": "github.com/pterodactyl/wings/server/crash.go",
+      "file": "github.com/Aquadactyl/manta/server/crash.go",
       "statements": 27,
       "covered": 27,
       "uncoveredBlocks": []
     },
     {
-      "file": "github.com/pterodactyl/wings/server/errors.go",
+      "file": "github.com/Aquadactyl/manta/server/errors.go",
       "statements": 6,
       "covered": 6,
       "uncoveredBlocks": []
     },
     {
-      "file": "github.com/pterodactyl/wings/server/events.go",
+      "file": "github.com/Aquadactyl/manta/server/events.go",
       "statements": 12,
       "covered": 11,
       "uncoveredBlocks": [
@@ -2269,7 +2269,7 @@
       ]
     },
     {
-      "file": "github.com/pterodactyl/wings/server/filesystem/archive.go",
+      "file": "github.com/Aquadactyl/manta/server/filesystem/archive.go",
       "statements": 121,
       "covered": 112,
       "uncoveredBlocks": [
@@ -2312,7 +2312,7 @@
       ]
     },
     {
-      "file": "github.com/pterodactyl/wings/server/filesystem/compress.go",
+      "file": "github.com/Aquadactyl/manta/server/filesystem/compress.go",
       "statements": 127,
       "covered": 109,
       "uncoveredBlocks": [
@@ -2387,7 +2387,7 @@
       ]
     },
     {
-      "file": "github.com/pterodactyl/wings/server/filesystem/disk_space.go",
+      "file": "github.com/Aquadactyl/manta/server/filesystem/disk_space.go",
       "statements": 104,
       "covered": 99,
       "uncoveredBlocks": [
@@ -2414,13 +2414,13 @@
       ]
     },
     {
-      "file": "github.com/pterodactyl/wings/server/filesystem/errors.go",
+      "file": "github.com/Aquadactyl/manta/server/filesystem/errors.go",
       "statements": 32,
       "covered": 32,
       "uncoveredBlocks": []
     },
     {
-      "file": "github.com/pterodactyl/wings/server/filesystem/filesystem.go",
+      "file": "github.com/Aquadactyl/manta/server/filesystem/filesystem.go",
       "statements": 231,
       "covered": 203,
       "uncoveredBlocks": [
@@ -2527,31 +2527,31 @@
       ]
     },
     {
-      "file": "github.com/pterodactyl/wings/server/filesystem/ignore.go",
+      "file": "github.com/Aquadactyl/manta/server/filesystem/ignore.go",
       "statements": 54,
       "covered": 54,
       "uncoveredBlocks": []
     },
     {
-      "file": "github.com/pterodactyl/wings/server/filesystem/mime.go",
+      "file": "github.com/Aquadactyl/manta/server/filesystem/mime.go",
       "statements": 7,
       "covered": 7,
       "uncoveredBlocks": []
     },
     {
-      "file": "github.com/pterodactyl/wings/server/filesystem/path.go",
+      "file": "github.com/Aquadactyl/manta/server/filesystem/path.go",
       "statements": 7,
       "covered": 7,
       "uncoveredBlocks": []
     },
     {
-      "file": "github.com/pterodactyl/wings/server/filesystem/quota_file.go",
+      "file": "github.com/Aquadactyl/manta/server/filesystem/quota_file.go",
       "statements": 55,
       "covered": 55,
       "uncoveredBlocks": []
     },
     {
-      "file": "github.com/pterodactyl/wings/server/filesystem/stat.go",
+      "file": "github.com/Aquadactyl/manta/server/filesystem/stat.go",
       "statements": 24,
       "covered": 20,
       "uncoveredBlocks": [
@@ -2574,13 +2574,13 @@
       ]
     },
     {
-      "file": "github.com/pterodactyl/wings/server/filesystem/stat_linux.go",
+      "file": "github.com/Aquadactyl/manta/server/filesystem/stat_linux.go",
       "statements": 5,
       "covered": 5,
       "uncoveredBlocks": []
     },
     {
-      "file": "github.com/pterodactyl/wings/server/install.go",
+      "file": "github.com/Aquadactyl/manta/server/install.go",
       "statements": 200,
       "covered": 189,
       "uncoveredBlocks": [
@@ -2627,25 +2627,25 @@
       ]
     },
     {
-      "file": "github.com/pterodactyl/wings/server/installer/errors.go",
+      "file": "github.com/Aquadactyl/manta/server/installer/errors.go",
       "statements": 4,
       "covered": 4,
       "uncoveredBlocks": []
     },
     {
-      "file": "github.com/pterodactyl/wings/server/installer/installer.go",
+      "file": "github.com/Aquadactyl/manta/server/installer/installer.go",
       "statements": 13,
       "covered": 13,
       "uncoveredBlocks": []
     },
     {
-      "file": "github.com/pterodactyl/wings/server/listeners.go",
+      "file": "github.com/Aquadactyl/manta/server/listeners.go",
       "statements": 62,
       "covered": 62,
       "uncoveredBlocks": []
     },
     {
-      "file": "github.com/pterodactyl/wings/server/manager.go",
+      "file": "github.com/Aquadactyl/manta/server/manager.go",
       "statements": 137,
       "covered": 134,
       "uncoveredBlocks": [
@@ -2664,7 +2664,7 @@
       ]
     },
     {
-      "file": "github.com/pterodactyl/wings/server/mounts.go",
+      "file": "github.com/Aquadactyl/manta/server/mounts.go",
       "statements": 81,
       "covered": 78,
       "uncoveredBlocks": [
@@ -2683,7 +2683,7 @@
       ]
     },
     {
-      "file": "github.com/pterodactyl/wings/server/power.go",
+      "file": "github.com/Aquadactyl/manta/server/power.go",
       "statements": 71,
       "covered": 70,
       "uncoveredBlocks": [
@@ -2694,13 +2694,13 @@
       ]
     },
     {
-      "file": "github.com/pterodactyl/wings/server/resources.go",
+      "file": "github.com/Aquadactyl/manta/server/resources.go",
       "statements": 14,
       "covered": 14,
       "uncoveredBlocks": []
     },
     {
-      "file": "github.com/pterodactyl/wings/server/server.go",
+      "file": "github.com/Aquadactyl/manta/server/server.go",
       "statements": 100,
       "covered": 95,
       "uncoveredBlocks": [
@@ -2727,7 +2727,7 @@
       ]
     },
     {
-      "file": "github.com/pterodactyl/wings/server/transfer/archive.go",
+      "file": "github.com/Aquadactyl/manta/server/transfer/archive.go",
       "statements": 9,
       "covered": 8,
       "uncoveredBlocks": [
@@ -2738,13 +2738,13 @@
       ]
     },
     {
-      "file": "github.com/pterodactyl/wings/server/transfer/manager.go",
+      "file": "github.com/Aquadactyl/manta/server/transfer/manager.go",
       "statements": 16,
       "covered": 16,
       "uncoveredBlocks": []
     },
     {
-      "file": "github.com/pterodactyl/wings/server/transfer/source.go",
+      "file": "github.com/Aquadactyl/manta/server/transfer/source.go",
       "statements": 111,
       "covered": 99,
       "uncoveredBlocks": [
@@ -2787,25 +2787,25 @@
       ]
     },
     {
-      "file": "github.com/pterodactyl/wings/server/transfer/transfer.go",
+      "file": "github.com/Aquadactyl/manta/server/transfer/transfer.go",
       "statements": 23,
       "covered": 23,
       "uncoveredBlocks": []
     },
     {
-      "file": "github.com/pterodactyl/wings/server/update.go",
+      "file": "github.com/Aquadactyl/manta/server/update.go",
       "statements": 17,
       "covered": 17,
       "uncoveredBlocks": []
     },
     {
-      "file": "github.com/pterodactyl/wings/server/websockets.go",
+      "file": "github.com/Aquadactyl/manta/server/websockets.go",
       "statements": 36,
       "covered": 36,
       "uncoveredBlocks": []
     },
     {
-      "file": "github.com/pterodactyl/wings/sftp/event.go",
+      "file": "github.com/Aquadactyl/manta/sftp/event.go",
       "statements": 9,
       "covered": 7,
       "uncoveredBlocks": [
@@ -2820,7 +2820,7 @@
       ]
     },
     {
-      "file": "github.com/pterodactyl/wings/sftp/handler.go",
+      "file": "github.com/Aquadactyl/manta/sftp/handler.go",
       "statements": 167,
       "covered": 165,
       "uncoveredBlocks": [
@@ -2835,7 +2835,7 @@
       ]
     },
     {
-      "file": "github.com/pterodactyl/wings/sftp/server.go",
+      "file": "github.com/Aquadactyl/manta/sftp/server.go",
       "statements": 185,
       "covered": 170,
       "uncoveredBlocks": [
@@ -2894,19 +2894,19 @@
       ]
     },
     {
-      "file": "github.com/pterodactyl/wings/sftp/utils.go",
+      "file": "github.com/Aquadactyl/manta/sftp/utils.go",
       "statements": 17,
       "covered": 17,
       "uncoveredBlocks": []
     },
     {
-      "file": "github.com/pterodactyl/wings/system/context_bag.go",
+      "file": "github.com/Aquadactyl/manta/system/context_bag.go",
       "statements": 17,
       "covered": 17,
       "uncoveredBlocks": []
     },
     {
-      "file": "github.com/pterodactyl/wings/system/locker.go",
+      "file": "github.com/Aquadactyl/manta/system/locker.go",
       "statements": 37,
       "covered": 36,
       "uncoveredBlocks": [
@@ -2917,19 +2917,19 @@
       ]
     },
     {
-      "file": "github.com/pterodactyl/wings/system/rate.go",
+      "file": "github.com/Aquadactyl/manta/system/rate.go",
       "statements": 15,
       "covered": 15,
       "uncoveredBlocks": []
     },
     {
-      "file": "github.com/pterodactyl/wings/system/sink_pool.go",
+      "file": "github.com/Aquadactyl/manta/system/sink_pool.go",
       "statements": 44,
       "covered": 44,
       "uncoveredBlocks": []
     },
     {
-      "file": "github.com/pterodactyl/wings/system/system.go",
+      "file": "github.com/Aquadactyl/manta/system/system.go",
       "statements": 33,
       "covered": 23,
       "uncoveredBlocks": [
@@ -2972,13 +2972,13 @@
       ]
     },
     {
-      "file": "github.com/pterodactyl/wings/system/url.go",
+      "file": "github.com/Aquadactyl/manta/system/url.go",
       "statements": 9,
       "covered": 9,
       "uncoveredBlocks": []
     },
     {
-      "file": "github.com/pterodactyl/wings/system/usage_linux.go",
+      "file": "github.com/Aquadactyl/manta/system/usage_linux.go",
       "statements": 59,
       "covered": 58,
       "uncoveredBlocks": [
@@ -2989,13 +2989,13 @@
       ]
     },
     {
-      "file": "github.com/pterodactyl/wings/system/utils.go",
+      "file": "github.com/Aquadactyl/manta/system/utils.go",
       "statements": 80,
       "covered": 80,
       "uncoveredBlocks": []
     },
     {
-      "file": "github.com/pterodactyl/wings/wings.go",
+      "file": "github.com/Aquadactyl/manta/wings.go",
       "statements": 1,
       "covered": 1,
       "uncoveredBlocks": []

@@ -17,15 +17,15 @@ import (
 	"github.com/gin-gonic/gin"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/pterodactyl/wings/config"
-	"github.com/pterodactyl/wings/internal/models"
-	"github.com/pterodactyl/wings/internal/ufs"
-	"github.com/pterodactyl/wings/router/downloader"
-	"github.com/pterodactyl/wings/router/middleware"
-	"github.com/pterodactyl/wings/router/tokens"
-	"github.com/pterodactyl/wings/server"
-	"github.com/pterodactyl/wings/server/filesystem"
-	"github.com/pterodactyl/wings/system"
+	"github.com/Aquadactyl/manta/config"
+	"github.com/Aquadactyl/manta/internal/models"
+	"github.com/Aquadactyl/manta/internal/ufs"
+	"github.com/Aquadactyl/manta/router/downloader"
+	"github.com/Aquadactyl/manta/router/middleware"
+	"github.com/Aquadactyl/manta/router/tokens"
+	"github.com/Aquadactyl/manta/server"
+	"github.com/Aquadactyl/manta/server/filesystem"
+	"github.com/Aquadactyl/manta/system"
 )
 
 // Streaming files through Gin's writer retains its byte accounting and response

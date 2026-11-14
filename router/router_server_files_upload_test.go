@@ -18,11 +18,11 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 
-	"github.com/pterodactyl/wings/config"
-	"github.com/pterodactyl/wings/internal/database"
-	"github.com/pterodactyl/wings/remote"
-	"github.com/pterodactyl/wings/router/tokens"
-	"github.com/pterodactyl/wings/server"
+	"github.com/Aquadactyl/manta/config"
+	"github.com/Aquadactyl/manta/internal/database"
+	"github.com/Aquadactyl/manta/remote"
+	"github.com/Aquadactyl/manta/router/tokens"
+	"github.com/Aquadactyl/manta/server"
 )
 
 const uploadTestServerUuid = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee"

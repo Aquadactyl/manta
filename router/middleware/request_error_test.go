@@ -12,11 +12,11 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/pterodactyl/wings/config"
-	"github.com/pterodactyl/wings/internal/ufs"
-	"github.com/pterodactyl/wings/remote"
-	"github.com/pterodactyl/wings/server"
-	"github.com/pterodactyl/wings/server/filesystem"
+	"github.com/Aquadactyl/manta/config"
+	"github.com/Aquadactyl/manta/internal/ufs"
+	"github.com/Aquadactyl/manta/remote"
+	"github.com/Aquadactyl/manta/server"
+	"github.com/Aquadactyl/manta/server/filesystem"
 )
 
 func init() {

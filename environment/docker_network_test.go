@@ -12,7 +12,7 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/stretchr/testify/require"
 
-	"github.com/pterodactyl/wings/config"
+	"github.com/Aquadactyl/manta/config"
 )
 
 func TestConfigureDockerErrorAndOverlayNetwork(t *testing.T) {

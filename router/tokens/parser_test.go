@@ -7,7 +7,7 @@ import (
 	"github.com/gbrlsnchs/jwt/v3"
 	"github.com/stretchr/testify/require"
 
-	"github.com/pterodactyl/wings/config"
+	"github.com/Aquadactyl/manta/config"
 )
 
 func TestParseTokenValidatesTimeClaims(t *testing.T) {

@@ -5,8 +5,8 @@ package cmd
 import (
 	"context"
 
-	"github.com/pterodactyl/wings/config"
-	"github.com/pterodactyl/wings/environment"
+	"github.com/Aquadactyl/manta/config"
+	"github.com/Aquadactyl/manta/environment"
 )
 
 var runMountCheck = environment.CheckDataMount

@@ -1,6 +1,6 @@
 goos: linux
 goarch: amd64
-pkg: github.com/pterodactyl/wings/router
+pkg: github.com/Aquadactyl/manta/router
 cpu: Intel(R) Core(TM) i7-14700KF
 BenchmarkServerStatus-4        	  148201	      4038 ns/op	    3529 B/op	      27 allocs/op
 BenchmarkServerStatus-4        	  146875	      4060 ns/op	    3529 B/op	      27 allocs/op
@@ -23,4 +23,4 @@ BenchmarkServerStatusScale/1000-4       	  138912	      3933 ns/op	    3523 B/op
 BenchmarkServerStatusScale/1000-4       	  154273	      3648 ns/op	    3523 B/op	      27 allocs/op
 BenchmarkServerStatusScale/1000-4       	  168841	      3806 ns/op	    3523 B/op	      27 allocs/op
 PASS
-ok  	github.com/pterodactyl/wings/router	11.894s
+ok  	github.com/Aquadactyl/manta/router	11.894s

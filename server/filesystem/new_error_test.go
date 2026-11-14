@@ -8,7 +8,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/pterodactyl/wings/internal/ufs"
+	"github.com/Aquadactyl/manta/internal/ufs"
 )
 
 func TestNewReturnsSetupErrors(t *testing.T) {

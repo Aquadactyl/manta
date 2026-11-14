@@ -12,10 +12,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pterodactyl/wings/environment"
-	"github.com/pterodactyl/wings/server"
-	"github.com/pterodactyl/wings/server/transfer"
-	"github.com/pterodactyl/wings/system"
+	"github.com/Aquadactyl/manta/environment"
+	"github.com/Aquadactyl/manta/server"
+	"github.com/Aquadactyl/manta/server/transfer"
+	"github.com/Aquadactyl/manta/system"
 )
 
 func TestFileBatchContextError(t *testing.T) {

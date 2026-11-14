@@ -8,8 +8,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/pterodactyl/wings/environment"
-	"github.com/pterodactyl/wings/remote"
+	"github.com/Aquadactyl/manta/environment"
+	"github.com/Aquadactyl/manta/remote"
 )
 
 func TestConsoleStartupMarkersAndInputOwnership(t *testing.T) {

@@ -10,7 +10,7 @@ import (
 	"emperror.dev/errors"
 	"github.com/docker/docker/api/types/container"
 
-	"github.com/pterodactyl/wings/environment"
+	"github.com/Aquadactyl/manta/environment"
 )
 
 // Decode only counters used by resource reporting. Docker's full response also

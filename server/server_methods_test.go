@@ -22,16 +22,16 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/pterodactyl/wings/config"
-	"github.com/pterodactyl/wings/environment"
-	"github.com/pterodactyl/wings/events"
-	"github.com/pterodactyl/wings/internal/database"
-	"github.com/pterodactyl/wings/internal/models"
-	"github.com/pterodactyl/wings/parser"
-	"github.com/pterodactyl/wings/remote"
-	"github.com/pterodactyl/wings/server/backup"
-	"github.com/pterodactyl/wings/server/filesystem"
-	"github.com/pterodactyl/wings/system"
+	"github.com/Aquadactyl/manta/config"
+	"github.com/Aquadactyl/manta/environment"
+	"github.com/Aquadactyl/manta/events"
+	"github.com/Aquadactyl/manta/internal/database"
+	"github.com/Aquadactyl/manta/internal/models"
+	"github.com/Aquadactyl/manta/parser"
+	"github.com/Aquadactyl/manta/remote"
+	"github.com/Aquadactyl/manta/server/backup"
+	"github.com/Aquadactyl/manta/server/filesystem"
+	"github.com/Aquadactyl/manta/system"
 )
 
 func init() {

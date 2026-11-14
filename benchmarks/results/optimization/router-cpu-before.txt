@@ -56,8 +56,8 @@ Dropped 254 nodes (cum <= 0.04s)
      0.03s  0.35% 64.55%      0.18s  2.11%  bytes.(*Buffer).Write
      0.03s  0.35% 64.91%      0.05s  0.59%  bytes.(*Buffer).WriteByte
      0.03s  0.35% 65.26%      0.10s  1.17%  gcWriteBarrier
-     0.03s  0.35% 65.61%      0.38s  4.46%  github.com/pterodactyl/wings/config.Get
-     0.03s  0.35% 65.96%      4.47s 52.46%  github.com/pterodactyl/wings/router.Configure.AttachApiClient.func5
+     0.03s  0.35% 65.61%      0.38s  4.46%  github.com/Aquadactyl/manta/config.Get
+     0.03s  0.35% 65.96%      4.47s 52.46%  github.com/Aquadactyl/manta/router.Configure.AttachApiClient.func5
      0.03s  0.35% 66.31%      0.09s  1.06%  internal/runtime/maps.(*Map).putSlotSmallFastStr
      0.03s  0.35% 66.67%      0.18s  2.11%  runtime.(*sweepLocked).sweep
      0.03s  0.35% 67.02%      1.70s 19.95%  runtime.gcDrain
@@ -67,10 +67,10 @@ Dropped 254 nodes (cum <= 0.04s)
      0.02s  0.23% 67.96%      0.07s  0.82%  github.com/apex/log.(*Logger).WithFields
      0.02s  0.23% 68.19%      1.85s 21.71%  github.com/gin-gonic/gin.(*Context).Render
      0.02s  0.23% 68.43%      4.43s 52.00%  github.com/gin-gonic/gin.LoggerWithConfig.func1
-     0.02s  0.23% 68.66%      5.72s 67.14%  github.com/pterodactyl/wings/router.BenchmarkServerStatus
-     0.02s  0.23% 68.90%      5.35s 62.79%  github.com/pterodactyl/wings/router.Configure.AttachRequestID.func2
-     0.02s  0.23% 69.13%      2.08s 24.41%  github.com/pterodactyl/wings/router.getServer
-     0.02s  0.23% 69.37%      0.09s  1.06%  github.com/pterodactyl/wings/server.(*Server).ToAPIResponse
+     0.02s  0.23% 68.66%      5.72s 67.14%  github.com/Aquadactyl/manta/router.BenchmarkServerStatus
+     0.02s  0.23% 68.90%      5.35s 62.79%  github.com/Aquadactyl/manta/router.Configure.AttachRequestID.func2
+     0.02s  0.23% 69.13%      2.08s 24.41%  github.com/Aquadactyl/manta/router.getServer
+     0.02s  0.23% 69.37%      0.09s  1.06%  github.com/Aquadactyl/manta/server.(*Server).ToAPIResponse
      0.02s  0.23% 69.60%      0.05s  0.59%  runtime.(*gcControllerState).update
      0.02s  0.23% 69.84%      0.40s  4.69%  runtime.(*mcache).nextFree
      0.02s  0.23% 70.07%      0.15s  1.76%  runtime.(*mheap).allocSpan
@@ -91,11 +91,11 @@ Dropped 254 nodes (cum <= 0.04s)
      0.01s  0.12% 72.42%      0.36s  4.23%  github.com/gin-gonic/gin.(*responseWriter).WriteHeaderNow (inline)
      0.01s  0.12% 72.54%      5.37s 63.03%  github.com/gin-gonic/gin.CustomRecoveryWithWriter.func1
      0.01s  0.12% 72.65%      1.83s 21.48%  github.com/gin-gonic/gin/render.WriteJSON
-     0.01s  0.12% 72.77%      4.51s 52.93%  github.com/pterodactyl/wings/router.Configure.AttachServerManager.func4
-     0.01s  0.12% 72.89%      3.37s 39.55%  github.com/pterodactyl/wings/router.Configure.RequireAuthorization.func8
-     0.01s  0.12% 73.00%      2.80s 32.86%  github.com/pterodactyl/wings/router.Configure.RequireAuthorization.func9
-     0.01s  0.12% 73.12%      2.38s 27.93%  github.com/pterodactyl/wings/router.Configure.ServerExists.func10
-     0.01s  0.12% 73.24%      0.05s  0.59%  github.com/pterodactyl/wings/server.(*Server).Proc
+     0.01s  0.12% 72.77%      4.51s 52.93%  github.com/Aquadactyl/manta/router.Configure.AttachServerManager.func4
+     0.01s  0.12% 72.89%      3.37s 39.55%  github.com/Aquadactyl/manta/router.Configure.RequireAuthorization.func8
+     0.01s  0.12% 73.00%      2.80s 32.86%  github.com/Aquadactyl/manta/router.Configure.RequireAuthorization.func9
+     0.01s  0.12% 73.12%      2.38s 27.93%  github.com/Aquadactyl/manta/router.Configure.ServerExists.func10
+     0.01s  0.12% 73.24%      0.05s  0.59%  github.com/Aquadactyl/manta/server.(*Server).Proc
      0.01s  0.12% 73.36%      0.19s  2.23%  internal/runtime/maps.NewEmptyMap (inline)
      0.01s  0.12% 73.47%      0.06s   0.7%  internal/stringslite.Index
      0.01s  0.12% 73.59%      0.05s  0.59%  internal/stringslite.IndexByte (inline)
@@ -147,13 +147,13 @@ Dropped 254 nodes (cum <= 0.04s)
          0     0% 76.41%      0.05s  0.59%  github.com/google/uuid.New
          0     0% 76.41%      0.05s  0.59%  github.com/google/uuid.NewRandom
          0     0% 76.41%      0.05s  0.59%  github.com/google/uuid.NewRandomFromReader
-         0     0% 76.41%      4.86s 57.04%  github.com/pterodactyl/wings/router.Configure.CaptureErrors.func3
-         0     0% 76.41%      0.60s  7.04%  github.com/pterodactyl/wings/router.Configure.func1
-         0     0% 76.41%      0.45s  5.28%  github.com/pterodactyl/wings/router/middleware.ClearDeadlines
-         0     0% 76.41%      4.86s 57.04%  github.com/pterodactyl/wings/router/middleware.SetAccessControlHeaders.func1
-         0     0% 76.41%      0.05s  0.59%  github.com/pterodactyl/wings/server.(*Server).ID
-         0     0% 76.41%      0.09s  1.06%  github.com/pterodactyl/wings/system.(*AtomicString).MarshalJSON
-         0     0% 76.41%      0.28s  3.29%  github.com/pterodactyl/wings/system.LogURL
+         0     0% 76.41%      4.86s 57.04%  github.com/Aquadactyl/manta/router.Configure.CaptureErrors.func3
+         0     0% 76.41%      0.60s  7.04%  github.com/Aquadactyl/manta/router.Configure.func1
+         0     0% 76.41%      0.45s  5.28%  github.com/Aquadactyl/manta/router/middleware.ClearDeadlines
+         0     0% 76.41%      4.86s 57.04%  github.com/Aquadactyl/manta/router/middleware.SetAccessControlHeaders.func1
+         0     0% 76.41%      0.05s  0.59%  github.com/Aquadactyl/manta/server.(*Server).ID
+         0     0% 76.41%      0.09s  1.06%  github.com/Aquadactyl/manta/system.(*AtomicString).MarshalJSON
+         0     0% 76.41%      0.28s  3.29%  github.com/Aquadactyl/manta/system.LogURL
          0     0% 76.41%      0.26s  3.05%  internal/poll.(*FD).Write
          0     0% 76.41%      0.23s  2.70%  internal/poll.ignoringEINTRIO (inline)
          0     0% 76.41%      0.27s  3.17%  internal/runtime/maps.(*Map).growToSmall

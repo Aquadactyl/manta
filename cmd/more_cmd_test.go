@@ -17,8 +17,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/pterodactyl/wings/config"
-	"github.com/pterodactyl/wings/server"
+	"github.com/Aquadactyl/manta/config"
+	"github.com/Aquadactyl/manta/server"
 )
 
 func TestConnectionLimits(t *testing.T) {

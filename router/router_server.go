@@ -10,11 +10,11 @@ import (
 	"github.com/apex/log"
 	"github.com/gin-gonic/gin"
 
-	"github.com/pterodactyl/wings/router/downloader"
-	"github.com/pterodactyl/wings/router/middleware"
-	"github.com/pterodactyl/wings/router/tokens"
-	"github.com/pterodactyl/wings/server"
-	"github.com/pterodactyl/wings/server/transfer"
+	"github.com/Aquadactyl/manta/router/downloader"
+	"github.com/Aquadactyl/manta/router/middleware"
+	"github.com/Aquadactyl/manta/router/tokens"
+	"github.com/Aquadactyl/manta/server"
+	"github.com/Aquadactyl/manta/server/transfer"
 )
 
 var removeServerFiles = os.RemoveAll

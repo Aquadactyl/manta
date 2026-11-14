@@ -3,7 +3,7 @@ package sftp
 import (
 	"testing"
 
-	"github.com/pterodactyl/wings/config"
+	"github.com/Aquadactyl/manta/config"
 )
 
 func TestConfiguredLimits(t *testing.T) {

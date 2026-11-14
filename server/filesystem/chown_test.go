@@ -9,8 +9,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/pterodactyl/wings/config"
-	"github.com/pterodactyl/wings/internal/ufs"
+	"github.com/Aquadactyl/manta/config"
+	"github.com/Aquadactyl/manta/internal/ufs"
 )
 
 func TestChownPaths(t *testing.T) {

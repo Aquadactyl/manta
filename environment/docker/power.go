@@ -12,8 +12,8 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
 
-	"github.com/pterodactyl/wings/environment"
-	"github.com/pterodactyl/wings/remote"
+	"github.com/Aquadactyl/manta/environment"
+	"github.com/Aquadactyl/manta/remote"
 )
 
 var waitForContainer = func(cli *client.Client, ctx context.Context, id string) (<-chan container.WaitResponse, <-chan error) {

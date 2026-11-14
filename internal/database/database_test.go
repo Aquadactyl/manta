@@ -10,8 +10,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 
-	"github.com/pterodactyl/wings/config"
-	"github.com/pterodactyl/wings/internal/models"
+	"github.com/Aquadactyl/manta/config"
+	"github.com/Aquadactyl/manta/internal/models"
 )
 
 func TestDatabase(t *testing.T) {

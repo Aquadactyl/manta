@@ -12,13 +12,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pterodactyl/wings/internal/models"
+	"github.com/Aquadactyl/manta/internal/models"
 
 	"emperror.dev/errors"
 	"github.com/apex/log"
 	"github.com/cenkalti/backoff/v7"
 
-	"github.com/pterodactyl/wings/system"
+	"github.com/Aquadactyl/manta/system"
 )
 
 type Client interface {

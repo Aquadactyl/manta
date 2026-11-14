@@ -7,7 +7,7 @@ import (
 	"github.com/franela/goblin"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/pterodactyl/wings/internal/progress"
+	"github.com/Aquadactyl/manta/internal/progress"
 )
 
 func TestProgress(t *testing.T) {

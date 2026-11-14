@@ -7,13 +7,13 @@ import (
 
 	"github.com/apex/log"
 	"github.com/gin-gonic/gin"
-	"github.com/pterodactyl/wings/router/tokens"
+	"github.com/Aquadactyl/manta/router/tokens"
 
-	"github.com/pterodactyl/wings/config"
-	"github.com/pterodactyl/wings/router/middleware"
-	"github.com/pterodactyl/wings/server"
-	"github.com/pterodactyl/wings/server/installer"
-	"github.com/pterodactyl/wings/system"
+	"github.com/Aquadactyl/manta/config"
+	"github.com/Aquadactyl/manta/router/middleware"
+	"github.com/Aquadactyl/manta/server"
+	"github.com/Aquadactyl/manta/server/installer"
+	"github.com/Aquadactyl/manta/system"
 )
 
 var readSystemInformation = system.GetSystemInformation

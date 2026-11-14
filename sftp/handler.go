@@ -13,9 +13,9 @@ import (
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
 
-	"github.com/pterodactyl/wings/config"
-	"github.com/pterodactyl/wings/server"
-	"github.com/pterodactyl/wings/server/filesystem"
+	"github.com/Aquadactyl/manta/config"
+	"github.com/Aquadactyl/manta/server"
+	"github.com/Aquadactyl/manta/server/filesystem"
 )
 
 var (

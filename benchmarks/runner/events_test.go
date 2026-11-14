@@ -5,7 +5,7 @@ import (
 	"io"
 	"testing"
 
-	"github.com/pterodactyl/wings/environment"
+	"github.com/Aquadactyl/manta/environment"
 	"github.com/stretchr/testify/require"
 )
 

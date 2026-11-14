@@ -7,7 +7,7 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/stretchr/testify/require"
 
-	"github.com/pterodactyl/wings/environment"
+	"github.com/Aquadactyl/manta/environment"
 )
 
 func TestNewReturnsDockerClientFactoryError(t *testing.T) {

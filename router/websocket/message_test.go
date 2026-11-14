@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/pterodactyl/wings/events"
+	"github.com/Aquadactyl/manta/events"
 )
 
 func TestDecodeEventMessage(t *testing.T) {

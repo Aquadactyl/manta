@@ -15,8 +15,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pterodactyl/wings/config"
-	"github.com/pterodactyl/wings/server"
+	"github.com/Aquadactyl/manta/config"
+	"github.com/Aquadactyl/manta/server"
 )
 
 func startTimeoutTestServer(t *testing.T) string {

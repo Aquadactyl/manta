@@ -11,11 +11,11 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/pterodactyl/wings/config"
-	"github.com/pterodactyl/wings/internal/ufs"
-	"github.com/pterodactyl/wings/parser"
-	"github.com/pterodactyl/wings/remote"
-	"github.com/pterodactyl/wings/server/filesystem"
+	"github.com/Aquadactyl/manta/config"
+	"github.com/Aquadactyl/manta/internal/ufs"
+	"github.com/Aquadactyl/manta/parser"
+	"github.com/Aquadactyl/manta/remote"
+	"github.com/Aquadactyl/manta/server/filesystem"
 )
 
 type closeErrorConfigurationFile struct {

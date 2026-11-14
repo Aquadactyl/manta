@@ -7,8 +7,8 @@ import (
 
 	"github.com/docker/docker/api/types"
 
-	"github.com/pterodactyl/wings/environment"
-	"github.com/pterodactyl/wings/system"
+	"github.com/Aquadactyl/manta/environment"
+	"github.com/Aquadactyl/manta/system"
 )
 
 // attachedEnvironment returns an environment attached to one end of a pipe,

@@ -12,7 +12,7 @@ import (
 
 	"github.com/apex/log"
 
-	"github.com/pterodactyl/wings/system"
+	"github.com/Aquadactyl/manta/system"
 )
 
 // Manta on macOS keeps its files in the home directory of the user it runs as,

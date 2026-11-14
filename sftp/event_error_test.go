@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/pterodactyl/wings/internal/models"
+	"github.com/Aquadactyl/manta/internal/models"
 )
 
 func TestEventLogAndMustLogHandlePersistenceErrors(t *testing.T) {

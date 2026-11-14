@@ -13,11 +13,11 @@ import (
 	"github.com/apex/log"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/pterodactyl/wings/config"
-	"github.com/pterodactyl/wings/internal/models"
-	"github.com/pterodactyl/wings/remote"
-	"github.com/pterodactyl/wings/server"
-	"github.com/pterodactyl/wings/system"
+	"github.com/Aquadactyl/manta/config"
+	"github.com/Aquadactyl/manta/internal/models"
+	"github.com/Aquadactyl/manta/remote"
+	"github.com/Aquadactyl/manta/server"
+	"github.com/Aquadactyl/manta/system"
 )
 
 func TestLogRunErrorBranches(t *testing.T) {

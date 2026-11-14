@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pterodactyl/wings/environment"
+	"github.com/Aquadactyl/manta/environment"
 )
 
 type streamedStats struct {

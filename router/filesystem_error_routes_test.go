@@ -15,10 +15,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/pterodactyl/wings/internal/ufs"
-	"github.com/pterodactyl/wings/router/downloader"
-	"github.com/pterodactyl/wings/server"
-	"github.com/pterodactyl/wings/server/filesystem"
+	"github.com/Aquadactyl/manta/internal/ufs"
+	"github.com/Aquadactyl/manta/router/downloader"
+	"github.com/Aquadactyl/manta/server"
+	"github.com/Aquadactyl/manta/server/filesystem"
 )
 
 func TestFilesystemRoutesRejectInvalidPathsAndTypes(t *testing.T) {

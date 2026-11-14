@@ -7,9 +7,9 @@ import (
 
 	"github.com/apex/log"
 
-	"github.com/pterodactyl/wings/config"
-	"github.com/pterodactyl/wings/environment"
-	"github.com/pterodactyl/wings/server/filesystem"
+	"github.com/Aquadactyl/manta/config"
+	"github.com/Aquadactyl/manta/environment"
+	"github.com/Aquadactyl/manta/server/filesystem"
 )
 
 var resourceEventFixture = []byte(`{"Topic":"resources","Data":{"memory_bytes":624234496,"memory_limit_bytes":2147483648,"cpu_absolute":12.763,"network":{"rx_bytes":381249,"tx_bytes":927156},"uptime":7365124}}`)

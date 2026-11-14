@@ -14,9 +14,9 @@ import (
 	ws "github.com/gorilla/websocket"
 	"github.com/stretchr/testify/require"
 
-	"github.com/pterodactyl/wings/config"
-	"github.com/pterodactyl/wings/router/tokens"
-	"github.com/pterodactyl/wings/router/websocket"
+	"github.com/Aquadactyl/manta/config"
+	"github.com/Aquadactyl/manta/router/tokens"
+	"github.com/Aquadactyl/manta/router/websocket"
 )
 
 // authenticationMessageFor returns an authentication message carrying a token

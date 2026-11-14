@@ -16,9 +16,9 @@ import (
 	"github.com/juju/ratelimit"
 	"github.com/klauspost/pgzip"
 
-	"github.com/pterodactyl/wings/config"
-	"github.com/pterodactyl/wings/internal/progress"
-	"github.com/pterodactyl/wings/internal/ufs"
+	"github.com/Aquadactyl/manta/config"
+	"github.com/Aquadactyl/manta/internal/progress"
+	"github.com/Aquadactyl/manta/internal/ufs"
 )
 
 const memory = 32 * 1024
