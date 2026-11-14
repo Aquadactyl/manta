@@ -84,7 +84,9 @@ func TestInitServerRejectsConfigurationForDifferentServer(t *testing.T) {
 
 func TestInitServerReturnsConstructionErrors(t *testing.T) {
 	setTestConfig(t)
-	config.Get().System.Data = t.TempDir()
+	root := t.TempDir()
+	config.Get().System.RootDirectory = root
+	config.Get().System.Data = filepath.Join(root, "volumes")
 	const id = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
 
 	t.Run("server defaults", func(t *testing.T) {

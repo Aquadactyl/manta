@@ -5,6 +5,7 @@ package ufs
 
 import (
 	"os"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -35,6 +36,13 @@ func TestOpenatResolvedTypeRetriesInterruptedOpen(t *testing.T) {
 	}
 
 	fd, err := fs.openatResolvedType(int(parent.Fd()), "file", unix.O_RDONLY, 0, false)
+	if runtime.GOOS == "darwin" {
+		// Darwin's userspace resolver does not perform post-open path verification.
+		// The injected EINTR retry still occurs before that platform-specific result.
+		require.ErrorContains(t, err, "path verification after opening is not used on macOS")
+		require.Equal(t, 2, calls)
+		return
+	}
 	require.NoError(t, err)
 	require.Equal(t, 2, calls)
 	require.NoError(t, unix.Close(fd))

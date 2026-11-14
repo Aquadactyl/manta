@@ -177,7 +177,7 @@ func TestUserspaceOpenBeneathOPathFollowsFinalSymlink(t *testing.T) {
 	defer unix.Close(fd)
 	var st unix.Stat_t
 	require.NoError(t, unix.Fstat(fd, &st))
-	assert.Equal(t, uint32(unix.S_IFREG), st.Mode&unix.S_IFMT)
+	assert.Equal(t, uint64(unix.S_IFREG), uint64(st.Mode&unix.S_IFMT))
 }
 
 func TestUserspaceOpenBeneathSymlinkEdgeCases(t *testing.T) {
