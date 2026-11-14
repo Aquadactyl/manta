@@ -198,7 +198,10 @@ func TestCustomMountsResolveAllowedMounts(t *testing.T) {
 func TestCustomMountsIgnoreNonRootPathResolvingToRoot(t *testing.T) {
 	root := setupMountTest(t)
 	allowed := filepath.Join(root, "root-link")
-	config.Update(func(c *config.Configuration) { c.AllowedMounts = []string{allowed} })
+	config.Update(func(c *config.Configuration) {
+		c.AllowedMounts = []string{allowed}
+		c.System.User.Uid = os.Geteuid()
+	})
 	oldEval := mountPathEvalSymlinks
 	mountPathEvalSymlinks = func(p string) (string, error) {
 		if p == allowed {

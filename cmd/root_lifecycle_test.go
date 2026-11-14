@@ -305,6 +305,13 @@ func TestRootCmdRunLifecycle(t *testing.T) {
 	oldConfigureDocker := configureDocker
 	t.Cleanup(func() { configureDocker = oldConfigureDocker })
 	configureDocker = func(context.Context) error { return nil }
+	oldResetRootServerStates := resetRootServerStates
+	resetFinished := make(chan struct{})
+	resetRootServerStates = func(context.Context, remote.Client) error {
+		close(resetFinished)
+		return nil
+	}
+	t.Cleanup(func() { resetRootServerStates = oldResetRootServerStates })
 
 	origConfigPath := configPath
 	configPath = cfgPath
@@ -334,6 +341,11 @@ func TestRootCmdRunLifecycle(t *testing.T) {
 	assert.NotPanics(t, func() {
 		rootCmdRun(cmd, nil)
 	})
+	select {
+	case <-resetFinished:
+	case <-time.After(5 * time.Second):
+		t.Fatal("timed out waiting for the panel state reset")
+	}
 	require.Error(t, startRootCron(context.Background(), lifecycleManager))
 }
 
