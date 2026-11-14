@@ -125,7 +125,7 @@ func TestCreateRejectsInvalidSELinuxMode(t *testing.T) {
 
 	e := &Environment{
 		Id:            "container-id",
-		Configuration: environment.NewConfiguration(environment.Settings{}, nil),
+		Configuration: environment.NewConfiguration(environment.Settings{Labels: map[string]string{"custom": "label"}}, nil),
 		meta:          &Metadata{Image: "~local-image"},
 		client:        cli,
 		emitter:       events.NewBus(),

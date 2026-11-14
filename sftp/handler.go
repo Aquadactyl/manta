@@ -18,6 +18,12 @@ import (
 	"github.com/pterodactyl/wings/server/filesystem"
 )
 
+var (
+	handlerTouchFile  = (*filesystem.Filesystem).Touch
+	handlerChownFile  = (*filesystem.Filesystem).Chown
+	handlerDeleteFile = (*filesystem.Filesystem).Delete
+)
+
 const (
 	PermissionFileRead        = "file.read"
 	PermissionFileReadContent = "file.read-content"
@@ -208,7 +214,7 @@ func (h *Handler) Filewrite(request *sftp.Request) (io.WriterAt, error) {
 	if slot == nil {
 		return nil, sftp.ErrSSHFxFailure
 	}
-	f, err := h.fs.Touch(request.Filepath, openFlags)
+	f, err := handlerTouchFile(h.fs, request.Filepath, openFlags)
 	if err != nil {
 		slot.close()
 		if errors.Is(err, os.ErrExist) {
@@ -220,7 +226,7 @@ func (h *Handler) Filewrite(request *sftp.Request) (io.WriterAt, error) {
 	}
 	// Chown may or may not have been called in the touch function, so always do
 	// it at this point to avoid the file being improperly owned.
-	_ = h.fs.Chown(request.Filepath)
+	_ = handlerChownFile(h.fs, request.Filepath)
 	event := server.ActivitySftpWrite
 	if permission == PermissionFileCreate {
 		event = server.ActivitySftpCreate
@@ -302,7 +308,7 @@ func (h *Handler) Filecmd(request *sftp.Request) error {
 			return sftp.ErrSSHFxPermissionDenied
 		}
 		p := filepath.Clean(request.Filepath)
-		if err := h.fs.Delete(p); err != nil {
+		if err := handlerDeleteFile(h.fs, p); err != nil {
 			l.WithField("error", err).Error("failed to remove directory")
 			return sftp.ErrSSHFxFailure
 		}
@@ -335,7 +341,7 @@ func (h *Handler) Filecmd(request *sftp.Request) error {
 		if !h.can(PermissionFileDelete) {
 			return sftp.ErrSSHFxPermissionDenied
 		}
-		if err := h.fs.Delete(request.Filepath); err != nil {
+		if err := handlerDeleteFile(h.fs, request.Filepath); err != nil {
 			if errors.Is(err, os.ErrNotExist) {
 				return sftp.ErrSSHFxNoSuchFile
 			}
@@ -355,7 +361,7 @@ func (h *Handler) Filecmd(request *sftp.Request) error {
 	// Not failing here is intentional. We still made the file, it is just owned incorrectly
 	// and will likely cause some issues. There is no logical check for if the file was removed
 	// because both of those cases (Rmdir, Remove) have an explicit return rather than break.
-	if err := h.fs.Chown(target); err != nil {
+	if err := handlerChownFile(h.fs, target); err != nil {
 		l.WithField("error", err).Warn("error chowning file")
 	}
 

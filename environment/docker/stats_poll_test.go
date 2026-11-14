@@ -7,6 +7,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/docker/docker/client"
 	"github.com/stretchr/testify/require"
@@ -77,5 +78,51 @@ func TestPollResourcesErrorAndStopPaths(t *testing.T) {
 				require.NoError(t, err)
 			}
 		})
+	}
+}
+
+func TestPollResourcesStopsAfterServerTurnsOffline(t *testing.T) {
+	previousCLI, previousFast := cli, fastEnabled
+	t.Cleanup(func() {
+		o = sync.Once{}
+		cli, fastEnabled = previousCLI, previousFast
+	})
+	config.Set(&config.Configuration{AuthenticationToken: "test-token", Docker: config.DockerConfiguration{UsePerformantInspect: true}})
+	fastEnabled = true
+	started, release := make(chan struct{}), make(chan struct{})
+	api := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case strings.HasSuffix(r.URL.Path, "/stats"):
+			w.WriteHeader(http.StatusOK)
+			w.(http.Flusher).Flush()
+			close(started)
+			<-release
+			_, _ = w.Write([]byte("{}\n"))
+		case strings.HasSuffix(r.URL.Path, "/json"):
+			_, _ = w.Write([]byte(`{"State":{"Running":true,"StartedAt":"2026-11-14T00:00:00Z"}}`))
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer api.Close()
+	cli, err := client.NewClientWithOpts(client.WithHost(api.URL), client.WithVersion("1.51"))
+	require.NoError(t, err)
+	defer cli.Close()
+	o = sync.Once{}
+	e := &Environment{Id: "poll-resources-offline", client: cli, st: system.NewAtomicString(environment.ProcessRunningState), emitter: events.NewBus()}
+	done := make(chan error, 1)
+	go func() { done <- e.pollResources(context.Background()) }()
+	select {
+	case <-started:
+	case <-time.After(time.Second):
+		t.Fatal("timed out waiting for stats stream")
+	}
+	e.SetState(environment.ProcessOfflineState)
+	close(release)
+	select {
+	case err := <-done:
+		require.NoError(t, err)
+	case <-time.After(time.Second):
+		t.Fatal("poller did not stop after the process went offline")
 	}
 }

@@ -15,6 +15,7 @@ import (
 
 	"github.com/pterodactyl/wings/config"
 	"github.com/pterodactyl/wings/internal/database"
+	"github.com/pterodactyl/wings/internal/ufs"
 	"github.com/pterodactyl/wings/server"
 	"github.com/pterodactyl/wings/server/filesystem"
 )
@@ -462,6 +463,39 @@ func TestSftpRemainingCoverage(t *testing.T) {
 	// 6. Filelist Stat error != ErrNotExist (path under regular file -> ENOTDIR)
 	_, err = h.Filelist(pkgsftp.NewRequest("Stat", "/fill.txt/under"))
 	assert.ErrorIs(t, err, pkgsftp.ErrSSHFxFailure)
+
+	// Exclusive creates distinguish an existing path from a create race.
+	exclusive := pkgsftp.NewRequest("Write", "/exclusive.txt")
+	exclusive.Flags = 0x28 // SSH_FXF_CREAT | SSH_FXF_EXCL
+	w, err := h.Filewrite(exclusive)
+	require.NoError(t, err)
+	if closer, ok := w.(io.Closer); ok {
+		require.NoError(t, closer.Close())
+	}
+	_, err = h.Filewrite(exclusive)
+	assert.ErrorIs(t, err, os.ErrExist)
+
+	oldTouch := handlerTouchFile
+	t.Cleanup(func() { handlerTouchFile = oldTouch })
+	handlerTouchFile = func(*filesystem.Filesystem, string, int) (ufs.File, error) {
+		return nil, os.ErrExist
+	}
+	race := pkgsftp.NewRequest("Write", "/exclusive-race.txt")
+	race.Flags = 0x28
+	_, err = h.Filewrite(race)
+	assert.ErrorIs(t, err, os.ErrExist)
+	handlerTouchFile = oldTouch
+
+	oldChown := handlerChownFile
+	t.Cleanup(func() { handlerChownFile = oldChown })
+	handlerChownFile = func(*filesystem.Filesystem, string) error { return errors.New("chown failed") }
+	assert.Equal(t, pkgsftp.ErrSSHFxOk, h.Filecmd(pkgsftp.NewRequest("Mkdir", "/chown-warning")))
+	handlerChownFile = oldChown
+	oldDelete := handlerDeleteFile
+	t.Cleanup(func() { handlerDeleteFile = oldDelete })
+	handlerDeleteFile = func(*filesystem.Filesystem, string) error { return os.ErrNotExist }
+	assert.Equal(t, pkgsftp.ErrSSHFxNoSuchFile, h.Filecmd(pkgsftp.NewRequest("Remove", "/missing-to-remove")))
+	handlerDeleteFile = oldDelete
 }
 
 type zeroReader struct{}

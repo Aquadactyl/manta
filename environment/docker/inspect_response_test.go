@@ -116,6 +116,7 @@ func TestExistsAndExitStateReturnUnexpectedInspectErrors(t *testing.T) {
 	require.False(t, exists)
 	_, _, err = e.ExitState()
 	require.ErrorContains(t, err, "environment/docker: failed to inspect container")
+	require.ErrorContains(t, e.InSituUpdate(), "environment/docker: could not inspect container")
 }
 
 func TestFastInspectRejectsInvalidRequestPath(t *testing.T) {

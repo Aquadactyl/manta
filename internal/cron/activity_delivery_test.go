@@ -245,6 +245,39 @@ func TestStoredActivityIsLimited(t *testing.T) {
 	assert.Equal(t, 19, newest.ID-oldest.ID)
 }
 
+func TestCronOperationsReturnDeleteErrors(t *testing.T) {
+	installDeleteFailure := func(t *testing.T) {
+		t.Helper()
+		require.NoError(t, database.Instance().Exec(`CREATE TRIGGER fail_activity_delete BEFORE DELETE ON activities BEGIN SELECT RAISE(FAIL, 'delete failed'); END`).Error)
+		t.Cleanup(func() { _ = database.Instance().Exec(`DROP TRIGGER IF EXISTS fail_activity_delete`).Error })
+	}
+
+	t.Run("activity send batch", func(t *testing.T) {
+		setupDatabase(t)
+		insertActivity(t, "server:console.command", zoneIP, "bad ip")
+		installDeleteFailure(t)
+		ac, _ := newCrons(t, &fakePanel{})
+		_, err := ac.sendBatch(context.Background())
+		require.ErrorContains(t, err, "delete failed")
+	})
+
+	t.Run("sftp send batch", func(t *testing.T) {
+		setupDatabase(t)
+		insertActivity(t, "server:sftp.write", zoneIP, "/bad-ip.txt")
+		installDeleteFailure(t)
+		_, sc := newCrons(t, &fakePanel{})
+		_, err := sc.sendBatch(context.Background())
+		require.ErrorContains(t, err, "delete failed")
+	})
+
+	t.Run("prune", func(t *testing.T) {
+		setupDatabase(t)
+		insertMany(t, 5, "server:console.command", models.ActivityMeta{"command": "prune"})
+		installDeleteFailure(t)
+		require.ErrorContains(t, pruneActivity(context.Background(), 1), "delete failed")
+	})
+}
+
 func insertMany(t *testing.T, n int, event models.Event, meta models.ActivityMeta) {
 	t.Helper()
 	batch := make([]models.Activity, 0, n)

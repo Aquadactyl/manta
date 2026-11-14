@@ -298,9 +298,7 @@ func (c *SFTPServer) serve(listener net.Listener, conf *ssh.ServerConfig) error 
 				return
 			}
 			defer c.sessions.release(user)
-			if err := c.handle(sconn, chans, reqs); err != nil {
-				log.WithField("error", err).WithField("ip", conn.RemoteAddr().String()).Error("sftp: failed to accept inbound connection")
-			}
+			logInboundHandleError(c.handle(sconn, chans, reqs), conn.RemoteAddr().String())
 		}(conn, key)
 	}
 }
@@ -382,14 +380,24 @@ func (c *SFTPServer) handle(sconn *ssh.ServerConn, chans <-chan ssh.NewChannel, 
 		wg.Add(1)
 		go func(srv *server.Server, channel ssh.Channel) {
 			defer wg.Done()
-			if err := c.Handle(sconn, srv, channel); err != nil {
-				log.WithField("error", err).WithField("user", sconn.User()).Error("sftp: failed to handle session")
-			}
+			logSessionHandleError(c.Handle(sconn, srv, channel), sconn.User())
 		}(srv, channel)
 	}
 
 	wg.Wait()
 	return nil
+}
+
+func logInboundHandleError(err error, ip string) {
+	if err != nil {
+		log.WithField("error", err).WithField("ip", ip).Error("sftp: failed to accept inbound connection")
+	}
+}
+
+func logSessionHandleError(err error, user string) {
+	if err != nil {
+		log.WithField("error", err).WithField("user", user).Error("sftp: failed to handle session")
+	}
 }
 
 // Handle spins up a SFTP server instance for the authenticated user's server allowing

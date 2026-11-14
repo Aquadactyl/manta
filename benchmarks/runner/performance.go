@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
 	"net/url"
 	"sync"
 	"sync/atomic"
@@ -56,16 +57,14 @@ func (h *harness) performance() {
 						go func() {
 							defer wg.Done()
 							for {
-								idx := int(next.Add(1) - 1)
-								if idx >= len(lat) {
+								idx, ok := nextPerformanceIndex(&next, len(lat))
+								if !ok {
 									return
 								}
 								t := time.Now()
 								status, _, err := h.request(n, "GET", route.path, nil, false, true)
 								lat[idx] = float64(time.Since(t).Microseconds()) / 1000
-								if err != nil || status != 200 {
-									failed.Add(1)
-								}
+								recordPerformanceFailure(&failed, err, status, http.StatusOK)
 							}
 						}()
 					}
@@ -91,15 +90,11 @@ func (h *harness) performance() {
 					case "http_write_16m":
 						status, _, err := h.request(n, "POST", base+"/files/write?file=/bench/payload.bin", payload, false, true)
 						must(err)
-						if status != 204 {
-							panic(fmt.Sprintf("raw write status %d", status))
-						}
+						checkPerformanceStatus(status, http.StatusNoContent, "raw write status %d", status)
 					case "http_read_16m":
 						status, b, err := h.request(n, "GET", base+"/files/contents?file=/bench/payload.bin", nil, false, true)
 						must(err)
-						if status != 200 {
-							panic("HTTP content mismatch")
-						}
+						checkPerformanceStatus(status, http.StatusOK, "HTTP content mismatch")
 						retrieved = b
 					case "sftp_write_16m":
 						f, err := sc.Create("bench/sftp.bin")
@@ -116,8 +111,8 @@ func (h *harness) performance() {
 						retrieved = b
 					}
 					lat = append(lat, float64(time.Since(start).Microseconds())/1000)
-					if retrieved != nil && sha256.Sum256(retrieved) != expectedHash {
-						panic("transferred content mismatch")
+					if retrieved != nil {
+						requirePerformanceHash(retrieved, expectedHash, "transferred content mismatch")
 					}
 				}
 				must(sc.Close())
@@ -165,19 +160,48 @@ func (h *harness) performance() {
 				Name string `json:"name"`
 			}
 			must(json.Unmarshal(archive, &stat))
-			if stat.Name == "" {
-				panic("archive name missing")
-			}
+			requireArchiveName(stat.Name)
 			start = time.Now()
 			h.api(n, "POST", base+"/files/decompress", map[string]string{"root": "/bench", "file": stat.Name})
 			extractTime := time.Since(start)
 			b := h.api(n, "GET", base+"/files/contents?file="+url.QueryEscape("/bench/payload.bin"), nil)
-			if sha256.Sum256(b) != expectedHash {
-				panic("archive restore content mismatch")
-			}
+			requirePerformanceHash(b, expectedHash, "archive restore content mismatch")
 			h.add(map[string]any{"type": "measurement", "test": "archive_16m_1000_files", "variant": k, "round": round, "compress_ms": float64(compressTime.Microseconds()) / 1000, "extract_ms": float64(extractTime.Microseconds()) / 1000, "verified": true})
 			h.api(n, "POST", base+"/files/delete", map[string]any{"root": "/bench", "files": []string{stat.Name}})
 			h.websocketLoad(k, n, s, round)
 		}
+	}
+}
+
+func nextPerformanceIndex(next *atomic.Int64, limit int) (int, bool) {
+	idx := int(next.Add(1) - 1)
+	return idx, idx < limit
+}
+
+func performanceRequestFailed(err error, status, expected int) bool {
+	return err != nil || status != expected
+}
+
+func recordPerformanceFailure(failed *atomic.Int64, err error, status, expected int) {
+	if performanceRequestFailed(err, status, expected) {
+		failed.Add(1)
+	}
+}
+
+func checkPerformanceStatus(status, expected int, message string, args ...any) {
+	if status != expected {
+		panic(fmt.Sprintf(message, args...))
+	}
+}
+
+func requirePerformanceHash(data []byte, expected [32]byte, message string) {
+	if sha256.Sum256(data) != expected {
+		panic(message)
+	}
+}
+
+func requireArchiveName(name string) {
+	if name == "" {
+		panic("archive name missing")
 	}
 }

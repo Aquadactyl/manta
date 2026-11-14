@@ -62,33 +62,21 @@ func (h *harness) websocketLoad(variant string, n node, s server, round int) {
 	var started time.Time
 	for i := 0; i < 16; i++ {
 		c, event := h.socket(n, s, h.token(n, s, "websocket", nil))
-		if event != "auth success" {
-			panic("valid websocket authentication failed: " + event)
-		}
+		checkWebsocketAuthentication(event)
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
 			defer c.Close()
 			<-ready
 			must(c.SetReadDeadline(time.Now().Add(12 * time.Second)))
-			received := map[string]bool{}
-			for len(received) < 100 {
+			collectBenchmarkWebsocketMessages(func() ([]byte, error) {
 				_, b, err := c.ReadMessage()
-				if err != nil {
-					return
-				}
-				p := strings.Index(string(b), prefix)
-				if p < 0 || len(b) < p+len(prefix)+3 {
-					continue
-				}
-				id := string(b[p+len(prefix) : p+len(prefix)+3])
-				if !received[id] {
-					received[id] = true
-					mu.Lock()
-					lat = append(lat, float64(time.Since(started).Microseconds())/1000)
-					mu.Unlock()
-				}
-			}
+				return b, err
+			}, prefix, 100, func() {
+				mu.Lock()
+				lat = append(lat, float64(time.Since(started).Microseconds())/1000)
+				mu.Unlock()
+			})
 		}()
 	}
 	started = time.Now()
@@ -103,6 +91,42 @@ func (h *harness) websocketLoad(variant string, n node, s server, round int) {
 	row["expected_messages"] = 1600
 	row["received_messages"] = len(lat)
 	h.add(row)
+}
+
+func checkWebsocketAuthentication(event string) {
+	if event != "auth success" {
+		panic("valid websocket authentication failed: " + event)
+	}
+}
+
+func websocketReadFailed(err error) bool {
+	return err != nil
+}
+
+func benchmarkWebsocketMessageID(data []byte, prefix string) (string, bool) {
+	p := strings.Index(string(data), prefix)
+	if p < 0 || len(data) < p+len(prefix)+3 {
+		return "", false
+	}
+	return string(data[p+len(prefix) : p+len(prefix)+3]), true
+}
+
+func collectBenchmarkWebsocketMessages(read func() ([]byte, error), prefix string, count int, onNewMessage func()) {
+	received := make(map[string]bool, count)
+	for len(received) < count {
+		data, err := read()
+		if websocketReadFailed(err) {
+			return
+		}
+		id, ok := benchmarkWebsocketMessageID(data, prefix)
+		if !ok {
+			continue
+		}
+		if !received[id] {
+			received[id] = true
+			onNewMessage()
+		}
+	}
 }
 func (h *harness) security() {
 	h.startAll()

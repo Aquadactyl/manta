@@ -22,6 +22,8 @@ type SinkPool struct {
 	sinks []chan []byte
 }
 
+var sinkPoolWaitTimeout = 10 * time.Millisecond
+
 // NewSinkPool returns a new empty SinkPool. A sink pool generally lives with a
 // server instance for its full lifetime.
 func NewSinkPool() *SinkPool {
@@ -118,7 +120,7 @@ func (p *SinkPool) Push(data []byte) {
 		wg.Add(1)
 		go func(c chan []byte, pending *sync.WaitGroup) {
 			defer pending.Done()
-			timer := time.NewTimer(10 * time.Millisecond)
+			timer := time.NewTimer(sinkPoolWaitTimeout)
 			defer timer.Stop()
 			select {
 			case c <- data:
@@ -130,10 +132,7 @@ func (p *SinkPool) Push(data []byte) {
 				case <-c:
 					// Only attempt to send the message if we were able to make
 					// space for it on the channel.
-					select {
-					case c <- data:
-					default:
-					}
+					trySendSinkMessage(c, data)
 				default:
 					// Do nothing, this is a fallthrough if there is nothing to
 					// read from c.
@@ -143,5 +142,12 @@ func (p *SinkPool) Push(data []byte) {
 	}
 	if wg != nil {
 		wg.Wait()
+	}
+}
+
+func trySendSinkMessage(c chan []byte, data []byte) {
+	select {
+	case c <- data:
+	default:
 	}
 }

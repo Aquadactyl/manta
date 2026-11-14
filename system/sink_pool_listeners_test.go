@@ -3,6 +3,7 @@ package system
 import (
 	"sync"
 	"testing"
+	"time"
 )
 
 func TestSinkPoolHasListenersAcrossLifecycle(t *testing.T) {
@@ -51,5 +52,34 @@ func TestSinkPoolHasListenersDuringSubscriptionChanges(t *testing.T) {
 	wg.Wait()
 	if p.HasListeners() {
 		t.Fatal("listeners remain after every subscriber left")
+	}
+}
+
+func TestSinkPoolPushBlockedReceiverAndFullFallback(t *testing.T) {
+	oldTimeout := sinkPoolWaitTimeout
+	sinkPoolWaitTimeout = time.Second
+	t.Cleanup(func() { sinkPoolWaitTimeout = oldTimeout })
+
+	p := NewSinkPool()
+	defer p.Destroy()
+	c := make(chan []byte, 1)
+	c <- []byte("old")
+	p.On(c)
+	drained := make(chan struct{})
+	time.AfterFunc(5*time.Millisecond, func() {
+		<-c
+		close(drained)
+	})
+	p.Push([]byte("new"))
+	<-drained
+	if got := string(<-c); got != "new" {
+		t.Fatalf("received %q after freeing the blocked sink, want new", got)
+	}
+
+	full := make(chan []byte, 1)
+	full <- []byte("kept")
+	trySendSinkMessage(full, []byte("dropped"))
+	if got := string(<-full); got != "kept" {
+		t.Fatalf("nonblocking fallback replaced %q with %q", got, "dropped")
 	}
 }
