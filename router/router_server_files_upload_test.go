@@ -81,9 +81,9 @@ func newUploadTest(t *testing.T, uploadLimit int64, diskLimit int64) *uploadTest
 	cfg.AuthenticationToken = "test-token"
 	cfg.PanelLocation = "http://panel.test"
 	cfg.System.Data = t.TempDir()
-	cfg.System.User.Uid = os.Getuid()
-	cfg.System.User.Gid = os.Getgid()
-	cfg.Api.UploadLimit = uploadLimit
+	cfg.System.User.UID = os.Getuid()
+	cfg.System.User.GID = os.Getgid()
+	cfg.API.UploadLimit = uploadLimit
 	config.Set(cfg)
 	initTestDatabase(t)
 

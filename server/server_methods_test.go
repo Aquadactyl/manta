@@ -727,8 +727,8 @@ func TestServerPowerAndOnBeforeStart(t *testing.T) {
 	// CheckPermissionsOnBoot and disk space check
 	cfgObj := config.Get()
 	cfgObj.System.CheckPermissionsOnBoot = true
-	cfgObj.System.User.Uid = os.Getuid()
-	cfgObj.System.User.Gid = os.Getgid()
+	cfgObj.System.User.UID = os.Getuid()
+	cfgObj.System.User.GID = os.Getgid()
 	config.Set(cfgObj)
 	s.Config().Build.DiskSpace = 1024
 
@@ -1032,8 +1032,8 @@ func TestServerEnsureDataDirectoryExists(t *testing.T) {
 	cfg := &config.Configuration{
 		AuthenticationToken: "test-auth-token-12345",
 	}
-	cfg.System.User.Uid = os.Getuid()
-	cfg.System.User.Gid = os.Getgid()
+	cfg.System.User.UID = os.Getuid()
+	cfg.System.User.GID = os.Getgid()
 	config.Set(cfg)
 
 	tmpDir := t.TempDir()

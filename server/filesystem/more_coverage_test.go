@@ -21,10 +21,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/mholt/archives"
 	"github.com/Aquadactyl/manta/config"
 	"github.com/Aquadactyl/manta/internal/progress"
 	"github.com/Aquadactyl/manta/internal/ufs"
+	"github.com/mholt/archives"
 )
 
 func init() {
@@ -695,13 +695,13 @@ func TestFilesystemChownChtimesAndFile(t *testing.T) {
 	require.NoError(t, os.Mkdir(filepath.Join(dir, "zzz_dir"), 0755))
 
 	cfg := config.Get()
-	oldUid, oldGid := cfg.System.User.Uid, cfg.System.User.Gid
-	cfg.System.User.Uid = os.Getuid()
-	cfg.System.User.Gid = os.Getgid()
+	oldUid, oldGid := cfg.System.User.UID, cfg.System.User.GID
+	cfg.System.User.UID = os.Getuid()
+	cfg.System.User.GID = os.Getgid()
 	config.Set(cfg)
 	defer func() {
-		cfg.System.User.Uid = oldUid
-		cfg.System.User.Gid = oldGid
+		cfg.System.User.UID = oldUid
+		cfg.System.User.GID = oldGid
 		config.Set(cfg)
 	}()
 

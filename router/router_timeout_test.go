@@ -43,7 +43,7 @@ func startTimeoutTestServerWithClosed(t *testing.T) (string, *atomic.Int64) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	cfg.AuthenticationTokenId = "test-id"
+	cfg.AuthenticationTokenID = "test-id"
 	cfg.AuthenticationToken = "test-token"
 	if err := cfg.ResolveToken(false); err != nil {
 		t.Fatal(err)

@@ -655,7 +655,7 @@ func postServerUploadFiles(c *gin.Context) {
 
 	directory := c.Query("directory")
 
-	maxFileSize := config.Get().Api.UploadLimit
+	maxFileSize := config.Get().API.UploadLimit
 	maxFileSizeBytes := maxFileSize * 1024 * 1024
 	var found bool
 	for {

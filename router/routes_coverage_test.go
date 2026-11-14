@@ -569,9 +569,9 @@ func TestMoreFilesAndBackupRoutes(t *testing.T) {
 	h := newTransferHarness(t, &transferTestPanel{})
 	s := h.seedServer()
 	next := *config.Get()
-	next.System.User.Uid = os.Getuid()
-	next.System.User.Gid = os.Getgid()
-	next.Api.RemoteDownloadAllowlist = []string{"127.0.0.1"}
+	next.System.User.UID = os.Getuid()
+	next.System.User.GID = os.Getgid()
+	next.API.RemoteDownloadAllowlist = []string{"127.0.0.1"}
 	config.Set(&next)
 
 	require.NoError(t, os.MkdirAll(s.Filesystem().Path(), 0755))
@@ -2177,7 +2177,7 @@ func TestFilesEndpointsAdvancedCoverage(t *testing.T) {
 	defer dlServer.Close()
 
 	cfg := *config.Get()
-	cfg.Api.RemoteDownloadAllowlist = []string{"127.0.0.1", "localhost"}
+	cfg.API.RemoteDownloadAllowlist = []string{"127.0.0.1", "localhost"}
 	config.Set(&cfg)
 
 	req = httptest.NewRequest(http.MethodPost, "/api/servers/"+s.ID()+"/files/pull", strings.NewReader(`{
@@ -2633,7 +2633,7 @@ func TestFileOperationsComprehensiveCoverage(t *testing.T) {
 	defer originFail.Close()
 
 	nextCfg := *config.Get()
-	nextCfg.Api.RemoteDownloadAllowlist = []string{"127.0.0.1"}
+	nextCfg.API.RemoteDownloadAllowlist = []string{"127.0.0.1"}
 	config.Set(&nextCfg)
 
 	req = httptest.NewRequest(http.MethodPost, "/api/servers/"+s.ID()+"/files/pull", strings.NewReader(`{"root":"/","url":"`+originFail.URL+`/file.txt","foreground":true}`))

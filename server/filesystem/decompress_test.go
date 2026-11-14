@@ -57,8 +57,8 @@ func TestDecompressSingleFileOwnedByServerUser(t *testing.T) {
 
 	const uid, gid = 1234, 1234
 	cfg := config.Get()
-	cfg.System.User.Uid = uid
-	cfg.System.User.Gid = gid
+	cfg.System.User.UID = uid
+	cfg.System.User.GID = gid
 	config.Set(cfg)
 	fs.isTest = false
 

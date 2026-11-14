@@ -10,12 +10,12 @@ import (
 	"time"
 
 	"emperror.dev/errors"
+	"github.com/Aquadactyl/manta/internal/models"
 	"github.com/apex/log"
 	"github.com/gbrlsnchs/jwt/v3"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
-	"github.com/Aquadactyl/manta/internal/models"
 
 	"github.com/Aquadactyl/manta/system"
 

@@ -281,7 +281,7 @@ func (e *Environment) Create() error {
 	if cfg.System.User.Rootless.Enabled {
 		conf.User = fmt.Sprintf("%d:%d", cfg.System.User.Rootless.ContainerUID, cfg.System.User.Rootless.ContainerGID)
 	} else {
-		conf.User = strconv.Itoa(cfg.System.User.Uid) + ":" + strconv.Itoa(cfg.System.User.Gid)
+		conf.User = strconv.Itoa(cfg.System.User.UID) + ":" + strconv.Itoa(cfg.System.User.GID)
 	}
 
 	networkMode := container.NetworkMode(cfg.Docker.Network.Mode)

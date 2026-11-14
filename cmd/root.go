@@ -177,8 +177,8 @@ func rootCmdRun(cmd *cobra.Command, _ []string) {
 	}
 	log.WithFields(log.Fields{
 		"username": config.Get().System.Username,
-		"uid":      config.Get().System.User.Uid,
-		"gid":      config.Get().System.User.Gid,
+		"uid":      config.Get().System.User.UID,
+		"gid":      config.Get().System.User.GID,
 	}).Info("configured system user successfully")
 	if err := enableLogRotation(); err != nil {
 		rootFatal(log.Fields{"error": err}, "failed to configure log rotation on the system")
@@ -339,7 +339,7 @@ func rootCmdRun(cmd *cobra.Command, _ []string) {
 		autotls = false
 	}
 
-	api := config.Get().Api
+	api := config.Get().API
 	log.WithFields(log.Fields{
 		"use_ssl":      api.Ssl.Enabled,
 		"use_auto_tls": autotls,
@@ -450,7 +450,7 @@ func persistRootStatesUntilDone(ctx context.Context, ticker *time.Ticker, persis
 
 // serveConfiguredAPI chooses the configured TLS mode and starts the API
 // listener. Keeping this separate makes the startup modes independently testable.
-func serveConfiguredAPI(s *http.Server, listener net.Listener, api config.ApiConfiguration, sys config.SystemConfiguration, autotls bool, tlsHostname string) {
+func serveConfiguredAPI(s *http.Server, listener net.Listener, api config.APIConfiguration, sys config.SystemConfiguration, autotls bool, tlsHostname string) {
 	if autotls {
 		m := autocert.Manager{
 			Prompt:     autocert.AcceptTOS,

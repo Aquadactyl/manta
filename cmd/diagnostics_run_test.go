@@ -55,7 +55,7 @@ func TestNewDiagnosticsCommandPreRun(t *testing.T) {
 	command := newDiagnosticsCommand()
 	command.PreRun(command, nil)
 	require.NotNil(t, config.Get())
-	require.Equal(t, DefaultHastebinUrl, command.Flags().Lookup("hastebin-url").DefValue)
+	require.Equal(t, DefaultHastebinURL, command.Flags().Lookup("hastebin-url").DefValue)
 	require.Equal(t, "200", command.Flags().Lookup("log-lines").DefValue)
 }
 

@@ -120,8 +120,8 @@ func TestDockerPowerStatesAndOnBeforeStart(t *testing.T) {
 	}
 	c.Docker.Network.Mode = "bridge"
 	c.Docker.TmpfsSize = 100
-	c.System.User.Uid = 0
-	c.System.User.Gid = 0
+	c.System.User.UID = 0
+	c.System.User.GID = 0
 	config.Set(c)
 
 	envCfg := environment.NewConfiguration(environment.Settings{
@@ -202,8 +202,8 @@ func TestDockerCreateVariations(t *testing.T) {
 	}
 	c.Docker.Network.Mode = "bridge"
 	c.Docker.TmpfsSize = 100
-	c.System.User.Uid = 0
-	c.System.User.Gid = 0
+	c.System.User.UID = 0
+	c.System.User.GID = 0
 	c.System.User.Rootless.Enabled = true
 	c.System.User.Rootless.ContainerUID = 1000
 	c.System.User.Rootless.ContainerGID = 1000
@@ -296,8 +296,8 @@ func TestDockerExistingContainerOperations(t *testing.T) {
 	}
 	cfg.Docker.Network.Mode = "bridge"
 	cfg.Docker.TmpfsSize = 100
-	cfg.System.User.Uid = 0
-	cfg.System.User.Gid = 0
+	cfg.System.User.UID = 0
+	cfg.System.User.GID = 0
 	config.Set(cfg)
 
 	envCfg := environment.NewConfiguration(environment.Settings{
@@ -659,8 +659,8 @@ func TestDockerRunningContainerOperations(t *testing.T) {
 	}
 	cfg.Docker.Network.Mode = "bridge"
 	cfg.Docker.TmpfsSize = 100
-	cfg.System.User.Uid = 0
-	cfg.System.User.Gid = 0
+	cfg.System.User.UID = 0
+	cfg.System.User.GID = 0
 	config.Set(cfg)
 
 	envCfg := environment.NewConfiguration(environment.Settings{

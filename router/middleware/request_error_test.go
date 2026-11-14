@@ -169,7 +169,7 @@ func TestMiddlewareExtractors(t *testing.T) {
 
 	// Disabled
 	config.Update(func(cfg *config.Configuration) {
-		cfg.Api.DisableRemoteDownload = true
+		cfg.API.DisableRemoteDownload = true
 	})
 	c2, _ := gin.CreateTestContext(httptest.NewRecorder())
 	RemoteDownloadEnabled()(c2)
@@ -177,7 +177,7 @@ func TestMiddlewareExtractors(t *testing.T) {
 
 	// Enabled
 	config.Update(func(cfg *config.Configuration) {
-		cfg.Api.DisableRemoteDownload = false
+		cfg.API.DisableRemoteDownload = false
 	})
 	c3, _ := gin.CreateTestContext(httptest.NewRecorder())
 	RemoteDownloadEnabled()(c3)

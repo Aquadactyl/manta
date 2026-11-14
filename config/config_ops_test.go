@@ -24,7 +24,7 @@ func TestConfigOperations(t *testing.T) {
 	assert.Equal(t, cfgPath, cfg.path)
 
 	cfg.AuthenticationToken = "test-token-12345"
-	cfg.AuthenticationTokenId = "test-id-12345"
+	cfg.AuthenticationTokenID = "test-id-12345"
 	cfg.Token = Token{ID: "test-id-12345", Token: "test-token-12345"}
 	cfg.System.RootDirectory = tmp
 
@@ -40,9 +40,9 @@ func TestConfigOperations(t *testing.T) {
 
 	// 4. Update
 	Update(func(c *Configuration) {
-		c.Api.Port = 8085
+		c.API.Port = 8085
 	})
-	assert.Equal(t, 8085, Get().Api.Port)
+	assert.Equal(t, 8085, Get().API.Port)
 
 	// 5. SetDebugViaFlag
 	SetDebugViaFlag(true)
@@ -58,7 +58,7 @@ func TestConfigOperations(t *testing.T) {
 
 	// 8. FromFile
 	require.NoError(t, FromFile(cfgPath))
-	assert.Equal(t, 8085, Get().Api.Port)
+	assert.Equal(t, 8085, Get().API.Port)
 
 	// 9. WriteToDisk with no path returns error
 	noPathCfg := &Configuration{}
@@ -71,28 +71,28 @@ func TestConfigOperations(t *testing.T) {
 func TestPanelConfiguration(t *testing.T) {
 	cfg := &Configuration{
 		Debug:                 false,
-		Uuid:                  "test-uuid-123",
-		AuthenticationTokenId: "id-1",
+		UUID:                  "test-uuid-123",
+		AuthenticationTokenID: "id-1",
 		AuthenticationToken:   "tok-1",
 	}
-	cfg.Api.Host = "127.0.0.1"
-	cfg.Api.Port = 9000
-	cfg.Api.UploadLimit = 50
+	cfg.API.Host = "127.0.0.1"
+	cfg.API.Port = 9000
+	cfg.API.UploadLimit = 50
 	cfg.System.Sftp.Port = 2022
 
 	panelCfg := cfg.PanelConfiguration()
-	assert.Equal(t, "test-uuid-123", panelCfg.Uuid)
-	assert.Equal(t, "id-1", panelCfg.TokenId)
+	assert.Equal(t, "test-uuid-123", panelCfg.UUID)
+	assert.Equal(t, "id-1", panelCfg.TokenID)
 	assert.Equal(t, "tok-1", panelCfg.Token)
-	assert.Equal(t, 9000, panelCfg.Api.Port)
+	assert.Equal(t, 9000, panelCfg.API.Port)
 	assert.Equal(t, 2022, panelCfg.System.Sftp.Port)
 
 	newCfg := &Configuration{}
 	newCfg.ApplyPanelConfiguration(panelCfg)
-	assert.Equal(t, "test-uuid-123", newCfg.Uuid)
-	assert.Equal(t, "id-1", newCfg.AuthenticationTokenId)
+	assert.Equal(t, "test-uuid-123", newCfg.UUID)
+	assert.Equal(t, "id-1", newCfg.AuthenticationTokenID)
 	assert.Equal(t, "tok-1", newCfg.AuthenticationToken)
-	assert.Equal(t, 9000, newCfg.Api.Port)
+	assert.Equal(t, 9000, newCfg.API.Port)
 	assert.Equal(t, 2022, newCfg.System.Sftp.Port)
 }
 
@@ -304,9 +304,9 @@ func TestConfigMoreOperations(t *testing.T) {
 	assert.NoError(t, EnsurePterodactylUser())
 	if runtime.GOOS == "darwin" {
 		u, _ := user.Current()
-		assert.Equal(t, system.MustInt(u.Uid), Get().System.User.Uid)
+		assert.Equal(t, system.MustInt(u.Uid), Get().System.User.UID)
 	} else {
-		assert.Equal(t, 0, Get().System.User.Uid)
+		assert.Equal(t, 0, Get().System.User.UID)
 	}
 
 	// 9. ConfigureTimezone invalid
@@ -401,8 +401,8 @@ func TestEnsurePterodactylUserAndPasswd(t *testing.T) {
 	tmp := t.TempDir()
 	cfg.System.Passwd.Enable = true
 	cfg.System.Passwd.Directory = tmp
-	cfg.System.User.Uid = 988
-	cfg.System.User.Gid = 988
+	cfg.System.User.UID = 988
+	cfg.System.User.GID = 988
 	Set(&cfg)
 	require.NoError(t, ConfigurePasswd())
 	assert.FileExists(t, filepath.Join(tmp, "group"))
@@ -421,11 +421,11 @@ func TestEnsurePterodactylUserAndPasswd(t *testing.T) {
 	require.NoError(t, EnsurePterodactylUser())
 	if runtime.GOOS == "darwin" {
 		u, _ := user.Current()
-		assert.Equal(t, system.MustInt(u.Uid), Get().System.User.Uid)
-		assert.Equal(t, system.MustInt(u.Gid), Get().System.User.Gid)
+		assert.Equal(t, system.MustInt(u.Uid), Get().System.User.UID)
+		assert.Equal(t, system.MustInt(u.Gid), Get().System.User.GID)
 	} else {
-		assert.Equal(t, 0, Get().System.User.Uid)
-		assert.Equal(t, 0, Get().System.User.Gid)
+		assert.Equal(t, 0, Get().System.User.UID)
+		assert.Equal(t, 0, Get().System.User.GID)
 	}
 
 	// 5. Load tests
@@ -469,7 +469,7 @@ func TestEnsurePterodactylUserAndPasswd(t *testing.T) {
 
 	// 9. ResolveToken when env has invalid file path
 	t.Setenv("WINGS_TOKEN_ID", "file:///invalid/nonexistent/secret/path/to/token")
-	cfg.AuthenticationTokenId = "test"
+	cfg.AuthenticationTokenID = "test"
 	assert.Error(t, cfg.ResolveToken(false))
 	t.Setenv("WINGS_TOKEN_ID", "")
 }

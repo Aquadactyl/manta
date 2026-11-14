@@ -8,11 +8,11 @@ import (
 	"time"
 
 	"emperror.dev/errors"
-	"github.com/gin-gonic/gin"
-	ws "github.com/gorilla/websocket"
 	"github.com/Aquadactyl/manta/router/middleware"
 	"github.com/Aquadactyl/manta/router/websocket"
 	"github.com/Aquadactyl/manta/server"
+	"github.com/gin-gonic/gin"
+	ws "github.com/gorilla/websocket"
 	"golang.org/x/time/rate"
 )
 

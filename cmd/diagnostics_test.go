@@ -25,7 +25,7 @@ func TestDiagnosticsReadsConfigFromConfigPath(t *testing.T) {
 	p := filepath.Join(t.TempDir(), "config.yml")
 	cfg, err := config.NewAtPath(p)
 	require.NoError(t, err)
-	cfg.AuthenticationTokenId = "token-id"
+	cfg.AuthenticationTokenID = "token-id"
 	cfg.AuthenticationToken = "test-token"
 	cfg.PanelLocation = "https://panel.example.test"
 	require.NoError(t, config.WriteToDisk(cfg))
@@ -112,12 +112,12 @@ func TestDiagnosticsHelpersAndEdgeCases(t *testing.T) {
 	_, err = uploadToHastebin(badStatusSrv.URL, "test")
 	require.Error(t, err)
 
-	notJsonSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	notJSONSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("not-json"))
 	}))
-	defer notJsonSrv.Close()
-	_, err = uploadToHastebin(notJsonSrv.URL, "test")
+	defer notJSONSrv.Close()
+	_, err = uploadToHastebin(notJSONSrv.URL, "test")
 	require.Error(t, err)
 
 	noKeySrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

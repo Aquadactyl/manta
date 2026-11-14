@@ -11,7 +11,7 @@ func TestResolveRemoteToken(t *testing.T) {
 	t.Setenv("WINGS_TOKEN", "")
 
 	cfg := Configuration{
-		AuthenticationTokenId: "panel-id",
+		AuthenticationTokenID: "panel-id",
 		AuthenticationToken:   "panel-token",
 	}
 	if err := cfg.ResolveToken(true); err != nil {
@@ -27,8 +27,8 @@ func TestResolveRemoteTokenRejectsIndirection(t *testing.T) {
 	t.Setenv("WINGS_TOKEN", "")
 
 	tests := []Configuration{
-		{AuthenticationTokenId: "file:///tmp/id", AuthenticationToken: "panel-token"},
-		{AuthenticationTokenId: "panel-id", AuthenticationToken: "$PANEL_TOKEN"},
+		{AuthenticationTokenID: "file:///tmp/id", AuthenticationToken: "panel-token"},
+		{AuthenticationTokenID: "panel-id", AuthenticationToken: "$PANEL_TOKEN"},
 	}
 	for _, cfg := range tests {
 		if err := cfg.ResolveToken(true); err == nil {
@@ -46,7 +46,7 @@ func TestResolveRemoteTokenRequiresEnvironmentMatch(t *testing.T) {
 	t.Setenv("WINGS_TOKEN", "file://"+secret)
 
 	cfg := Configuration{
-		AuthenticationTokenId: "panel-id",
+		AuthenticationTokenID: "panel-id",
 		AuthenticationToken:   "panel-token",
 	}
 	if err := cfg.ResolveToken(true); err != nil {

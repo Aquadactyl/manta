@@ -56,8 +56,8 @@ func TestEnsurePterodactylUserPlatformAndCreationPaths(t *testing.T) {
 		t.Setenv("WINGS_GID", "5678")
 		require.NoError(t, EnsurePterodactylUser())
 		require.Equal(t, "custom-user", Get().System.Username)
-		require.Equal(t, 1234, Get().System.User.Uid)
-		require.Equal(t, 5678, Get().System.User.Gid)
+		require.Equal(t, 1234, Get().System.User.UID)
+		require.Equal(t, 5678, Get().System.User.GID)
 	})
 
 	t.Run("distroless defaults", func(t *testing.T) {
@@ -67,8 +67,8 @@ func TestEnsurePterodactylUserPlatformAndCreationPaths(t *testing.T) {
 		t.Setenv("WINGS_GID", "")
 		require.NoError(t, EnsurePterodactylUser())
 		require.Equal(t, "pterodactyl", Get().System.Username)
-		require.Equal(t, 988, Get().System.User.Uid)
-		require.Equal(t, 988, Get().System.User.Gid)
+		require.Equal(t, 988, Get().System.User.UID)
+		require.Equal(t, 988, Get().System.User.GID)
 	})
 
 	t.Run("release read error", func(t *testing.T) {
@@ -87,8 +87,8 @@ func TestEnsurePterodactylUserPlatformAndCreationPaths(t *testing.T) {
 		}
 		require.NoError(t, EnsurePterodactylUser())
 		require.Equal(t, "current", Get().System.Username)
-		require.Equal(t, 41, Get().System.User.Uid)
-		require.Equal(t, 42, Get().System.User.Gid)
+		require.Equal(t, 41, Get().System.User.UID)
+		require.Equal(t, 42, Get().System.User.GID)
 	})
 
 	t.Run("rootless current user error", func(t *testing.T) {
@@ -104,8 +104,8 @@ func TestEnsurePterodactylUserPlatformAndCreationPaths(t *testing.T) {
 			return &user.User{Username: "existing", Uid: "51", Gid: "52"}, nil
 		}
 		require.NoError(t, EnsurePterodactylUser())
-		require.Equal(t, 51, Get().System.User.Uid)
-		require.Equal(t, 52, Get().System.User.Gid)
+		require.Equal(t, 51, Get().System.User.UID)
+		require.Equal(t, 52, Get().System.User.GID)
 	})
 
 	t.Run("lookup returns a non-unknown-user error", func(t *testing.T) {
@@ -171,8 +171,8 @@ func TestEnsurePterodactylUserPlatformAndCreationPaths(t *testing.T) {
 		}
 		runUserCommand = func(string, ...string) ([]byte, error) { return nil, nil }
 		require.NoError(t, EnsurePterodactylUser())
-		require.Equal(t, 61, Get().System.User.Uid)
-		require.Equal(t, 62, Get().System.User.Gid)
+		require.Equal(t, 61, Get().System.User.UID)
+		require.Equal(t, 62, Get().System.User.GID)
 	})
 
 	t.Run("created user lookup failure", func(t *testing.T) {

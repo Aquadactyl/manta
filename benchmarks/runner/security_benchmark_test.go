@@ -258,16 +258,16 @@ func TestHarnessSecurity(t *testing.T) {
 	defer ts.Close()
 
 	// Docker mock server for h.dk
-	dockerTs := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	dockerTS := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("safe logs without marker"))
 	}))
-	defer dockerTs.Close()
+	defer dockerTS.Close()
 
 	dockerClient := &http.Client{
 		Transport: &http.Transport{
 			DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
-				return net.Dial("tcp", dockerTs.Listener.Addr().String())
+				return net.Dial("tcp", dockerTS.Listener.Addr().String())
 			},
 		},
 	}

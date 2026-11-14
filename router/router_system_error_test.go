@@ -66,10 +66,10 @@ func TestPostUpdateConfigurationRejectsInvalidTokenAndWriteFailures(t *testing.T
 			cfg, err := config.NewAtPath(configPath)
 			require.NoError(t, err)
 			if tc.envTokenID != "" {
-				cfg.AuthenticationTokenId = "old-token-id"
+				cfg.AuthenticationTokenID = "old-token-id"
 				cfg.AuthenticationToken = "old-token"
 			} else if tc.pathIsDir {
-				cfg.AuthenticationTokenId = "old-token-id"
+				cfg.AuthenticationTokenID = "old-token-id"
 				cfg.AuthenticationToken = "old-token"
 			}
 			config.Set(cfg)

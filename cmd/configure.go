@@ -37,7 +37,7 @@ var (
 	doConfigureRequest      = func(c *http.Client, r *http.Request) (*http.Response, error) { return c.Do(r) }
 )
 
-var nodeIdRegex = regexp.MustCompile(`^(\d+)$`)
+var nodeIDRegex = regexp.MustCompile(`^(\d+)$`)
 
 var configureCmd = &cobra.Command{
 	Use:   "configure",
@@ -167,7 +167,7 @@ func configureQuestions() []*survey.Question {
 			Prompt: &survey.Input{Message: "Node ID: "},
 			Validate: func(ans interface{}) error {
 				if str, ok := ans.(string); ok {
-					if !nodeIdRegex.Match([]byte(str)) {
+					if !nodeIDRegex.Match([]byte(str)) {
 						return fmt.Errorf("please provide a valid authentication token")
 					}
 				}

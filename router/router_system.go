@@ -5,9 +5,9 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/Aquadactyl/manta/router/tokens"
 	"github.com/apex/log"
 	"github.com/gin-gonic/gin"
-	"github.com/Aquadactyl/manta/router/tokens"
 
 	"github.com/Aquadactyl/manta/config"
 	"github.com/Aquadactyl/manta/router/middleware"
@@ -178,8 +178,8 @@ func postUpdateConfiguration(c *gin.Context) {
 
 	// Keep the SSL certificates the same since the Panel always sends the default Lets
 	// Encrypt locations, which would override any location picked manually.
-	update.Api.Ssl.CertificateFile = cfg.Api.Ssl.CertificateFile
-	update.Api.Ssl.KeyFile = cfg.Api.Ssl.KeyFile
+	update.API.Ssl.CertificateFile = cfg.API.Ssl.CertificateFile
+	update.API.Ssl.KeyFile = cfg.API.Ssl.KeyFile
 	cfg.ApplyPanelConfiguration(update)
 
 	// The token that everything authenticates against is a derived value that is

@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/apex/log"
 	"github.com/Aquadactyl/manta/config"
+	"github.com/apex/log"
 )
 
 func TestServeConfiguredAPIInvokesDefaultTLSHandler(t *testing.T) {
@@ -23,7 +23,7 @@ func TestServeConfiguredAPIInvokesDefaultTLSHandler(t *testing.T) {
 	oldFatal := rootFatal
 	t.Cleanup(func() { rootFatal = oldFatal })
 	rootFatal = func(log.Fields, string) {}
-	api := config.ApiConfiguration{}
+	api := config.APIConfiguration{}
 	api.Ssl.Enabled = true
 	api.Ssl.CertificateFile = filepath.Join(t.TempDir(), "missing.crt")
 	api.Ssl.KeyFile = filepath.Join(t.TempDir(), "missing.key")
@@ -47,7 +47,7 @@ func TestServeConfiguredAPIInitializesAutoTLS(t *testing.T) {
 	}
 	s := &http.Server{TLSConfig: &tls.Config{}}
 	sys := config.SystemConfiguration{RootDirectory: t.TempDir()}
-	serveConfiguredAPI(s, listener, config.ApiConfiguration{}, sys, true, "example.com")
+	serveConfiguredAPI(s, listener, config.APIConfiguration{}, sys, true, "example.com")
 	if got != s {
 		t.Fatal("auto-TLS server was not passed to TLS serving")
 	}
@@ -72,11 +72,11 @@ func TestServeConfiguredAPIReportsListenFailures(t *testing.T) {
 	}
 	defer listener.Close()
 	sys := config.SystemConfiguration{RootDirectory: t.TempDir()}
-	serveConfiguredAPI(&http.Server{TLSConfig: &tls.Config{}}, listener, config.ApiConfiguration{}, sys, true, "example.com")
-	api := config.ApiConfiguration{}
+	serveConfiguredAPI(&http.Server{TLSConfig: &tls.Config{}}, listener, config.APIConfiguration{}, sys, true, "example.com")
+	api := config.APIConfiguration{}
 	api.Ssl.Enabled = true
 	serveConfiguredAPI(&http.Server{TLSConfig: &tls.Config{}}, listener, api, sys, false, "")
-	serveConfiguredAPI(&http.Server{}, listener, config.ApiConfiguration{}, sys, false, "")
+	serveConfiguredAPI(&http.Server{}, listener, config.APIConfiguration{}, sys, false, "")
 	if len(messages) != 3 {
 		t.Fatalf("reported %d listener failures, want 3", len(messages))
 	}

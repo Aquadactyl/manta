@@ -186,7 +186,7 @@ func TestRootCmdRunLifecycle(t *testing.T) {
 	require.NoError(t, err)
 
 	cfg.PanelLocation = panel.URL
-	cfg.AuthenticationTokenId = "test-id"
+	cfg.AuthenticationTokenID = "test-id"
 	cfg.AuthenticationToken = "test-token"
 	require.NoError(t, cfg.ResolveToken(false))
 	cfg.System.RootDirectory = tmpDir
@@ -209,9 +209,9 @@ func TestRootCmdRunLifecycle(t *testing.T) {
 	cfg.System.Sftp.Port = 20225
 	cfg.Docker.Network.Mode = "bridge"
 	cfg.Docker.Network.Name = "bridge"
-	cfg.Api.Host = "127.0.0.1"
-	cfg.Api.Port = 0
-	cfg.Api.Ssl.Enabled = false
+	cfg.API.Host = "127.0.0.1"
+	cfg.API.Port = 0
+	cfg.API.Ssl.Enabled = false
 	require.NoError(t, config.WriteToDisk(cfg))
 	config.Set(cfg)
 	require.NoError(t, os.MkdirAll(cfg.System.Data, 0o700))

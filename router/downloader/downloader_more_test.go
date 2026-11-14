@@ -14,10 +14,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/google/uuid"
 	"github.com/Aquadactyl/manta/config"
 	"github.com/Aquadactyl/manta/remote"
 	"github.com/Aquadactyl/manta/server"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -28,9 +28,9 @@ func newUniquePullTestServer(t *testing.T, denylist ...string) *server.Server {
 	t.Cleanup(func() { config.Set(previous) })
 	next := *previous
 	next.System.Data = t.TempDir()
-	next.System.User.Uid = os.Getuid()
-	next.System.User.Gid = os.Getgid()
-	next.Api.RemoteDownloadAllowlist = []string{"127.0.0.1"}
+	next.System.User.UID = os.Getuid()
+	next.System.User.GID = os.Getgid()
+	next.API.RemoteDownloadAllowlist = []string{"127.0.0.1"}
 	config.Set(&next)
 
 	u := uuid.Must(uuid.NewRandom()).String()

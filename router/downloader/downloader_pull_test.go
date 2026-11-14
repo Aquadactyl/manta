@@ -33,9 +33,9 @@ func newPullTestServer(t *testing.T) *server.Server {
 	t.Cleanup(func() { config.Set(previous) })
 	next := *previous
 	next.System.Data = t.TempDir()
-	next.System.User.Uid = os.Getuid()
-	next.System.User.Gid = os.Getgid()
-	next.Api.RemoteDownloadAllowlist = []string{"127.0.0.1"}
+	next.System.User.UID = os.Getuid()
+	next.System.User.GID = os.Getgid()
+	next.API.RemoteDownloadAllowlist = []string{"127.0.0.1"}
 	config.Set(&next)
 
 	settings, err := json.Marshal(map[string]string{"uuid": pullTestServerUuid})

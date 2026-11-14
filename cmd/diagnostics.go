@@ -30,7 +30,7 @@ import (
 )
 
 const (
-	DefaultHastebinUrl = "https://ptero.co"
+	DefaultHastebinURL = "https://ptero.co"
 	DefaultLogLines    = 200
 )
 
@@ -64,7 +64,7 @@ func newDiagnosticsCommand() *cobra.Command {
 		Run: diagnosticsCmdRun,
 	}
 
-	command.Flags().StringVar(&diagnosticsArgs.HastebinURL, "hastebin-url", DefaultHastebinUrl, "the url of the hastebin instance to use")
+	command.Flags().StringVar(&diagnosticsArgs.HastebinURL, "hastebin-url", DefaultHastebinURL, "the url of the hastebin instance to use")
 	command.Flags().IntVar(&diagnosticsArgs.LogLines, "log-lines", DefaultLogLines, "the number of log lines to include in the report")
 
 	return command
@@ -194,7 +194,7 @@ func buildDiagnosticsReport(output *strings.Builder, dockerVersion types.Version
 	if !diagnosticsArgs.IncludeEndpoints && cfg != nil {
 		s := output.String()
 		output.Reset()
-		for _, v := range []string{cfg.PanelLocation, cfg.Api.Host, cfg.Api.Ssl.CertificateFile, cfg.Api.Ssl.KeyFile, cfg.System.Sftp.Address} {
+		for _, v := range []string{cfg.PanelLocation, cfg.API.Host, cfg.API.Ssl.CertificateFile, cfg.API.Ssl.KeyFile, cfg.System.Sftp.Address} {
 			// Replacing an empty string would insert the placeholder between every character.
 			if v != "" {
 				s = strings.ReplaceAll(s, v, "{redacted}")
@@ -216,10 +216,10 @@ func writeConfiguration(w io.Writer) *config.Configuration {
 		cfg = config.Get()
 		fmt.Fprintln(w, "      Panel Location:", redact(cfg.PanelLocation))
 		fmt.Fprintln(w, "")
-		fmt.Fprintln(w, "  Internal Webserver:", redact(cfg.Api.Host), ":", cfg.Api.Port)
-		fmt.Fprintln(w, "         SSL Enabled:", cfg.Api.Ssl.Enabled)
-		fmt.Fprintln(w, "     SSL Certificate:", redact(cfg.Api.Ssl.CertificateFile))
-		fmt.Fprintln(w, "             SSL Key:", redact(cfg.Api.Ssl.KeyFile))
+		fmt.Fprintln(w, "  Internal Webserver:", redact(cfg.API.Host), ":", cfg.API.Port)
+		fmt.Fprintln(w, "         SSL Enabled:", cfg.API.Ssl.Enabled)
+		fmt.Fprintln(w, "     SSL Certificate:", redact(cfg.API.Ssl.CertificateFile))
+		fmt.Fprintln(w, "             SSL Key:", redact(cfg.API.Ssl.KeyFile))
 		fmt.Fprintln(w, "")
 		fmt.Fprintln(w, "         SFTP Server:", redact(cfg.System.Sftp.Address), ":", cfg.System.Sftp.Port)
 		fmt.Fprintln(w, "      SFTP Read-Only:", cfg.System.Sftp.ReadOnly)
@@ -253,9 +253,9 @@ func getDockerInfo() (types.Version, dockersystem.Info, error) {
 	return dockerVersion, dockerInfo, nil
 }
 
-func uploadToHastebin(hbUrl, content string) (string, error) {
+func uploadToHastebin(hbURL, content string) (string, error) {
 	r := strings.NewReader(content)
-	u, err := url.Parse(hbUrl)
+	u, err := url.Parse(hbURL)
 	if err != nil {
 		return "", err
 	}
@@ -282,7 +282,7 @@ func uploadToHastebin(hbUrl, content string) (string, error) {
 		return "", err
 	}
 	if key, ok := pres["key"].(string); ok {
-		u, _ := url.Parse(hbUrl)
+		u, _ := url.Parse(hbURL)
 		u.Path = path.Join(u.Path, key)
 		return u.String(), nil
 	}

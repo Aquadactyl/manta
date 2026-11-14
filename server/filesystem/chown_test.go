@@ -22,7 +22,7 @@ func TestChownPaths(t *testing.T) {
 	})
 	filesystemIsRoot = func() bool { return true }
 	cfg := &config.Configuration{}
-	cfg.System.User.Uid, cfg.System.User.Gid = os.Geteuid(), os.Getegid()
+	cfg.System.User.UID, cfg.System.User.GID = os.Geteuid(), os.Getegid()
 	config.Set(cfg)
 
 	root := t.TempDir()
@@ -85,7 +85,7 @@ func TestChownPaths(t *testing.T) {
 
 	t.Run("directory walk succeeds", func(t *testing.T) {
 		cfg := config.Get()
-		cfg.System.User.Uid, cfg.System.User.Gid = os.Geteuid(), os.Getegid()
+		cfg.System.User.UID, cfg.System.User.GID = os.Geteuid(), os.Getegid()
 		require.NoError(t, fs.Chown("directory"))
 	})
 }

@@ -329,8 +329,8 @@ func (fs *Filesystem) chownFile(name string) error {
 		return nil
 	}
 
-	uid := config.Get().System.User.Uid
-	gid := config.Get().System.User.Gid
+	uid := config.Get().System.User.UID
+	gid := config.Get().System.User.GID
 	return filesystemLchown(fs.unixFS.UnixFS, name, uid, gid)
 }
 
@@ -359,8 +359,8 @@ func (fs *Filesystem) Chown(p string) error {
 		return nil
 	}
 
-	uid := config.Get().System.User.Uid
-	gid := config.Get().System.User.Gid
+	uid := config.Get().System.User.UID
+	gid := config.Get().System.User.GID
 
 	dirfd, name, closeFd, err := fs.unixFS.SafePath(p)
 	defer closeFd()
@@ -508,7 +508,7 @@ func (fs *Filesystem) Copy(p string) error {
 	used = n
 
 	if !fs.isTest && filesystemIsRoot() {
-		if err := filesystemLchownat(fs.unixFS.UnixFS, dirfd, newName, config.Get().System.User.Uid, config.Get().System.User.Gid); err != nil {
+		if err := filesystemLchownat(fs.unixFS.UnixFS, dirfd, newName, config.Get().System.User.UID, config.Get().System.User.GID); err != nil {
 			return err
 		}
 	}

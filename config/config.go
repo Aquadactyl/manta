@@ -76,9 +76,9 @@ type SftpConfiguration struct {
 	MaxAuthenticatingConnectionsPerIP int `json:"-" yaml:"max_authenticating_connections_per_ip"`
 }
 
-// ApiConfiguration defines the configuration for the internal API that is
+// APIConfiguration defines the configuration for the internal API that is
 // exposed by the Wings webserver.
-type ApiConfiguration struct {
+type APIConfiguration struct {
 	// The interface that the internal webserver should bind to.
 	Host string `default:"0.0.0.0" yaml:"host"`
 
@@ -179,8 +179,8 @@ type SystemConfiguration struct {
 			ContainerGID int `yaml:"container_gid" default:"0"`
 		} `yaml:"rootless"`
 
-		Uid int `yaml:"uid"`
-		Gid int `yaml:"gid"`
+		UID int `yaml:"uid"`
+		GID int `yaml:"gid"`
 	} `yaml:"user"`
 
 	// Passwd controls the mounting of a generated passwd files into containers started by Wings.
@@ -347,17 +347,17 @@ type Configuration struct {
 	AppName string `default:"Pterodactyl" json:"app_name" yaml:"app_name"`
 
 	// A unique identifier for this node in the Panel.
-	Uuid string
+	UUID string
 
 	// An identifier for the token which must be included in any requests to the panel
 	// so that the token can be looked up correctly.
-	AuthenticationTokenId string `json:"token_id" yaml:"token_id"`
+	AuthenticationTokenID string `json:"token_id" yaml:"token_id"`
 
 	// The token used when performing operations. Requests to this instance must
 	// validate against it.
 	AuthenticationToken string `json:"token" yaml:"token"`
 
-	Api    ApiConfiguration    `json:"api" yaml:"api"`
+	API    APIConfiguration    `json:"api" yaml:"api"`
 	System SystemConfiguration `json:"system" yaml:"system"`
 	Docker DockerConfiguration `json:"docker" yaml:"docker"`
 
@@ -394,10 +394,10 @@ type Configuration struct {
 // runs on the host and must only be changed by the node operator.
 type PanelConfiguration struct {
 	Debug   bool   `json:"debug"`
-	Uuid    string `json:"uuid"`
-	TokenId string `json:"token_id"`
+	UUID    string `json:"uuid"`
+	TokenID string `json:"token_id"`
 	Token   string `json:"token"`
-	Api     struct {
+	API     struct {
 		Host string `json:"host"`
 		Port int    `json:"port"`
 		Ssl  struct {
@@ -419,15 +419,15 @@ type PanelConfiguration struct {
 func (c *Configuration) PanelConfiguration() PanelConfiguration {
 	var p PanelConfiguration
 	p.Debug = c.Debug
-	p.Uuid = c.Uuid
-	p.TokenId = c.AuthenticationTokenId
+	p.UUID = c.UUID
+	p.TokenID = c.AuthenticationTokenID
 	p.Token = c.AuthenticationToken
-	p.Api.Host = c.Api.Host
-	p.Api.Port = c.Api.Port
-	p.Api.Ssl.Enabled = c.Api.Ssl.Enabled
-	p.Api.Ssl.CertificateFile = c.Api.Ssl.CertificateFile
-	p.Api.Ssl.KeyFile = c.Api.Ssl.KeyFile
-	p.Api.UploadLimit = c.Api.UploadLimit
+	p.API.Host = c.API.Host
+	p.API.Port = c.API.Port
+	p.API.Ssl.Enabled = c.API.Ssl.Enabled
+	p.API.Ssl.CertificateFile = c.API.Ssl.CertificateFile
+	p.API.Ssl.KeyFile = c.API.Ssl.KeyFile
+	p.API.UploadLimit = c.API.UploadLimit
 	p.System.Sftp.Port = c.System.Sftp.Port
 	return p
 }
@@ -436,15 +436,15 @@ func (c *Configuration) PanelConfiguration() PanelConfiguration {
 // allowed to set.
 func (c *Configuration) ApplyPanelConfiguration(p PanelConfiguration) {
 	c.Debug = p.Debug
-	c.Uuid = p.Uuid
-	c.AuthenticationTokenId = p.TokenId
+	c.UUID = p.UUID
+	c.AuthenticationTokenID = p.TokenID
 	c.AuthenticationToken = p.Token
-	c.Api.Host = p.Api.Host
-	c.Api.Port = p.Api.Port
-	c.Api.Ssl.Enabled = p.Api.Ssl.Enabled
-	c.Api.Ssl.CertificateFile = p.Api.Ssl.CertificateFile
-	c.Api.Ssl.KeyFile = p.Api.Ssl.KeyFile
-	c.Api.UploadLimit = p.Api.UploadLimit
+	c.API.Host = p.API.Host
+	c.API.Port = p.API.Port
+	c.API.Ssl.Enabled = p.API.Ssl.Enabled
+	c.API.Ssl.CertificateFile = p.API.Ssl.CertificateFile
+	c.API.Ssl.KeyFile = p.API.Ssl.KeyFile
+	c.API.UploadLimit = p.API.UploadLimit
 	c.System.Sftp.Port = p.System.Sftp.Port
 }
 
@@ -514,7 +514,7 @@ func (c *Configuration) ResolveToken(remote bool) error {
 	}
 
 	var err error
-	if c.Token.ID, err = resolve("token ID", os.Getenv("WINGS_TOKEN_ID"), c.AuthenticationTokenId); err != nil {
+	if c.Token.ID, err = resolve("token ID", os.Getenv("WINGS_TOKEN_ID"), c.AuthenticationTokenID); err != nil {
 		return err
 	}
 	if c.Token.Token, err = resolve("token", os.Getenv("WINGS_TOKEN"), c.AuthenticationToken); err != nil {
@@ -627,8 +627,8 @@ func EnsurePterodactylUser() error {
 	// Our way of detecting if wings is running inside of Docker.
 	if sysName == "distroless" {
 		_config.System.Username = system.FirstNotEmpty(os.Getenv("WINGS_USERNAME"), "pterodactyl")
-		_config.System.User.Uid = system.MustInt(system.FirstNotEmpty(os.Getenv("WINGS_UID"), "988"))
-		_config.System.User.Gid = system.MustInt(system.FirstNotEmpty(os.Getenv("WINGS_GID"), "988"))
+		_config.System.User.UID = system.MustInt(system.FirstNotEmpty(os.Getenv("WINGS_UID"), "988"))
+		_config.System.User.GID = system.MustInt(system.FirstNotEmpty(os.Getenv("WINGS_GID"), "988"))
 		return nil
 	}
 
@@ -639,8 +639,8 @@ func EnsurePterodactylUser() error {
 			return err
 		}
 		_config.System.Username = u.Username
-		_config.System.User.Uid = system.MustInt(u.Uid)
-		_config.System.User.Gid = system.MustInt(u.Gid)
+		_config.System.User.UID = system.MustInt(u.Uid)
+		_config.System.User.GID = system.MustInt(u.Gid)
 		return nil
 	}
 
@@ -653,8 +653,8 @@ func EnsurePterodactylUser() error {
 			return err
 		}
 	} else {
-		_config.System.User.Uid = system.MustInt(u.Uid)
-		_config.System.User.Gid = system.MustInt(u.Gid)
+		_config.System.User.UID = system.MustInt(u.Uid)
+		_config.System.User.GID = system.MustInt(u.Gid)
 		return nil
 	}
 
@@ -678,8 +678,8 @@ func EnsurePterodactylUser() error {
 	if err != nil {
 		return err
 	}
-	_config.System.User.Uid = system.MustInt(u.Uid)
-	_config.System.User.Gid = system.MustInt(u.Gid)
+	_config.System.User.UID = system.MustInt(u.Uid)
+	_config.System.User.GID = system.MustInt(u.Gid)
 	return nil
 }
 
@@ -694,7 +694,7 @@ func ConfigurePasswd() error {
 		`root:x:0:
 container:x:%d:
 nogroup:x:65534:`,
-		_config.System.User.Gid,
+		_config.System.User.GID,
 	)
 	if err := os.WriteFile(filepath.Join(passwd.Directory, "group"), v, 0o644); err != nil { //nolint:gosec // mounted as /etc/group, which containers must be able to read
 		return fmt.Errorf("failed to write file to %s/group: %v", passwd.Directory, err)
@@ -705,8 +705,8 @@ nogroup:x:65534:`,
 container:x:%d:%d::/home/container:/bin/sh
 nobody:x:65534:65534::/var/empty:/bin/sh
 `,
-		_config.System.User.Uid,
-		_config.System.User.Gid,
+		_config.System.User.UID,
+		_config.System.User.GID,
 	)
 	if err := os.WriteFile(filepath.Join(passwd.Directory, "passwd"), v, 0o644); err != nil { //nolint:gosec // mounted as /etc/passwd, which containers must be able to read
 		return fmt.Errorf("failed to write file to %s/passwd: %v", passwd.Directory, err)

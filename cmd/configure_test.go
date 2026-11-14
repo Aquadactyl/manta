@@ -110,7 +110,7 @@ docker:
 
 	cfg, err := config.Load(path)
 	require.NoError(t, err)
-	require.Equal(t, "new-id", cfg.AuthenticationTokenId)
+	require.Equal(t, "new-id", cfg.AuthenticationTokenID)
 	require.Equal(t, "new-token", cfg.AuthenticationToken)
 	require.Equal(t, []string{"/srv/shared"}, cfg.AllowedMounts)
 	require.Contains(t, cfg.Docker.Registries, "registry.example.com")

@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mholt/archives"
 	"github.com/Aquadactyl/manta/internal/ufs"
+	"github.com/mholt/archives"
 	"github.com/stretchr/testify/require"
 )
 

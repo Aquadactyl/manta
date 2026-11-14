@@ -9,7 +9,7 @@ import (
 func TestConfigurePanicsOnInvalidTrustedProxy(t *testing.T) {
 	old := config.Get()
 	t.Cleanup(func() { config.Set(old) })
-	config.Set(&config.Configuration{Api: config.ApiConfiguration{TrustedProxies: []string{"invalid"}}})
+	config.Set(&config.Configuration{API: config.APIConfiguration{TrustedProxies: []string{"invalid"}}})
 
 	defer func() {
 		if recover() == nil {

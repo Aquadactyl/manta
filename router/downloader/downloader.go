@@ -107,7 +107,7 @@ func checkConnection(ctx context.Context, _ string, address string, _ syscall.Ra
 // isBlocked reports whether connecting to the address, resolved from the host,
 // is refused because it is internal and not allowed by the operator.
 func isBlocked(host string, ip netip.Addr) bool {
-	return wnet.IsInternal(ip) && !wnet.IsAllowed(config.Get().Api.RemoteDownloadAllowlist, host, ip)
+	return wnet.IsInternal(ip) && !wnet.IsAllowed(config.Get().API.RemoteDownloadAllowlist, host, ip)
 }
 
 var instance = &Downloader{

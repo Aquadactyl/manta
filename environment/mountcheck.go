@@ -94,7 +94,7 @@ func CheckDataMount(ctx context.Context) {
 
 	cfg := config.Get()
 	dir := cfg.System.Data
-	res := CheckMount(ctx, &dockerMountChecker{cli: cli}, dir, cfg.System.User.Uid, cfg.System.User.Gid)
+	res := CheckMount(ctx, &dockerMountChecker{cli: cli}, dir, cfg.System.User.UID, cfg.System.User.GID)
 
 	l := log.WithField("path", dir)
 	switch res.Status {

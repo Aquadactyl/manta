@@ -30,7 +30,7 @@ func setAllowlist(t *testing.T, entries ...string) {
 	previous := config.Get()
 	t.Cleanup(func() { config.Set(previous) })
 	next := *previous
-	next.Api.RemoteDownloadAllowlist = entries
+	next.API.RemoteDownloadAllowlist = entries
 	config.Set(&next)
 }
 

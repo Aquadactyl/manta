@@ -71,8 +71,8 @@ func newRestoreTestServer(t *testing.T) (*Server, string, string) {
 			DiskCheckInterval: 150,
 		},
 	}
-	cfg.System.User.Uid = os.Getuid()
-	cfg.System.User.Gid = os.Getgid()
+	cfg.System.User.UID = os.Getuid()
+	cfg.System.User.GID = os.Getgid()
 	config.Set(cfg)
 
 	s, err := New(restoreTestClient{})

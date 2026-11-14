@@ -11,13 +11,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/client"
 	"github.com/Aquadactyl/manta/config"
 	"github.com/Aquadactyl/manta/environment"
 	"github.com/Aquadactyl/manta/events"
 	"github.com/Aquadactyl/manta/system"
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/client"
 	"github.com/stretchr/testify/require"
 )
 

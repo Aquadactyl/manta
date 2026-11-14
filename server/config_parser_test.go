@@ -33,8 +33,8 @@ func newConfigParserServer(t *testing.T, diskLimit int64, raw string) (*Server, 
 	cfg, err := config.NewAtPath(filepath.Join(t.TempDir(), "config.yml"))
 	require.NoError(t, err)
 	cfg.AuthenticationToken = "test-token"
-	cfg.System.User.Uid = os.Getuid()
-	cfg.System.User.Gid = os.Getgid()
+	cfg.System.User.UID = os.Getuid()
+	cfg.System.User.GID = os.Getgid()
 	config.Set(cfg)
 
 	root := filepath.Join(t.TempDir(), "server")

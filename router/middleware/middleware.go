@@ -199,7 +199,7 @@ func ClearDeadlines(c *gin.Context) {
 // RemoteDownloadEnabled checks if remote downloads are enabled for this instance
 // and if not aborts the request.
 func RemoteDownloadEnabled() gin.HandlerFunc {
-	disabled := config.Get().Api.DisableRemoteDownload
+	disabled := config.Get().API.DisableRemoteDownload
 	return func(c *gin.Context) {
 		if disabled {
 			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "This functionality is not currently enabled on this instance."})

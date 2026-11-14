@@ -81,7 +81,7 @@ func (s *Server) customMounts() []environment.Mount {
 	cfg := config.Get()
 	var allowed []string
 	for _, a := range cfg.AllowedMounts {
-		resolved, err := resolveMountPath(a, cfg.System.User.Uid)
+		resolved, err := resolveMountPath(a, cfg.System.User.UID)
 		if err != nil {
 			s.Log().WithField("allowed_mount", a).WithField("error", err).Warn("ignoring allowed mount point")
 			continue
@@ -105,7 +105,7 @@ func (s *Server) customMounts() []environment.Mount {
 		})
 
 		// The source is checked against the allowed mounts once it is resolved.
-		resolved, err := resolveMountPath(source, cfg.System.User.Uid)
+		resolved, err := resolveMountPath(source, cfg.System.User.UID)
 		if err != nil {
 			logger.WithField("error", err).Warn("skipping custom server mount")
 			s.publishSkippedMount(target)

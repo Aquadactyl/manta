@@ -150,8 +150,8 @@ func TestCustomMountsRequireProtectedParentDirectories(t *testing.T) {
 			t.Fatal(err)
 		}
 		config.Update(func(c *config.Configuration) {
-			c.System.User.Uid = 12345
-			c.System.User.Gid = 12345
+			c.System.User.UID = 12345
+			c.System.User.GID = 12345
 		})
 
 		if got := mountSource(t, filepath.Join(root, "mnt", "shared", "maps")); got != "" {
@@ -200,7 +200,7 @@ func TestCustomMountsIgnoreNonRootPathResolvingToRoot(t *testing.T) {
 	allowed := filepath.Join(root, "root-link")
 	config.Update(func(c *config.Configuration) {
 		c.AllowedMounts = []string{allowed}
-		c.System.User.Uid = os.Geteuid()
+		c.System.User.UID = os.Geteuid()
 	})
 	oldEval := mountPathEvalSymlinks
 	mountPathEvalSymlinks = func(p string) (string, error) {

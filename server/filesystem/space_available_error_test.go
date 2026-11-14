@@ -8,9 +8,9 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/Aquadactyl/manta/internal/ufs"
 	"github.com/klauspost/compress/zip"
 	"github.com/mholt/archives"
-	"github.com/Aquadactyl/manta/internal/ufs"
 	"github.com/stretchr/testify/require"
 )
 

@@ -60,7 +60,7 @@ func Configure(m *wserver.Manager, client remote.Client) *gin.Engine {
 
 	router := gin.New()
 	router.Use(gin.Recovery())
-	if err := router.SetTrustedProxies(config.Get().Api.TrustedProxies); err != nil {
+	if err := router.SetTrustedProxies(config.Get().API.TrustedProxies); err != nil {
 		panic(errors.WithStack(err))
 	}
 	router.Use(middleware.AttachRequestID(), middleware.CaptureErrors(), middleware.SetAccessControlHeaders())

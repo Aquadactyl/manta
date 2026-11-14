@@ -108,8 +108,8 @@ func TestDockerContainerCreateDestroy(t *testing.T) {
 	}
 	cfg.Docker.Network.Mode = "bridge"
 	cfg.Docker.TmpfsSize = 100
-	cfg.System.User.Uid = 0
-	cfg.System.User.Gid = 0
+	cfg.System.User.UID = 0
+	cfg.System.User.GID = 0
 	config.Set(cfg)
 
 	envCfg := environment.NewConfiguration(environment.Settings{
@@ -179,8 +179,8 @@ func TestDockerContainerStartAndControl(t *testing.T) {
 	}
 	cfg.Docker.Network.Mode = "bridge"
 	cfg.Docker.TmpfsSize = 100
-	cfg.System.User.Uid = 0
-	cfg.System.User.Gid = 0
+	cfg.System.User.UID = 0
+	cfg.System.User.GID = 0
 	config.Set(cfg)
 
 	envCfg := environment.NewConfiguration(environment.Settings{
@@ -251,8 +251,8 @@ func TestDockerStopConfigurationsAndTerminate(t *testing.T) {
 	}
 	cfg.Docker.Network.Mode = "bridge"
 	cfg.Docker.TmpfsSize = 100
-	cfg.System.User.Uid = 0
-	cfg.System.User.Gid = 0
+	cfg.System.User.UID = 0
+	cfg.System.User.GID = 0
 	config.Set(cfg)
 
 	envCfg := environment.NewConfiguration(environment.Settings{

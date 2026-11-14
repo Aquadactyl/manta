@@ -25,7 +25,7 @@ func TestPostUpdateConfigurationRotatesCredentials(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	cfg.AuthenticationTokenId = "old-id"
+	cfg.AuthenticationTokenID = "old-id"
 	cfg.AuthenticationToken = "old-token"
 	if err := cfg.ResolveToken(false); err != nil {
 		t.Fatal(err)
@@ -97,11 +97,11 @@ func TestPostUpdateConfigurationOnlyAppliesPanelValues(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	cfg.AuthenticationTokenId = "old-id"
+	cfg.AuthenticationTokenID = "old-id"
 	cfg.AuthenticationToken = "old-token"
 	cfg.System.Username = "pterodactyl"
-	cfg.System.User.Uid = 988
-	cfg.System.User.Gid = 988
+	cfg.System.User.UID = 988
+	cfg.System.User.GID = 988
 	if err := cfg.ResolveToken(false); err != nil {
 		t.Fatal(err)
 	}
@@ -144,13 +144,13 @@ func TestPostUpdateConfigurationOnlyAppliesPanelValues(t *testing.T) {
 
 	expected := config.Get()
 	expected.Debug = true
-	expected.Uuid = "node-uuid"
-	expected.AuthenticationTokenId = "new-id"
+	expected.UUID = "node-uuid"
+	expected.AuthenticationTokenID = "new-id"
 	expected.AuthenticationToken = "new-token"
-	expected.Api.Host = "127.0.0.1"
-	expected.Api.Port = 8443
-	expected.Api.Ssl.Enabled = true
-	expected.Api.UploadLimit = 250
+	expected.API.Host = "127.0.0.1"
+	expected.API.Port = 8443
+	expected.API.Ssl.Enabled = true
+	expected.API.UploadLimit = 250
 	expected.System.Sftp.Port = 2023
 	want, err := yaml.Marshal(expected)
 	if err != nil {
