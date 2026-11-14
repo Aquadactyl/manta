@@ -212,6 +212,7 @@ func TestCustomMountsIgnoreNonRootPathResolvingToRoot(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	s.Config().Mounts = []Mount{{Source: "/usr", Target: "/data"}}
 	if mounts := s.customMounts(); len(mounts) != 0 {
 		t.Fatalf("expected no custom mounts, got %v", mounts)
 	}

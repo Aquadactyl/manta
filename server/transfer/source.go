@@ -143,9 +143,25 @@ func (t *Transfer) PushArchiveToTarget(targetURL, token string) ([]byte, error) 
 			t.Log().Debug("finished copying dest to tee")
 		}()
 
-		if err := a.Stream(ctx, pw); err != nil {
-			_ = pw.CloseWithError(err)
-			_ = src.CloseWithError(err)
+		streamFinished := make(chan struct{})
+		cancelWatcherDone := make(chan struct{})
+		go func() {
+			defer close(cancelWatcherDone)
+			select {
+			case <-ctx.Done():
+				// Archive.Stream closes its gzip writer before returning. If the
+				// destination has stopped reading, that final flush can otherwise
+				// block forever on this pipe after cancellation.
+				_ = src.CloseWithError(ctx.Err())
+			case <-streamFinished:
+			}
+		}()
+		streamErr := a.Stream(ctx, pw)
+		close(streamFinished)
+		<-cancelWatcherDone
+		if streamErr != nil {
+			_ = pw.CloseWithError(streamErr)
+			_ = src.CloseWithError(streamErr)
 			if copyErr := <-ch; copyErr != nil {
 				t.Log().WithError(copyErr).Debug("copy ended with error during stream abort")
 			}

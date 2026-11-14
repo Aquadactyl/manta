@@ -199,6 +199,10 @@ func TestUserspaceOpenBeneathDefensiveOpenedSymlinkPath(t *testing.T) {
 	userspaceReadlinkat = func(_ int, _ string, _ []byte) (int, error) { return 0, unix.EINVAL }
 	_, err = userspaceOpenBeneath(dirfd, "file", unix.O_RDONLY, 0)
 	assert.ErrorIs(t, err, unix.ENOENT)
+
+	userspaceReadlinkat = func(_ int, _ string, buf []byte) (int, error) { return len(buf), nil }
+	_, err = userspaceOpenBeneath(dirfd, "file", unix.O_RDONLY, 0)
+	assert.ErrorIs(t, err, unix.ENAMETOOLONG)
 }
 
 func TestUserspaceOpenBeneathOPathFollowsFinalSymlink(t *testing.T) {

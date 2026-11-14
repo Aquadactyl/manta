@@ -79,6 +79,34 @@ func TestBuildDiagnosticsReportReportsMissingCommandsAndLogs(t *testing.T) {
 	require.Contains(t, output.String(), "No logs found or an error occurred.")
 }
 
+func TestBuildDiagnosticsReportIncludesCommandOutput(t *testing.T) {
+	oldPath, oldArgs := configPath, diagnosticsArgs
+	t.Cleanup(func() { configPath, diagnosticsArgs = oldPath, oldArgs })
+	configPath = filepath.Join(t.TempDir(), "config.yml")
+	cfg, err := config.NewAtPath(configPath)
+	require.NoError(t, err)
+	cfg.System.LogDirectory = t.TempDir()
+	require.NoError(t, config.WriteToDisk(cfg))
+	diagnosticsArgs.IncludeLogs = true
+	diagnosticsArgs.IncludeEndpoints = true
+	diagnosticsArgs.LogLines = 3
+
+	bin := t.TempDir()
+	for name, output := range map[string]string{
+		"docker": "printf 'container-list\\n'\n",
+		"tail":   "printf 'log-lines\\n'\n",
+	} {
+		p := filepath.Join(bin, name)
+		require.NoError(t, os.WriteFile(p, []byte("#!/bin/sh\n"+output), 0o700))
+	}
+	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
+
+	var report strings.Builder
+	buildDiagnosticsReport(&report, types.Version{}, dockersystem.Info{}, errors.New("docker unavailable"))
+	require.Contains(t, report.String(), "container-list")
+	require.Contains(t, report.String(), "log-lines")
+}
+
 func TestUploadToHastebinReportsBodyReadFailure(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Length", "100")
