@@ -27,7 +27,7 @@ func newManagerTestTransfer(t *testing.T, uuid string) *Transfer {
 	t.Helper()
 	s, err := server.New(nil)
 	require.NoError(t, err)
-	s.Config().Uuid = uuid
+	s.Config().UUID = uuid
 	return New(context.Background(), s)
 }
 
@@ -448,7 +448,7 @@ func TestTransferArchiveCacheAndRedirectURLs(t *testing.T) {
 	assert.False(t, IsValidRedirectURL("http://"))
 	assert.False(t, IsValidRedirectURL("http://user:pass@example.com"))
 	assert.True(t, IsValidRedirectURL("http://127.0.0.1:8080/path"))
-	assert.False(t, isValidRedirectUrl("invalid://url"))
+	assert.False(t, isValidRedirectURL("invalid://url"))
 
 	tr := newManagerTestTransfer(t, "transfer-cache")
 	dataDir := t.TempDir()

@@ -117,7 +117,7 @@ func TestPanelRedirectCannotForwardCredentialsOrBodyToAnotherOrigin(t *testing.T
 	}))
 	t.Cleanup(origin.Close)
 	httpClient := origin.Client()
-	c := New(origin.URL, WithCredentials("id", "secret"), WithHttpClient(httpClient)).(*client)
+	c := New(origin.URL, WithCredentials("id", "secret"), WithHTTPClient(httpClient)).(*client)
 	_, err := c.Post(context.Background(), "/sftp/auth", map[string]string{"password": "secret-password"})
 	require.Error(t, err)
 	require.Equal(t, http.StatusTemporaryRedirect, AsRequestError(err).StatusCode())

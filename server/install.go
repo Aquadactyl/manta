@@ -462,15 +462,15 @@ func (ip *InstallationProcess) GetLogPath() string {
 // AfterExecute cleans up after the execution of the installation process.
 // This grabs the logs from the process to store in the server configuration
 // directory, and then destroys the associated installation container.
-func (ip *InstallationProcess) AfterExecute(containerId string) error {
+func (ip *InstallationProcess) AfterExecute(containerID string) error {
 	defer func() {
 		if err := ip.RemoveContainer(); err != nil {
 			ip.Server.Log().WithField("error", err).Warn("failed to remove installation container")
 		}
 	}()
 
-	ip.Server.Log().WithField("container_id", containerId).Debug("pulling installation logs for server")
-	reader, err := ip.client.ContainerLogs(ip.Server.Context(), containerId, container.LogsOptions{
+	ip.Server.Log().WithField("container_id", containerID).Debug("pulling installation logs for server")
+	reader, err := ip.client.ContainerLogs(ip.Server.Context(), containerID, container.LogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,
 		Follow:     false,
@@ -677,9 +677,9 @@ func (ip *InstallationProcess) resourceLimits() container.Resources {
 	// installer CPU limit is unlimited don't even waste time with the logic, just
 	// set the config to unlimited for this.
 	if limits.Cpu == 0 {
-		cfg.CpuLimit = 0
-	} else if cfg.CpuLimit != 0 && cfg.CpuLimit < limits.Cpu {
-		cfg.CpuLimit = limits.Cpu
+		cfg.CPULimit = 0
+	} else if cfg.CPULimit != 0 && cfg.CPULimit < limits.Cpu {
+		cfg.CPULimit = limits.Cpu
 	}
 
 	resources := cfg.AsContainerResources()

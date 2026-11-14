@@ -61,7 +61,7 @@ func (cfr *ConfigurationFileReplacement) getKeyValue(value string) interface{} {
 // This does not currently support nested wildcard matches. For example, foo.*.bar
 // will work, however foo.*.bar.*.baz will not, since we'll only be splitting at the
 // first wildcard, and not subsequent ones.
-func (f *ConfigurationFile) IterateOverJson(data []byte) (*gabs.Container, error) {
+func (f *ConfigurationFile) IterateOverJSON(data []byte) (*gabs.Container, error) {
 	parsed, err := gabs.ParseJSON(data)
 	if err != nil {
 		return nil, err

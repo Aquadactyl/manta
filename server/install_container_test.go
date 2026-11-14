@@ -179,7 +179,7 @@ func newInstallerTestProcess(t *testing.T, fake *fakeInstallerDocker) *Installat
 
 	s, err := New(nil)
 	require.NoError(t, err)
-	s.cfg.Uuid = installTestUUID
+	s.cfg.UUID = installTestUUID
 	s.fs, err = filesystem.New(filepath.Join(t.TempDir(), installTestUUID), 0, nil)
 	require.NoError(t, err)
 

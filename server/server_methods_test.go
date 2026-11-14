@@ -218,13 +218,13 @@ func TestManagerFilters(t *testing.T) {
 
 	s1, err := New(nil)
 	require.NoError(t, err)
-	s1.Config().Uuid = "uuid-1"
+	s1.Config().UUID = "uuid-1"
 	s1.Config().Suspended = false
 	m.Add(s1)
 
 	s2, err := New(nil)
 	require.NoError(t, err)
-	s2.Config().Uuid = "uuid-2"
+	s2.Config().UUID = "uuid-2"
 	s2.Config().Suspended = true
 	m.Add(s2)
 
@@ -281,7 +281,7 @@ func TestServerMountsPersistStatesAndAPIResponse(t *testing.T) {
 	s, err := New(nil)
 	require.NoError(t, err)
 	s.fs = fsys
-	s.Config().Uuid = "11111111-2222-3333-4444-555555555555"
+	s.Config().UUID = "11111111-2222-3333-4444-555555555555"
 	s.Environment = testEnvWithState{state: environment.ProcessRunningState}
 
 	// 1. Mounts
@@ -320,13 +320,13 @@ func TestServerMountsPersistStatesAndAPIResponse(t *testing.T) {
 	// 5. ResourceUsage Reset
 	ru := &ResourceUsage{}
 	ru.Memory = 1024
-	ru.CpuAbsolute = 50.0
+	ru.CPUAbsolute = 50.0
 	ru.Uptime = 1000
 	ru.Network.TxBytes = 500
 	ru.Network.RxBytes = 500
 	ru.Reset()
 	assert.Equal(t, uint64(0), ru.Memory)
-	assert.Equal(t, float64(0), ru.CpuAbsolute)
+	assert.Equal(t, float64(0), ru.CPUAbsolute)
 	assert.Equal(t, int64(0), ru.Uptime)
 	assert.Equal(t, uint64(0), ru.Network.TxBytes)
 	assert.Equal(t, uint64(0), ru.Network.RxBytes)
@@ -521,7 +521,7 @@ func (c *fullMockRemoteClient) GetServers(ctx context.Context, perPage int) ([]r
 	}
 	return []remote.RawServerData{
 		{
-			Uuid:                 "11111111-2222-3333-4444-555555555555",
+			UUID:                 "11111111-2222-3333-4444-555555555555",
 			Settings:             []byte(`{"uuid":"11111111-2222-3333-4444-555555555555"}`),
 			ProcessConfiguration: []byte(`{}`),
 		},
@@ -544,7 +544,7 @@ func TestServerCrashHandling(t *testing.T) {
 	}
 	s, err := New(remoteCli)
 	require.NoError(t, err)
-	s.Config().Uuid = "11111111-2222-3333-4444-555555555555"
+	s.Config().UUID = "11111111-2222-3333-4444-555555555555"
 
 	fsys, err := filesystem.New(t.TempDir(), 0, nil)
 	require.NoError(t, err)
@@ -602,7 +602,7 @@ func TestServerSyncAndInstall(t *testing.T) {
 	}
 	s, err := New(remoteCli)
 	require.NoError(t, err)
-	s.Config().Uuid = serverUUID
+	s.Config().UUID = serverUUID
 
 	fsys, err := filesystem.New(t.TempDir(), 0, nil)
 	require.NoError(t, err)
@@ -695,7 +695,7 @@ func TestServerPowerAndOnBeforeStart(t *testing.T) {
 	s, err := New(remoteCli)
 	require.NoError(t, err)
 	s.fs = fsys
-	s.Config().Uuid = "33333333-4444-5555-6666-777777777777"
+	s.Config().UUID = "33333333-4444-5555-6666-777777777777"
 
 	envCfg := environment.NewConfiguration(environment.Settings{}, []string{})
 	env := &fullMockEnv{
@@ -763,8 +763,8 @@ func TestServerPowerAndOnBeforeStart(t *testing.T) {
 
 	err = s.CreateEnvironment()
 	assert.NoError(t, err)
-	machineIdPath := filepath.Join(cfg.System.MachineID.Directory, s.ID())
-	assert.FileExists(t, machineIdPath)
+	machineIDPath := filepath.Join(cfg.System.MachineID.Directory, s.ID())
+	assert.FileExists(t, machineIDPath)
 }
 
 func TestServerActivityAndDatabase(t *testing.T) {
@@ -963,7 +963,7 @@ func TestManagerAndInstallAndSync(t *testing.T) {
 
 	// Mock environment on server
 	envCfg := environment.NewConfiguration(environment.Settings{
-		Limits: environment.Limits{MemoryLimit: 256, CpuLimit: 50},
+		Limits: environment.Limits{MemoryLimit: 256, CPULimit: 50},
 	}, []string{})
 	env := &fullMockEnv{
 		cfg:   envCfg,
@@ -1084,9 +1084,9 @@ func TestInstallationProcessDetails(t *testing.T) {
 
 	s, err := New(nil)
 	require.NoError(t, err)
-	s.Config().Uuid = "test-uuid-install"
+	s.Config().UUID = "test-uuid-install"
 	s.Config().Build.MemoryLimit = 256
-	s.Config().Build.CpuLimit = 50
+	s.Config().Build.CPULimit = 50
 
 	ip := &InstallationProcess{
 		Server: s,
@@ -1146,25 +1146,25 @@ func TestManagerInitBranches(t *testing.T) {
 			return []remote.RawServerData{
 				// 1. Valid server
 				{
-					Uuid:                 validUUID,
+					UUID:                 validUUID,
 					Settings:             []byte(`{"uuid":"` + validUUID + `"}`),
 					ProcessConfiguration: []byte(`{}`),
 				},
 				// 2. Server with bad process config JSON
 				{
-					Uuid:                 badCfgUUID,
+					UUID:                 badCfgUUID,
 					Settings:             []byte(`{"uuid":"` + badCfgUUID + `"}`),
 					ProcessConfiguration: []byte(`invalid-json`),
 				},
 				// 3. Server with bad settings JSON (causes InitServer to fail)
 				{
-					Uuid:                 badSetUUID,
+					UUID:                 badSetUUID,
 					Settings:             []byte(`invalid-settings`),
 					ProcessConfiguration: []byte(`{}`),
 				},
 				// 4. Duplicate valid server (causes !AddIfMissing)
 				{
-					Uuid:                 validUUID,
+					UUID:                 validUUID,
 					Settings:             []byte(`{"uuid":"` + validUUID + `"}`),
 					ProcessConfiguration: []byte(`{}`),
 				},
@@ -1245,7 +1245,7 @@ func TestServerRemainingCoverage(t *testing.T) {
 	require.NoError(t, err)
 
 	envCfg := environment.NewConfiguration(environment.Settings{
-		Limits: environment.Limits{MemoryLimit: 256, CpuLimit: 50},
+		Limits: environment.Limits{MemoryLimit: 256, CPULimit: 50},
 	}, []string{})
 	env := &fullMockEnv{
 		cfg:   envCfg,
@@ -1254,7 +1254,7 @@ func TestServerRemainingCoverage(t *testing.T) {
 	}
 	s.Environment = env
 	s.procConfig = &remote.ProcessConfiguration{}
-	s.cfg.Uuid = "11111111-2222-3333-4444-555555555555"
+	s.cfg.UUID = "11111111-2222-3333-4444-555555555555"
 
 	fs, err := filesystem.New(filepath.Join(tempDir, s.ID()), 1024*1024*1024, nil)
 	require.NoError(t, err)
@@ -1495,18 +1495,18 @@ func TestServerRemainingCoverage(t *testing.T) {
 	ts := httptest.NewServer(http.NotFoundHandler())
 	defer ts.Close()
 	tsClient := remote.New(ts.URL)
-	sWithTs, _ := New(tsClient)
-	sWithTs.cfg.Uuid = s.ID()
-	sWithTs.fs = s.fs
-	err = sWithTs.Sync()
+	sWithTS, _ := New(tsClient)
+	sWithTS.cfg.UUID = s.ID()
+	sWithTS.fs = s.fs
+	err = sWithTS.Sync()
 	assert.Error(t, err)
 	assert.True(t, IsServerDoesNotExistError(err))
 
 	// 13. CreateEnvironment and EnsureDataDirectoryExists
-	machineIdDir := filepath.Join(tempDir, "machine_id")
-	require.NoError(t, os.MkdirAll(machineIdDir, 0755))
+	machineIDDir := filepath.Join(tempDir, "machine_id")
+	require.NoError(t, os.MkdirAll(machineIDDir, 0755))
 	cfg.System.MachineID.Enable = true
-	cfg.System.MachineID.Directory = machineIdDir
+	cfg.System.MachineID.Directory = machineIDDir
 	config.Set(cfg)
 	assert.NoError(t, s.CreateEnvironment())
 

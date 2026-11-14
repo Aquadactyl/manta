@@ -154,7 +154,7 @@ func isAllowedResolvedMountPath(configured, resolved string) bool {
 //
 // This returns an error if any directory above the path, before or after it is
 // resolved, could be modified by the user containers run as.
-func resolveMountPath(p string, containerUid int) (string, error) {
+func resolveMountPath(p string, containerUID int) (string, error) {
 	p = filepath.Clean(p)
 	if !filepath.IsAbs(p) {
 		return "", errors.New("path is not absolute")
@@ -180,7 +180,7 @@ func resolveMountPath(p string, containerUid int) (string, error) {
 	}
 
 	for _, v := range []string{p, resolved} {
-		if err := checkMountPathParents(v, containerUid); err != nil {
+		if err := checkMountPathParents(v, containerUID); err != nil {
 			return "", err
 		}
 	}
@@ -199,7 +199,7 @@ var (
 // checkMountPathParents returns an error if any existing directory above the
 // path is owned by the user containers run as, or is writable by its group or
 // other users.
-func checkMountPathParents(p string, containerUid int) error {
+func checkMountPathParents(p string, containerUID int) error {
 	for d := filepath.Dir(p); ; d = filepath.Dir(d) {
 		st, err := mountPathLstat(d)
 		if err != nil {
@@ -211,7 +211,7 @@ func checkMountPathParents(p string, containerUid int) error {
 			if !ok {
 				return fmt.Errorf("unable to determine owner of %s", d)
 			}
-			if containerUid != os.Geteuid() && int(sys.Uid) == containerUid {
+			if containerUID != os.Geteuid() && int(sys.Uid) == containerUID {
 				return fmt.Errorf("%s is owned by the user servers run as", d)
 			}
 			if st.Mode().Perm()&0o022 != 0 {

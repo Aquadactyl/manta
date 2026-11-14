@@ -19,7 +19,7 @@ var openLocalBackup = os.Open
 
 // Handle a download request for a server backup.
 func getDownloadBackup(c *gin.Context) {
-	client := middleware.ExtractApiClient(c)
+	client := middleware.ExtractAPIClient(c)
 	manager := middleware.ExtractManager(c)
 
 	// Get the payload from the token.
@@ -30,7 +30,7 @@ func getDownloadBackup(c *gin.Context) {
 	}
 
 	// Get the server using the UUID from the token.
-	if _, ok := manager.Get(token.ServerUuid); !ok || token.Denylisted() || !token.IsUniqueRequest() || !token.HasScope(tokens.BackupDownload) {
+	if _, ok := manager.Get(token.ServerUUID); !ok || token.Denylisted() || !token.IsUniqueRequest() || !token.HasScope(tokens.BackupDownload) {
 		c.AbortWithStatusJSON(http.StatusNotFound, gin.H{
 			"error": "The requested resource was not found on this server.",
 		})
@@ -40,13 +40,13 @@ func getDownloadBackup(c *gin.Context) {
 
 	// Validate that the BackupUuid field is actually a UUID and not some random characters or a
 	// file path.
-	if _, err := uuid.Parse(token.BackupUuid); err != nil {
+	if _, err := uuid.Parse(token.BackupUUID); err != nil {
 		middleware.CaptureAndAbort(c, err)
 		return
 	}
 
 	// Locate the backup on the local disk.
-	b, st, err := backup.LocateLocal(client, token.BackupUuid)
+	b, st, err := backup.LocateLocal(client, token.BackupUUID)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			c.AbortWithStatusJSON(http.StatusNotFound, gin.H{
@@ -84,7 +84,7 @@ func getDownloadFile(c *gin.Context) {
 		return
 	}
 
-	s, ok := manager.Get(token.ServerUuid)
+	s, ok := manager.Get(token.ServerUUID)
 	if !ok || token.Denylisted() || !token.IsUniqueRequest() || !token.HasScope(tokens.FileDownload) {
 		c.AbortWithStatusJSON(http.StatusNotFound, gin.H{
 			"error": "The requested resource was not found on this server.",

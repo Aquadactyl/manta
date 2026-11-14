@@ -32,7 +32,7 @@ func TestCreateReturnsContainerInspectError(t *testing.T) {
 	defer cli.Close()
 
 	e := &Environment{
-		Id:            "container-id",
+		ID:            "container-id",
 		Configuration: environment.NewConfiguration(environment.Settings{}, nil),
 		meta:          &Metadata{Image: "example.test/image:latest"},
 		client:        cli,
@@ -68,7 +68,7 @@ func TestCreateReturnsImageAvailabilityError(t *testing.T) {
 	defer cli.Close()
 
 	e := &Environment{
-		Id:            "container-id",
+		ID:            "container-id",
 		Configuration: environment.NewConfiguration(environment.Settings{}, nil),
 		meta:          &Metadata{Image: "example.test/image:latest"},
 		client:        cli,
@@ -98,7 +98,7 @@ func TestCreateExistingContainerDoesNotCallDockerAgain(t *testing.T) {
 	require.NoError(t, err)
 	defer cli.Close()
 
-	e := &Environment{Id: "container-id", meta: &Metadata{}, client: cli}
+	e := &Environment{ID: "container-id", meta: &Metadata{}, client: cli}
 	require.NoError(t, e.Create())
 	require.True(t, called)
 }
@@ -124,7 +124,7 @@ func TestCreateRejectsInvalidSELinuxMode(t *testing.T) {
 	defer cli.Close()
 
 	e := &Environment{
-		Id:            "container-id",
+		ID:            "container-id",
 		Configuration: environment.NewConfiguration(environment.Settings{Labels: map[string]string{"custom": "label"}}, nil),
 		meta:          &Metadata{Image: "~local-image"},
 		client:        cli,
@@ -159,7 +159,7 @@ func TestCreateReturnsDockerContainerCreateError(t *testing.T) {
 	defer cli.Close()
 
 	e := &Environment{
-		Id:            "container-id",
+		ID:            "container-id",
 		Configuration: environment.NewConfiguration(environment.Settings{}, nil),
 		meta:          &Metadata{Image: "~local-image"},
 		client:        cli,
@@ -208,7 +208,7 @@ func TestCreateForceOutgoingIPNetworkErrors(t *testing.T) {
 			allocations := environment.Allocations{ForceOutgoingIP: true}
 			allocations.DefaultMapping.Ip = "10.0.0.1"
 			e := &Environment{
-				Id:            "container-id",
+				ID:            "container-id",
 				Configuration: environment.NewConfiguration(environment.Settings{Allocations: allocations}, nil),
 				meta:          &Metadata{Image: "~local-image"},
 				client:        cli,

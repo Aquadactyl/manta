@@ -93,10 +93,10 @@ func TestConfigurationFilesMoreCases(t *testing.T) {
 	require.NoFileExists(t, filepath.Join(root, "does_not_exist.txt"))
 
 	// 2. Parse error (e.g. invalid json in file)
-	rawJson := `{"file":"broken.json","parser":"json","replace":[{"match":"port","value_data":"1234"}]}`
-	var cfJson parser.ConfigurationFile
-	require.NoError(t, json.Unmarshal([]byte(rawJson), &cfJson))
-	s.procConfig = &remote.ProcessConfiguration{ConfigurationFiles: []parser.ConfigurationFile{cfJson}}
+	rawJSON := `{"file":"broken.json","parser":"json","replace":[{"match":"port","value_data":"1234"}]}`
+	var cfJSON parser.ConfigurationFile
+	require.NoError(t, json.Unmarshal([]byte(rawJSON), &cfJSON))
+	s.procConfig = &remote.ProcessConfiguration{ConfigurationFiles: []parser.ConfigurationFile{cfJSON}}
 	require.NoError(t, os.WriteFile(filepath.Join(root, "broken.json"), []byte(`{invalid-json`), 0644))
 	s.UpdateConfigurationFiles()
 }

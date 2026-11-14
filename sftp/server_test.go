@@ -614,7 +614,7 @@ func TestServerHandleChannelBranches(t *testing.T) {
 
 	registered, err := server.New(nil)
 	require.NoError(t, err)
-	registered.Config().Uuid = "registered-server"
+	registered.Config().UUID = "registered-server"
 	manager := server.NewEmptyManager(nil)
 	manager.Add(registered)
 	validServer := New(manager)

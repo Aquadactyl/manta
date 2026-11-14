@@ -117,7 +117,7 @@ func handleServerWebsocket(c *gin.Context, maxConnections int, authTimeout time.
 		if closed || !authTimer.Stop() {
 			return context.Canceled
 		}
-		if !s.Websockets().TryPush(handler.Uuid(), &cancel, handler.User, maxConnections) {
+		if !s.Websockets().TryPush(handler.UUID(), &cancel, handler.User, maxConnections) {
 			cancel()
 			return errTooManyWebsockets
 		}
@@ -128,7 +128,7 @@ func handleServerWebsocket(c *gin.Context, maxConnections int, authTimeout time.
 		trackMu.Lock()
 		closed = true
 		trackMu.Unlock()
-		s.Websockets().Remove(handler.Uuid())
+		s.Websockets().Remove(handler.UUID())
 	}()
 
 	go func() {
@@ -221,7 +221,7 @@ func handleServerWebsocket(c *gin.Context, maxConnections int, authTimeout time.
 				if errors.Is(err, server.ErrSuspended) {
 					cancel()
 				} else {
-					_ = handler.SendErrorJson(msg, err)
+					_ = handler.SendErrorJSON(msg, err)
 				}
 			}
 		}(j)

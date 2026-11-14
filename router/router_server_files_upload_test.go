@@ -25,7 +25,7 @@ import (
 	"github.com/Aquadactyl/manta/server"
 )
 
-const uploadTestServerUuid = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee"
+const uploadTestServerUUID = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee"
 
 // countingBody counts the bytes a handler reads from a request body.
 type countingBody struct {
@@ -88,12 +88,12 @@ func newUploadTest(t *testing.T, uploadLimit int64, diskLimit int64) *uploadTest
 	initTestDatabase(t)
 
 	settings, err := json.Marshal(map[string]any{
-		"uuid":  uploadTestServerUuid,
+		"uuid":  uploadTestServerUUID,
 		"build": map[string]any{"disk_space": diskLimit},
 	})
 	require.NoError(t, err)
 	manager := server.NewEmptyManager(nil)
-	s, err := manager.InitServer(uploadTestServerUuid, remote.ServerConfigurationResponse{Settings: settings, ProcessConfiguration: &remote.ProcessConfiguration{}})
+	s, err := manager.InitServer(uploadTestServerUUID, remote.ServerConfigurationResponse{Settings: settings, ProcessConfiguration: &remote.ProcessConfiguration{}})
 	require.NoError(t, err)
 	t.Cleanup(s.CtxCancel)
 	manager.Add(s)
@@ -120,9 +120,9 @@ func (u *uploadTest) token(t *testing.T) string {
 			ExpirationTime: jwt.NumericDate(now.Add(time.Minute * 15)),
 		},
 		Scoped:     tokens.Scoped{Scope: string(tokens.FileUpload)},
-		ServerUuid: uploadTestServerUuid,
-		UserUuid:   "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
-		UniqueId:   uuid.NewString(),
+		ServerUUID: uploadTestServerUUID,
+		UserUUID:   "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+		UniqueID:   uuid.NewString(),
 	}
 	token, err := jwt.Sign(&payload, config.GetJwtAlgorithm())
 	require.NoError(t, err)

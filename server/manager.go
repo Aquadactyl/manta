@@ -301,19 +301,19 @@ func (m *Manager) init(ctx context.Context) error {
 			d := remote.ServerConfigurationResponse{
 				Settings: data.Settings,
 			}
-			log.WithField("server", data.Uuid).Info("creating new server object from API response")
+			log.WithField("server", data.UUID).Info("creating new server object from API response")
 			if err := json.Unmarshal(data.ProcessConfiguration, &d.ProcessConfiguration); err != nil {
-				log.WithField("server", data.Uuid).WithField("error", err).Error("failed to parse server configuration from API response, skipping...")
+				log.WithField("server", data.UUID).WithField("error", err).Error("failed to parse server configuration from API response, skipping...")
 				return
 			}
-			s, err := m.InitServer(data.Uuid, d)
+			s, err := m.InitServer(data.UUID, d)
 			if err != nil {
-				log.WithField("server", data.Uuid).WithField("error", err).Error("failed to load server, skipping...")
+				log.WithField("server", data.UUID).WithField("error", err).Error("failed to load server, skipping...")
 				return
 			}
 			if !m.AddIfMissing(s) {
 				s.CleanupForDestroy()
-				log.WithField("server", data.Uuid).Error("server was returned by the API more than once, skipping...")
+				log.WithField("server", data.UUID).Error("server was returned by the API more than once, skipping...")
 			}
 		})
 	}

@@ -36,7 +36,7 @@ func NewS3(client remote.Client, uuid string, ignore string) *S3Backup {
 	return &S3Backup{
 		Backup{
 			client:  client,
-			Uuid:    uuid,
+			UUID:    uuid,
 			Ignore:  ignore,
 			adapter: S3BackupAdapter,
 		},
@@ -136,7 +136,7 @@ func (s *S3Backup) generateRemoteRequest(ctx context.Context, rc *os.File) ([]re
 	s.log().WithField("size", size).Debug("got size of backup")
 
 	s.log().Debug("attempting to get S3 upload urls from Panel...")
-	urls, err := s.client.GetBackupRemoteUploadURLs(context.Background(), s.Backup.Uuid, size)
+	urls, err := s.client.GetBackupRemoteUploadURLs(context.Background(), s.Backup.UUID, size)
 	if err != nil {
 		return nil, err
 	}

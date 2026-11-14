@@ -27,7 +27,7 @@ func TestNestedXMLOverDepthLimitIsNotRewritten(t *testing.T) {
 	defer f.Close()
 
 	start := time.Now()
-	require.Error(t, cf.parseXmlFile(f))
+	require.Error(t, cf.parseXMLFile(f))
 	require.Less(t, time.Since(start), 5*time.Second)
 
 	b, err := os.ReadFile(path)

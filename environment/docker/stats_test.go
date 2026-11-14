@@ -30,7 +30,7 @@ func sdkResourceStats(frame []byte, uptime int64) (environment.Stats, error) {
 		uptime += v.Read.Sub(v.PreRead).Milliseconds()
 	}
 	out := environment.Stats{Uptime: uptime, Memory: memory, MemoryLimit: v.MemoryStats.Limit,
-		CpuAbsolute: calculateDockerAbsoluteCpu(v.PreCPUStats, v.CPUStats)}
+		CPUAbsolute: calculateDockerAbsoluteCPU(v.PreCPUStats, v.CPUStats)}
 	for _, network := range v.Networks {
 		out.Network.RxBytes += network.RxBytes
 		out.Network.TxBytes += network.TxBytes

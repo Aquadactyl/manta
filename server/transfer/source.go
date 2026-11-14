@@ -64,7 +64,7 @@ func parseValidRedirectURL(raw string) (*url.URL, bool) {
 	return parsed, true
 }
 
-func isValidRedirectUrl(raw string) bool {
+func isValidRedirectURL(raw string) bool {
 	return IsValidRedirectURL(raw)
 }
 

@@ -57,9 +57,9 @@ func (h *Handler) listenForExpiration(ctx context.Context) {
 			jwt := h.GetJwt()
 			if jwt != nil {
 				if jwt.ExpirationTime.Unix()-time.Now().Unix() <= 0 {
-					_ = h.SendJson(Message{Event: TokenExpiredEvent})
+					_ = h.SendJSON(Message{Event: TokenExpiredEvent})
 				} else if jwt.ExpirationTime.Unix()-time.Now().Unix() <= 60 {
-					_ = h.SendJson(Message{Event: TokenExpiringEvent})
+					_ = h.SendJSON(Message{Event: TokenExpiringEvent})
 				}
 			}
 		}
@@ -100,13 +100,13 @@ func (h *Handler) listenForServerEvents(ctx context.Context) error {
 		case <-ctx.Done():
 			// Exits through the break after the select.
 		case b := <-logOutput:
-			sendErr := h.SendJson(Message{Event: server.ConsoleOutputEvent, Args: []string{string(b)}})
+			sendErr := h.SendJSON(Message{Event: server.ConsoleOutputEvent, Args: []string{string(b)}})
 			if sendErr == nil {
 				continue
 			}
 			onError(server.ConsoleOutputEvent, sendErr)
 		case b := <-installOutput:
-			sendErr := h.SendJson(Message{Event: server.InstallOutputEvent, Args: []string{string(b)}})
+			sendErr := h.SendJSON(Message{Event: server.InstallOutputEvent, Args: []string{string(b)}})
 			if sendErr == nil {
 				continue
 			}
@@ -116,7 +116,7 @@ func (h *Handler) listenForServerEvents(ctx context.Context) error {
 			if decodeErr != nil {
 				continue
 			}
-			sendErr := h.SendJson(message)
+			sendErr := h.SendJSON(message)
 			if sendErr == nil {
 				continue
 			}

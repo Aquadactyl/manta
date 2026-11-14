@@ -74,7 +74,7 @@ type Limits struct {
 	// The percentage of CPU that this instance is allowed to consume relative to
 	// the host. A value of 200% represents complete utilization of two cores. This
 	// should be a value between 1 and THREAD_COUNT * 100.
-	CpuLimit int64 `json:"cpu_limit"`
+	CPULimit int64 `json:"cpu_limit"`
 
 	// The amount of disk space in megabytes that a server is allowed to use.
 	DiskSpace int64 `json:"disk_space"`
@@ -89,11 +89,11 @@ type Limits struct {
 // that can be better understood by the Docker environment. If there is no limit
 // set, return -1 which will indicate to Docker that it has unlimited CPU quota.
 func (l Limits) ConvertedCpuLimit() int64 {
-	if l.CpuLimit == 0 {
+	if l.CPULimit == 0 {
 		return -1
 	}
 
-	return l.CpuLimit * 1000
+	return l.CPULimit * 1000
 }
 
 // MemoryOverheadMultiplier sets the hard limit for memory usage to be 5% more
@@ -146,10 +146,10 @@ func (l Limits) AsContainerResources() container.Resources {
 	// them seems to break some Java services that try to read the available processors.
 	//
 	// @see https://github.com/pterodactyl/panel/issues/3988
-	if l.CpuLimit > 0 {
+	if l.CPULimit > 0 {
 		cfg := config.Get().Docker
 		period := cfg.CpuPeriodMicroseconds()
-		resources.CPUQuota = l.CpuLimit * period / 100
+		resources.CPUQuota = l.CPULimit * period / 100
 		resources.CPUPeriod = period
 		resources.CPUShares = cfg.CpuShares
 	}

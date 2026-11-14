@@ -76,7 +76,7 @@ type BackupInterface interface {
 type Backup struct {
 	// The UUID of this backup object. This must line up with a backup from
 	// the panel instance.
-	Uuid string `json:"uuid"`
+	UUID string `json:"uuid"`
 
 	// An array of files to ignore when generating this backup. This should be
 	// compatible with a standard .gitignore structure.
@@ -92,7 +92,7 @@ func (b *Backup) SetClient(c remote.Client) {
 }
 
 func (b *Backup) Identifier() string {
-	return b.Uuid
+	return b.UUID
 }
 
 func (b *Backup) normalizedIdentifier() (string, error) {

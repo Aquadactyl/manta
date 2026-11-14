@@ -6,7 +6,7 @@ import (
 )
 
 func lookupServer(id string) *Server {
-	return &Server{cfg: Configuration{configurationData: configurationData{Uuid: id}}}
+	return &Server{cfg: Configuration{configurationData: configurationData{UUID: id}}}
 }
 
 // Last-entry and missing-ID requests exercise the scan's worst case. The

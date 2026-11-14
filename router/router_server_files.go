@@ -634,7 +634,7 @@ func postServerUploadFiles(c *gin.Context) {
 		return
 	}
 
-	s, ok := manager.Get(token.ServerUuid)
+	s, ok := manager.Get(token.ServerUUID)
 	if !ok || token.Denylisted() || !token.IsUniqueRequest() || !token.HasScope(tokens.FileUpload) {
 		c.AbortWithStatusJSON(http.StatusNotFound, gin.H{
 			"error": "The requested resource was not found on this server.",
@@ -685,7 +685,7 @@ func postServerUploadFiles(c *gin.Context) {
 			middleware.CaptureAndAbort(c, err)
 			return
 		}
-		s.SaveActivity(s.NewRequestActivity(token.UserUuid, c.ClientIP()), server.ActivityFileUploaded, models.ActivityMeta{
+		s.SaveActivity(s.NewRequestActivity(token.UserUUID, c.ClientIP()), server.ActivityFileUploaded, models.ActivityMeta{
 			"file":      name,
 			"directory": filepath.Clean(directory),
 		})

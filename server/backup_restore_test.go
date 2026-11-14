@@ -77,7 +77,7 @@ func newRestoreTestServer(t *testing.T) (*Server, string, string) {
 
 	s, err := New(restoreTestClient{})
 	require.NoError(t, err)
-	s.Config().Uuid = "restore-test"
+	s.Config().UUID = "restore-test"
 	s.Environment = restoreTestEnvironment{}
 
 	root := filepath.Join(t.TempDir(), "server")

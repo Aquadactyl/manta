@@ -98,7 +98,7 @@ func (p *WebsocketPayload) GetPayload() *jwt.Payload {
 }
 
 // Returns the UUID of the server associated with this JWT.
-func (p *WebsocketPayload) GetServerUuid() string {
+func (p *WebsocketPayload) GetServerUUID() string {
 	p.RLock()
 	defer p.RUnlock()
 

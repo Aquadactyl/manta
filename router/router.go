@@ -64,7 +64,7 @@ func Configure(m *wserver.Manager, client remote.Client) *gin.Engine {
 		panic(errors.WithStack(err))
 	}
 	router.Use(middleware.AttachRequestID(), middleware.CaptureErrors(), middleware.SetAccessControlHeaders())
-	router.Use(middleware.AttachServerManager(m), middleware.AttachApiClient(client))
+	router.Use(middleware.AttachServerManager(m), middleware.AttachAPIClient(client))
 	// Access logger dumps requests in debug mode to aid in understanding the request
 	// lifecycle and debugging issues without creating excessive production log noise.
 	accessLogger := gin.LoggerWithFormatter(func(params gin.LogFormatterParams) string {

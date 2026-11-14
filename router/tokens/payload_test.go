@@ -25,22 +25,22 @@ func TestPayloadGetters(t *testing.T) {
 
 	fp := FilePayload{
 		Payload:    jwtPayload,
-		ServerUuid: "srv-uuid",
-		UserUuid:   "usr-uuid",
+		ServerUUID: "srv-uuid",
+		UserUUID:   "usr-uuid",
 	}
 	assert.Equal(t, "jti-123", fp.GetPayload().JWTID)
 
 	bp := BackupPayload{
 		Payload:    jwtPayload,
-		ServerUuid: "srv-uuid",
-		UserUuid:   "usr-uuid",
+		ServerUUID: "srv-uuid",
+		UserUUID:   "usr-uuid",
 	}
 	assert.Equal(t, "jti-123", bp.GetPayload().JWTID)
 
 	up := UploadPayload{
 		Payload:    jwtPayload,
-		ServerUuid: "srv-uuid",
-		UserUuid:   "usr-uuid",
+		ServerUUID: "srv-uuid",
+		UserUUID:   "usr-uuid",
 	}
 	assert.Equal(t, "jti-123", up.GetPayload().JWTID)
 
@@ -51,7 +51,7 @@ func TestPayloadGetters(t *testing.T) {
 		Permissions: []string{"control.start", "control.stop"},
 	}
 	assert.Equal(t, "jti-123", wp.GetPayload().JWTID)
-	assert.Equal(t, "srv-uuid", wp.GetServerUuid())
+	assert.Equal(t, "srv-uuid", wp.GetServerUUID())
 }
 
 func TestWebsocketPermissionsAndDenyJTI(t *testing.T) {

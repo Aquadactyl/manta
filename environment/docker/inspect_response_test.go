@@ -35,7 +35,7 @@ func TestFastInspectClosesResponseWhenRedirectFails(t *testing.T) {
 	config.Set(&config.Configuration{AuthenticationToken: "test-token", Docker: config.DockerConfiguration{UsePerformantInspect: true}})
 	o = sync.Once{}
 
-	_, err = (&Environment{Id: "inspect-redirect", client: c}).ContainerInspect(context.Background())
+	_, err = (&Environment{ID: "inspect-redirect", client: c}).ContainerInspect(context.Background())
 	require.ErrorContains(t, err, "redirect rejected")
 }
 
@@ -68,7 +68,7 @@ func TestFastInspectRejectsMalformedAndTruncatedResponses(t *testing.T) {
 			defer c.Close()
 			config.Set(&config.Configuration{AuthenticationToken: "test-token", Docker: config.DockerConfiguration{UsePerformantInspect: true}})
 			o = sync.Once{}
-			e := &Environment{Id: "inspect-response", client: c}
+			e := &Environment{ID: "inspect-response", client: c}
 			_, err = e.ContainerInspect(context.Background())
 			require.ErrorContains(t, err, test.want)
 		})
@@ -90,7 +90,7 @@ func TestReadlogReturnsScannerErrorForOversizedLine(t *testing.T) {
 	require.NoError(t, err)
 	defer c.Close()
 
-	_, err = (&Environment{Id: "oversized-log", client: c}).Readlog(10)
+	_, err = (&Environment{ID: "oversized-log", client: c}).Readlog(10)
 	require.ErrorContains(t, err, "token too long")
 }
 
@@ -109,7 +109,7 @@ func TestExistsAndExitStateReturnUnexpectedInspectErrors(t *testing.T) {
 	defer c.Close()
 	config.Set(&config.Configuration{AuthenticationToken: "test-token", Docker: config.DockerConfiguration{UsePerformantInspect: false}})
 	o = sync.Once{}
-	e := &Environment{Id: "inspect-failure", client: c}
+	e := &Environment{ID: "inspect-failure", client: c}
 
 	exists, err := e.Exists()
 	require.Error(t, err)
@@ -127,7 +127,7 @@ func TestFastInspectRejectsInvalidRequestPath(t *testing.T) {
 	defer c.Close()
 	config.Set(&config.Configuration{AuthenticationToken: "test-token", Docker: config.DockerConfiguration{UsePerformantInspect: true}})
 	o = sync.Once{}
-	_, err = (&Environment{Id: "invalid\nidentifier", client: c}).ContainerInspect(context.Background())
+	_, err = (&Environment{ID: "invalid\nidentifier", client: c}).ContainerInspect(context.Background())
 	require.ErrorContains(t, err, "invalid control character")
 }
 
@@ -146,7 +146,7 @@ func TestUptimeRejectsMalformedStartTimeAndReturnsZeroWhenStopped(t *testing.T) 
 		require.NoError(t, err)
 		config.Set(&config.Configuration{AuthenticationToken: "test-token", Docker: config.DockerConfiguration{UsePerformantInspect: true}})
 		o = sync.Once{}
-		e := &Environment{Id: "uptime-response", client: c, Configuration: environment.NewConfiguration(environment.Settings{}, nil)}
+		e := &Environment{ID: "uptime-response", client: c, Configuration: environment.NewConfiguration(environment.Settings{}, nil)}
 		uptime, err := e.Uptime(context.Background())
 		if test.wantError {
 			require.ErrorContains(t, err, "failed to parse container start time")

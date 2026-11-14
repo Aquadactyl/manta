@@ -54,8 +54,8 @@ func parseStreamedStats(args []string, utilization map[string]json.RawMessage) (
 	if err := json.Unmarshal(data, &usage); err != nil {
 		return streamedStats{}, err
 	}
-	if usage.State != "running" || usage.Memory == 0 || usage.MemoryLimit < usage.Memory || usage.Uptime <= 0 || usage.Disk <= 0 || math.IsNaN(usage.CpuAbsolute) || math.IsInf(usage.CpuAbsolute, 0) || usage.CpuAbsolute < 0 {
-		return streamedStats{}, fmt.Errorf("invalid streamed resource values: state=%s memory=%d limit=%d uptime=%d disk=%d cpu=%v", usage.State, usage.Memory, usage.MemoryLimit, usage.Uptime, usage.Disk, usage.CpuAbsolute)
+	if usage.State != "running" || usage.Memory == 0 || usage.MemoryLimit < usage.Memory || usage.Uptime <= 0 || usage.Disk <= 0 || math.IsNaN(usage.CPUAbsolute) || math.IsInf(usage.CPUAbsolute, 0) || usage.CPUAbsolute < 0 {
+		return streamedStats{}, fmt.Errorf("invalid streamed resource values: state=%s memory=%d limit=%d uptime=%d disk=%d cpu=%v", usage.State, usage.Memory, usage.MemoryLimit, usage.Uptime, usage.Disk, usage.CPUAbsolute)
 	}
 	return usage, nil
 }

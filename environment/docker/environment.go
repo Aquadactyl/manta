@@ -34,7 +34,7 @@ type Environment struct {
 
 	// The public identifier for this environment. In this case it is the Docker container
 	// name that will be used for all instances created under it.
-	Id string
+	ID string
 
 	// The environment configuration.
 	Configuration *environment.Configuration
@@ -73,7 +73,7 @@ func New(id string, m *Metadata, c *environment.Configuration) (*Environment, er
 	}
 
 	e := &Environment{
-		Id:            id,
+		ID:            id,
 		Configuration: c,
 		meta:          m,
 		client:        cli,
@@ -85,7 +85,7 @@ func New(id string, m *Metadata, c *environment.Configuration) (*Environment, er
 }
 
 func (e *Environment) log() *log.Entry {
-	return log.WithField("environment", e.Type()).WithField("container_id", e.Id)
+	return log.WithField("environment", e.Type()).WithField("container_id", e.ID)
 }
 
 func (e *Environment) Type() string {

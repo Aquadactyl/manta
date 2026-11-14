@@ -12,7 +12,7 @@ import (
 
 func TestJsonNullString(t *testing.T) {
 	// Valid string
-	ns := JsonNullString{}
+	ns := JSONNullString{}
 	ns.Valid = true
 	ns.String = "test-string"
 
@@ -21,26 +21,26 @@ func TestJsonNullString(t *testing.T) {
 	assert.Equal(t, `"test-string"`, string(b))
 
 	// Invalid / null string
-	nsInvalid := JsonNullString{}
+	nsInvalid := JSONNullString{}
 	b, err = json.Marshal(nsInvalid)
 	require.NoError(t, err)
 	assert.Equal(t, "null", string(b))
 
 	// Unmarshal null
-	var ns2 JsonNullString
+	var ns2 JSONNullString
 	err = json.Unmarshal([]byte("null"), &ns2)
 	require.NoError(t, err)
 	assert.False(t, ns2.Valid)
 
 	// Unmarshal string
-	var ns3 JsonNullString
+	var ns3 JSONNullString
 	err = json.Unmarshal([]byte(`"hello"`), &ns3)
 	require.NoError(t, err)
 	assert.True(t, ns3.Valid)
 	assert.Equal(t, "hello", ns3.String)
 
 	// Unmarshal invalid json
-	var ns4 JsonNullString
+	var ns4 JSONNullString
 	err = json.Unmarshal([]byte(`1234`), &ns4)
 	assert.Error(t, err)
 }

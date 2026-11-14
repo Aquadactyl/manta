@@ -27,8 +27,8 @@ const (
 	Yaml       = "yaml"
 	Properties = "properties"
 	Ini        = "ini"
-	Json       = "json"
-	Xml        = "xml"
+	JSON       = "json"
+	XML        = "xml"
 )
 
 // maxTextScanTokenSize bounds how large a single line the "file" parser will buffer.
@@ -300,12 +300,12 @@ func (f *ConfigurationFile) Parse(file ufs.File) error {
 		err = f.parseTextFile(file)
 	case Yaml, "yml":
 		err = f.parseYamlFile(file)
-	case Json:
-		err = f.parseJsonFile(file)
+	case JSON:
+		err = f.parseJSONFile(file)
 	case Ini:
 		err = f.parseIniFile(file)
-	case Xml:
-		err = f.parseXmlFile(file)
+	case XML:
+		err = f.parseXMLFile(file)
 	default:
 		return errors.Errorf("parser: unknown parser type %q", f.Parser)
 	}
@@ -313,7 +313,7 @@ func (f *ConfigurationFile) Parse(file ufs.File) error {
 }
 
 // Parses an xml file.
-func (f *ConfigurationFile) parseXmlFile(file ufs.File) error {
+func (f *ConfigurationFile) parseXMLFile(file ufs.File) error {
 	doc := etree.NewDocument()
 	if _, err := doc.ReadFrom(io.LimitReader(file, maxConfigFileSize)); err != nil {
 		return err
@@ -452,13 +452,13 @@ func (f *ConfigurationFile) parseIniFile(file ufs.File) error {
 // Parses a json file updating any matching key/value pairs. If a match is not found, the
 // value is set regardless in the file. See the commentary in parseYamlFile for more details
 // about what is happening during this process.
-func (f *ConfigurationFile) parseJsonFile(file ufs.File) error {
+func (f *ConfigurationFile) parseJSONFile(file ufs.File) error {
 	b, err := io.ReadAll(io.LimitReader(file, maxConfigFileSize))
 	if err != nil {
 		return err
 	}
 
-	data, err := f.IterateOverJson(b)
+	data, err := f.IterateOverJSON(b)
 	if err != nil {
 		return err
 	}
@@ -489,7 +489,7 @@ func (f *ConfigurationFile) parseYamlFile(file ufs.File) error {
 
 	// Now that the data is converted, treat it just like JSON and pass it to the
 	// iterator function to update values as necessary.
-	data, err := f.IterateOverJson(jsonBytes)
+	data, err := f.IterateOverJSON(jsonBytes)
 	if err != nil {
 		return err
 	}

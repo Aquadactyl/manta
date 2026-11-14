@@ -34,7 +34,7 @@ type configurationData struct {
 	// The unique identifier for the server that should be used when referencing
 	// it against the Panel API (and internally). This will be used when naming
 	// docker containers as well as in log output.
-	Uuid string `json:"uuid"`
+	UUID string `json:"uuid"`
 
 	Meta ConfigurationMeta `json:"meta"`
 
@@ -95,10 +95,10 @@ func (s *Server) MemoryLimit() int64 {
 	return s.cfg.Build.MemoryLimit
 }
 
-func (c *Configuration) GetUuid() string {
+func (c *Configuration) GetUUID() string {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	return c.Uuid
+	return c.UUID
 }
 
 func (c *Configuration) SetSuspended(s bool) {

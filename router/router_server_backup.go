@@ -39,17 +39,17 @@ func (e backupDownloadError) Error() string {
 // provided backup adapter.
 func postServerBackup(c *gin.Context) {
 	s := middleware.ExtractServer(c)
-	client := middleware.ExtractApiClient(c)
+	client := middleware.ExtractAPIClient(c)
 	logger := middleware.ExtractLogger(c)
 	var data struct {
 		Adapter backup.AdapterType `json:"adapter"`
-		Uuid    string             `json:"uuid"`
+		UUID    string             `json:"uuid"`
 		Ignore  string             `json:"ignore"`
 	}
 	if err := middleware.BindJSON(c, &data); err != nil {
 		return
 	}
-	backupUuid, ok := parseBackupUuid(c, data.Uuid)
+	backupUUID, ok := parseBackupUUID(c, data.UUID)
 	if !ok {
 		return
 	}
@@ -62,9 +62,9 @@ func postServerBackup(c *gin.Context) {
 	var adapter backup.BackupInterface
 	switch data.Adapter {
 	case backup.LocalBackupAdapter:
-		adapter = backup.NewLocal(client, backupUuid, data.Ignore)
+		adapter = backup.NewLocal(client, backupUUID, data.Ignore)
 	case backup.S3BackupAdapter:
-		adapter = backup.NewS3(client, backupUuid, data.Ignore)
+		adapter = backup.NewS3(client, backupUUID, data.Ignore)
 	default:
 		middleware.CaptureAndAbort(c, errors.New("router/backups: provided adapter is not valid: "+string(data.Adapter)))
 		return
@@ -95,7 +95,7 @@ func postServerBackup(c *gin.Context) {
 // spinner to be displayed in the Panel UI effectively.
 func postServerRestoreBackup(c *gin.Context) {
 	s := middleware.ExtractServer(c)
-	client := middleware.ExtractApiClient(c)
+	client := middleware.ExtractAPIClient(c)
 	logger := middleware.ExtractLogger(c)
 
 	var data struct {
@@ -103,21 +103,21 @@ func postServerRestoreBackup(c *gin.Context) {
 		TruncateDirectory bool               `json:"truncate_directory"`
 		// A UUID is always required for this endpoint, however the download URL
 		// is only present when the given adapter type is s3.
-		DownloadUrl string `json:"download_url"`
+		DownloadURL string `json:"download_url"`
 	}
 	if err := middleware.BindJSON(c, &data); err != nil {
 		return
 	}
-	backupUuid, ok := parseBackupUuid(c, c.Param("backup"))
+	backupUUID, ok := parseBackupUUID(c, c.Param("backup"))
 	if !ok {
 		return
 	}
-	if data.Adapter == backup.S3BackupAdapter && data.DownloadUrl == "" {
+	if data.Adapter == backup.S3BackupAdapter && data.DownloadURL == "" {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "The download_url field is required when the backup adapter is set to S3."})
 		return
 	}
 	if data.Adapter == backup.S3BackupAdapter {
-		if err := validateBackupDownloadUrl(data.DownloadUrl); err != nil {
+		if err := validateBackupDownloadURL(data.DownloadURL); err != nil {
 			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
@@ -139,7 +139,7 @@ func postServerRestoreBackup(c *gin.Context) {
 	// happen leaves the server's files as they are. If the truncate_directory flag
 	// is set, the files are deleted once the server has stopped.
 	if data.Adapter == backup.LocalBackupAdapter {
-		b, _, err := backup.LocateLocal(client, backupUuid)
+		b, _, err := backup.LocateLocal(client, backupUUID)
 		if err != nil {
 			middleware.CaptureAndAbort(c, err)
 			return
@@ -161,10 +161,10 @@ func postServerRestoreBackup(c *gin.Context) {
 
 	// Since this is not a local backup we need to stream the archive and then
 	// parse over the contents as we go in order to restore it to the server.
-	httpClient := backupRestoreHttpClient()
+	httpClient := backupRestoreHTTPClient()
 	logger.Info("downloading backup from remote location...")
 	// Use the server context so the request is canceled if the server gets deleted.
-	targetURL := data.DownloadUrl
+	targetURL := data.DownloadURL
 	req, err := backupRestoreNewRequest(s.Context(), http.MethodGet, targetURL, nil)
 	if err != nil {
 		middleware.CaptureAndAbort(c, err)
@@ -203,7 +203,7 @@ func postServerRestoreBackup(c *gin.Context) {
 		s.Events().Publish(server.BackupRestoreCompletedEvent, "")
 		logger.Info("completed server restoration from S3 backup")
 		s.SetRestoring(false)
-	}(s, backupUuid, logger)
+	}(s, backupUUID, logger)
 
 	hasError = false
 	c.Status(http.StatusAccepted)
@@ -214,11 +214,11 @@ func postServerRestoreBackup(c *gin.Context) {
 // endpoint can make its own decisions as to how it wants to handle that
 // response.
 func deleteServerBackup(c *gin.Context) {
-	backupUuid, ok := parseBackupUuid(c, c.Param("backup"))
+	backupUUID, ok := parseBackupUUID(c, c.Param("backup"))
 	if !ok {
 		return
 	}
-	b, _, err := backup.LocateLocal(middleware.ExtractApiClient(c), backupUuid)
+	b, _, err := backup.LocateLocal(middleware.ExtractAPIClient(c), backupUUID)
 	if err != nil {
 		// Just return from the function at this point if the backup was not located.
 		if errors.Is(err, os.ErrNotExist) {
@@ -240,7 +240,7 @@ func deleteServerBackup(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
-func parseBackupUuid(c *gin.Context, value string) (string, bool) {
+func parseBackupUUID(c *gin.Context, value string) (string, bool) {
 	parsed, err := uuid.Parse(value)
 	if err == nil && len(value) == len(parsed.String()) && parsed.String() == strings.ToLower(value) {
 		return parsed.String(), true
@@ -261,10 +261,10 @@ func isValidRedirectUrl(raw string) bool {
 	if !validBackupURLRegexp.MatchString(raw) {
 		return false
 	}
-	return validateBackupDownloadUrl(raw) == nil
+	return validateBackupDownloadURL(raw) == nil
 }
 
-func validateBackupDownloadUrl(raw string) error {
+func validateBackupDownloadURL(raw string) error {
 	parsed, err := url.Parse(raw)
 	if err != nil || parsed.Host == "" {
 		return backupDownloadError("The provided backup link is not a valid URL.")
@@ -281,7 +281,7 @@ func validateBackupDownloadUrl(raw string) error {
 	return nil
 }
 
-func backupRestoreHttpClient() http.Client {
+func backupRestoreHTTPClient() http.Client {
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 	transport.Proxy = nil
 	transport.ResponseHeaderTimeout = 30 * time.Second
@@ -322,7 +322,7 @@ func backupRestoreHttpClient() http.Client {
 			if !isValidRedirectUrl(redirectURL) {
 				return backupDownloadError("The provided backup link is not a valid URL.")
 			}
-			return validateBackupDownloadUrl(redirectURL)
+			return validateBackupDownloadURL(redirectURL)
 		},
 	}
 }

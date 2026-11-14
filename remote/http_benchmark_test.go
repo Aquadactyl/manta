@@ -21,7 +21,7 @@ func (benchmarkTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 // network latency, so the cost of copying the body is visible.
 func BenchmarkRequestBody(b *testing.B) {
 	body := bytes.NewBuffer(make([]byte, 1<<20))
-	c := New("http://panel.example", WithHttpClient(&http.Client{Transport: benchmarkTransport{}})).(*client)
+	c := New("http://panel.example", WithHTTPClient(&http.Client{Transport: benchmarkTransport{}})).(*client)
 	ctx := context.Background()
 	b.SetBytes(int64(body.Len()))
 	b.ReportAllocs()

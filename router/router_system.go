@@ -196,7 +196,7 @@ func postUpdateConfiguration(c *gin.Context) {
 		return
 	}
 
-	tokenId, token := cfg.Token.ID, cfg.Token.Token
+	tokenID, token := cfg.Token.ID, cfg.Token.Token
 
 	// Try to write this new configuration to the disk before updating our global
 	// state with it.
@@ -210,7 +210,7 @@ func postUpdateConfiguration(c *gin.Context) {
 
 	// Requests we make back to the Panel use credentials that were captured when
 	// the client was created at boot, so they have to be rotated explicitly.
-	middleware.ExtractManager(c).Client().SetCredentials(tokenId, token)
+	middleware.ExtractManager(c).Client().SetCredentials(tokenID, token)
 
 	c.JSON(http.StatusOK, postUpdateConfigurationResponse{
 		Applied: true,

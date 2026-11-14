@@ -29,7 +29,7 @@ func TestStartupReturnsDockerRemovalAndInspectionErrors(t *testing.T) {
 	require.NoError(t, err)
 	defer cli.Close()
 	e := &Environment{
-		Id:      "container-id",
+		ID:      "container-id",
 		client:  cli,
 		st:      system.NewAtomicString(environment.ProcessOfflineState),
 		emitter: events.NewBus(),
@@ -60,7 +60,7 @@ func TestStartReturnsAttachError(t *testing.T) {
 	require.NoError(t, err)
 	defer cli.Close()
 	e := &Environment{
-		Id:            "container-id",
+		ID:            "container-id",
 		Configuration: environment.NewConfiguration(environment.Settings{}, nil),
 		meta:          &Metadata{Image: "alpine:latest"},
 		client:        cli,
@@ -86,7 +86,7 @@ func TestStartReturnsLogTruncateError(t *testing.T) {
 	cli, err := client.NewClientWithOpts(client.WithHost(api.URL), client.WithVersion("1.51"))
 	require.NoError(t, err)
 	defer cli.Close()
-	e := &Environment{Id: "container-id", client: cli}
+	e := &Environment{ID: "container-id", client: cli}
 
 	require.ErrorContains(t, e.Start(context.Background()), "failed to truncate instance logs")
 }
@@ -111,7 +111,7 @@ func TestStartReturnsContainerStartError(t *testing.T) {
 	require.NoError(t, err)
 	defer cli.Close()
 	e := &Environment{
-		Id:            "container-id",
+		ID:            "container-id",
 		Configuration: environment.NewConfiguration(environment.Settings{}, nil),
 		meta:          &Metadata{Image: "alpine:latest"},
 		client:        cli,
@@ -146,7 +146,7 @@ func TestSignalContainerReturnsDockerKillError(t *testing.T) {
 	cli, err := client.NewClientWithOpts(client.WithHost(api.URL), client.WithVersion("1.51"))
 	require.NoError(t, err)
 	defer cli.Close()
-	e := &Environment{Id: "container-id", client: cli, st: system.NewAtomicString(environment.ProcessRunningState), emitter: events.NewBus()}
+	e := &Environment{ID: "container-id", client: cli, st: system.NewAtomicString(environment.ProcessRunningState), emitter: events.NewBus()}
 	require.ErrorContains(t, e.SignalContainer(context.Background(), "SIGTERM"), "kill failed")
 }
 
@@ -178,7 +178,7 @@ func TestReattachStopsWhenContainerStopsDuringFailedAttach(t *testing.T) {
 	require.NoError(t, err)
 	defer cli.Close()
 	e := &Environment{
-		Id:            "container-id",
+		ID:            "container-id",
 		Configuration: environment.NewConfiguration(environment.Settings{}, nil),
 		client:        cli,
 		st:            system.NewAtomicString(environment.ProcessRunningState),
@@ -217,7 +217,7 @@ func TestReattachTerminatesWhenContainerRemainsUnmanageable(t *testing.T) {
 	require.NoError(t, err)
 	defer cli.Close()
 	e := &Environment{
-		Id:            "container-id",
+		ID:            "container-id",
 		Configuration: environment.NewConfiguration(environment.Settings{}, nil),
 		client:        cli,
 		st:            system.NewAtomicString(environment.ProcessRunningState),
@@ -249,7 +249,7 @@ func TestInSituUpdateReturnsContainerUpdateError(t *testing.T) {
 	require.NoError(t, err)
 	defer cli.Close()
 	e := &Environment{
-		Id:            "container-id",
+		ID:            "container-id",
 		Configuration: environment.NewConfiguration(environment.Settings{}, nil),
 		client:        cli,
 		emitter:       events.NewBus(),

@@ -47,8 +47,8 @@ func TestGetHandler(t *testing.T) {
 	require.NoError(t, os.MkdirAll(cfg.System.Data, 0755))
 	config.Set(cfg)
 
-	settings, _ := json.Marshal(map[string]string{"uuid": serverUuid})
-	s, err := server.NewEmptyManager(nil).InitServer(serverUuid, remote.ServerConfigurationResponse{
+	settings, _ := json.Marshal(map[string]string{"uuid": serverUUID})
+	s, err := server.NewEmptyManager(nil).InitServer(serverUUID, remote.ServerConfigurationResponse{
 		Settings:             settings,
 		ProcessConfiguration: &remote.ProcessConfiguration{},
 	})
@@ -81,7 +81,7 @@ func TestGetHandler(t *testing.T) {
 		t.Fatal("timed out waiting for handler")
 	}
 	assert.NotNil(t, lastHandler)
-	assert.NotEmpty(t, lastHandler.Uuid().String())
+	assert.NotEmpty(t, lastHandler.UUID().String())
 	assert.Equal(t, s, lastHandler.server)
 	_ = conn.Close()
 
@@ -153,7 +153,7 @@ func TestNewTokenPayload_DenylistAndPermissions(t *testing.T) {
 	config.Set(cfg)
 
 	// 1. Valid token
-	tokStr, _ := signToken(t, serverUuid, PermissionConnect)
+	tokStr, _ := signToken(t, serverUUID, PermissionConnect)
 	payload, err := NewTokenPayload([]byte(tokStr))
 	require.NoError(t, err)
 	assert.True(t, payload.HasPermission(PermissionConnect))
@@ -173,7 +173,7 @@ func TestNewTokenPayload_DenylistAndPermissions(t *testing.T) {
 			JWTID:          jti,
 		},
 		Scoped:      tokens.Scoped{Scope: string(tokens.Websocket)},
-		ServerUUID:  serverUuid,
+		ServerUUID:  serverUUID,
 		UserUUID:    "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
 		Permissions: []string{PermissionConnect},
 	}
@@ -192,7 +192,7 @@ func TestNewTokenPayload_DenylistAndPermissions(t *testing.T) {
 			JWTID:          "no-perm-jti",
 		},
 		Scoped:      tokens.Scoped{Scope: string(tokens.Websocket)},
-		ServerUUID:  serverUuid,
+		ServerUUID:  serverUUID,
 		UserUUID:    "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
 		Permissions: []string{PermissionSendCommand},
 	}
@@ -204,7 +204,7 @@ func TestNewTokenPayload_DenylistAndPermissions(t *testing.T) {
 
 func TestListeners_LogAndInstallAndExpiration(t *testing.T) {
 	h, _, client := setupHandlerClient(t)
-	_, token := signToken(t, serverUuid, PermissionConnect, PermissionReceiveInstall)
+	_, token := signToken(t, serverUUID, PermissionConnect, PermissionReceiveInstall)
 	h.setJwt(token)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -273,7 +273,7 @@ func (e *customWsTestEnv) WaitForStop(context.Context, time.Duration, bool) erro
 func TestListeners_ErrorPathsOnClosedConn(t *testing.T) {
 	// 1. LogSink error path via registerListenerEvents
 	h1, _, _ := setupHandlerClient(t)
-	_, token := signToken(t, serverUuid, PermissionConnect, PermissionReceiveInstall)
+	_, token := signToken(t, serverUUID, PermissionConnect, PermissionReceiveInstall)
 	h1.setJwt(token)
 	_ = h1.Connection.Close()
 
@@ -311,7 +311,7 @@ func TestHandleInbound_AllRemainingBranches(t *testing.T) {
 	h, _ := setupHandler(t)
 
 	// 1. SendJson when jwt is nil returns nil immediately
-	assert.NoError(t, h.SendJson(Message{Event: server.StatusEvent}))
+	assert.NoError(t, h.SendJSON(Message{Event: server.StatusEvent}))
 
 	// 2. NewTokenPayload with invalid JWT bytes
 	_, err := NewTokenPayload([]byte("not-a-valid-jwt"))
@@ -322,7 +322,7 @@ func TestHandleInbound_AllRemainingBranches(t *testing.T) {
 	assert.Error(t, err)
 
 	// 4. AuthenticationEvent with onAuthenticated returning error, then nil
-	tokStr, tok := signToken(t, serverUuid, PermissionConnect, PermissionSendCommand, PermissionSendPowerStart, PermissionSendPowerStop)
+	tokStr, tok := signToken(t, serverUUID, PermissionConnect, PermissionSendCommand, PermissionSendPowerStart, PermissionSendPowerStop)
 	h.onAuthenticated = func() error {
 		return assert.AnError
 	}
@@ -351,7 +351,7 @@ func TestHandleInbound_AllRemainingBranches(t *testing.T) {
 	assert.NoError(t, err)
 
 	// 6. SetStateEvent without permission returns nil
-	_, tokNoPower := signToken(t, serverUuid, PermissionConnect, PermissionSendCommand)
+	_, tokNoPower := signToken(t, serverUUID, PermissionConnect, PermissionSendCommand)
 	h.setJwt(tokNoPower)
 	err = h.HandleInbound(ctx, Message{Event: SetStateEvent, Args: []string{"start"}})
 	assert.NoError(t, err)
@@ -414,9 +414,9 @@ func TestHandleInbound_AllRemainingBranches(t *testing.T) {
 func TestHandleInboundRefreshesExistingAuthentication(t *testing.T) {
 	h, _, client := setupHandlerClient(t)
 	t.Cleanup(func() { _ = client.Close() })
-	_, existing := signToken(t, serverUuid, PermissionConnect)
+	_, existing := signToken(t, serverUUID, PermissionConnect)
 	h.setJwt(existing)
-	refresh, _ := signToken(t, serverUuid, PermissionConnect)
+	refresh, _ := signToken(t, serverUUID, PermissionConnect)
 
 	err := h.HandleInbound(context.Background(), Message{Event: AuthenticationEvent, Args: []string{refresh}})
 	assert.NoError(t, err)

@@ -305,7 +305,7 @@ func TestDockerExistingContainerOperations(t *testing.T) {
 			{Target: "/home/container", Source: dataDir, ReadOnly: false},
 		},
 		Limits: environment.Limits{
-			CpuLimit:    100,
+			CPULimit:    100,
 			MemoryLimit: 512,
 		},
 	}, []string{})
@@ -502,7 +502,7 @@ func TestWaitForStopWaitErrorAndForcedTermination(t *testing.T) {
 
 	newEnvironment := func() *Environment {
 		return &Environment{
-			Id:      "container-id",
+			ID:      "container-id",
 			meta:    &Metadata{},
 			client:  cli,
 			st:      system.NewAtomicString(environment.ProcessOfflineState),
@@ -549,7 +549,7 @@ func TestWaitForStopParentCancellationAfterStop(t *testing.T) {
 	defer cli.Close()
 	newEnvironment := func() *Environment {
 		return &Environment{
-			Id:      "container-id",
+			ID:      "container-id",
 			meta:    &Metadata{},
 			client:  cli,
 			st:      system.NewAtomicString(environment.ProcessOfflineState),

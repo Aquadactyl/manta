@@ -37,7 +37,7 @@ func TestGetServersBoundsPaginationConcurrency(t *testing.T) {
 			}
 		}
 		_ = json.NewEncoder(w).Encode(map[string]any{
-			"data": []RawServerData{{Uuid: strconv.Itoa(page)}},
+			"data": []RawServerData{{UUID: strconv.Itoa(page)}},
 			"meta": Pagination{CurrentPage: uint(page), LastPage: 12},
 		})
 	})
@@ -71,7 +71,7 @@ func TestGetServersBoundsPaginationConcurrency(t *testing.T) {
 	require.Equal(t, int32(4), peak.Load())
 	seen := make(map[string]bool)
 	for _, s := range servers {
-		seen[s.Uuid] = true
+		seen[s.UUID] = true
 	}
 	require.Len(t, seen, 12)
 }

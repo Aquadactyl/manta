@@ -299,10 +299,10 @@ func TestRouterRemainingCoverage(t *testing.T) {
 			ExpirationTime: jwt.NumericDate(now.Add(10 * time.Minute)),
 		},
 		Scoped:     tokens.Scoped{Scope: string(tokens.BackupDownload)},
-		ServerUuid: s.ID(),
-		UserUuid:   "user-1",
-		BackupUuid: "not-a-valid-uuid",
-		UniqueId:   uuid.New().String(),
+		ServerUUID: s.ID(),
+		UserUUID:   "user-1",
+		BackupUUID: "not-a-valid-uuid",
+		UniqueID:   uuid.New().String(),
 	}
 	signedBadBackup, err := jwt.Sign(&badBackupTok, config.GetJwtAlgorithm())
 	require.NoError(t, err)
@@ -311,8 +311,8 @@ func TestRouterRemainingCoverage(t *testing.T) {
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
 
 	missingBackupTok := badBackupTok
-	missingBackupTok.BackupUuid = uuid.New().String()
-	missingBackupTok.UniqueId = uuid.New().String()
+	missingBackupTok.BackupUUID = uuid.New().String()
+	missingBackupTok.UniqueID = uuid.New().String()
 	signedMissingBackup, err := jwt.Sign(&missingBackupTok, config.GetJwtAlgorithm())
 	require.NoError(t, err)
 	w = httptest.NewRecorder()
@@ -326,10 +326,10 @@ func TestRouterRemainingCoverage(t *testing.T) {
 			ExpirationTime: jwt.NumericDate(now.Add(10 * time.Minute)),
 		},
 		Scoped:     tokens.Scoped{Scope: string(tokens.FileDownload)},
-		ServerUuid: s.ID(),
-		UserUuid:   "user-1",
+		ServerUUID: s.ID(),
+		UserUUID:   "user-1",
 		FilePath:   "/conflict_dir",
-		UniqueId:   uuid.New().String(),
+		UniqueID:   uuid.New().String(),
 	}
 	signedDirFile, err := jwt.Sign(&dirFileTok, config.GetJwtAlgorithm())
 	require.NoError(t, err)
@@ -341,7 +341,7 @@ func TestRouterRemainingCoverage(t *testing.T) {
 	require.NoError(t, os.WriteFile(filepath.Join(s.Filesystem().Path(), "downloadable.txt"), []byte("file-content"), 0o644))
 	validFileTok := dirFileTok
 	validFileTok.FilePath = "/downloadable.txt"
-	validFileTok.UniqueId = uuid.New().String()
+	validFileTok.UniqueID = uuid.New().String()
 	signedValidFile, err := jwt.Sign(&validFileTok, config.GetJwtAlgorithm())
 	require.NoError(t, err)
 	w = httptest.NewRecorder()
@@ -360,8 +360,8 @@ func TestRouterRemainingCoverage(t *testing.T) {
 
 	// Valid getDownloadBackup serving existing backup
 	validBackupTok := missingBackupTok
-	validBackupTok.BackupUuid = backupUUID
-	validBackupTok.UniqueId = uuid.New().String()
+	validBackupTok.BackupUUID = backupUUID
+	validBackupTok.UniqueID = uuid.New().String()
 	signedValidBackup, err := jwt.Sign(&validBackupTok, config.GetJwtAlgorithm())
 	require.NoError(t, err)
 	w = httptest.NewRecorder()
@@ -469,11 +469,11 @@ func TestRouterRemainingCoverage(t *testing.T) {
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
 
 	// 8. validateBackupDownloadUrl & backupRestoreHttpClient
-	assert.Error(t, validateBackupDownloadUrl("http:///no-host"))
-	assert.Error(t, validateBackupDownloadUrl("ftp://example.com/backup.tar.gz"))
-	assert.Error(t, validateBackupDownloadUrl("http://127.0.0.1/backup.tar.gz"))
+	assert.Error(t, validateBackupDownloadURL("http:///no-host"))
+	assert.Error(t, validateBackupDownloadURL("ftp://example.com/backup.tar.gz"))
+	assert.Error(t, validateBackupDownloadURL("http://127.0.0.1/backup.tar.gz"))
 
-	bClient := backupRestoreHttpClient()
+	bClient := backupRestoreHTTPClient()
 	via := make([]*http.Request, 10)
 	reqRedir, _ := http.NewRequest(http.MethodGet, "https://example.com/b.tar.gz", nil)
 	assert.Error(t, bClient.CheckRedirect(reqRedir, via))
@@ -632,10 +632,10 @@ func TestRouterRemainingCoverage(t *testing.T) {
 			ExpirationTime: jwt.NumericDate(now.Add(10 * time.Minute)),
 			Subject:        "user-1",
 		},
-		UserUuid:   "user-1",
-		ServerUuid: s.ID(),
-		BackupUuid: realBackupUUID,
-		UniqueId:   uuid.New().String(),
+		UserUUID:   "user-1",
+		ServerUUID: s.ID(),
+		BackupUUID: realBackupUUID,
+		UniqueID:   uuid.New().String(),
 		Scoped:     tokens.Scoped{Scope: string(tokens.BackupDownload)},
 	}
 	signedRealBackup, err := jwt.Sign(&realBackupTok, config.GetJwtAlgorithm())
@@ -733,7 +733,7 @@ func TestBackupRestoreDialResolutionFailures(t *testing.T) {
 	t.Cleanup(func() {
 		lookupBackupRestoreIPAddr, dialBackupRestore = previousLookup, previousDial
 	})
-	transport := backupRestoreHttpClient().Transport.(*http.Transport)
+	transport := backupRestoreHTTPClient().Transport.(*http.Transport)
 	address := "backup.example.test:443"
 
 	lookupErr := errors.New("resolver unavailable")
@@ -774,8 +774,8 @@ func TestBackupRestoreDialResolutionFailures(t *testing.T) {
 	_ = conn.Close()
 	assert.Equal(t, 2, called)
 
-	assert.Error(t, validateBackupDownloadUrl("https://example.com/file#fragment"))
-	client := backupRestoreHttpClient()
+	assert.Error(t, validateBackupDownloadURL("https://example.com/file#fragment"))
+	client := backupRestoreHTTPClient()
 	redirect, err := http.NewRequest(http.MethodGet, "https://example.com/backup", nil)
 	assert.NoError(t, err)
 	assert.NoError(t, client.CheckRedirect(redirect, nil))

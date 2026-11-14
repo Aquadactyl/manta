@@ -130,7 +130,7 @@ func (s *Server) CleanupForDestroy() {
 
 // ID returns the UUID for the server instance.
 func (s *Server) ID() string {
-	return s.Config().GetUuid()
+	return s.Config().GetUUID()
 }
 
 // Id returns the UUID for the server instance. This function is deprecated
@@ -246,10 +246,10 @@ func (s *Server) SyncWithConfiguration(cfg remote.ServerConfigurationResponse) e
 
 	// Only accept a UUID from the Panel, and never allow it to change once the
 	// server has been created.
-	if !govalidator.IsUUID(c.Uuid) {
+	if !govalidator.IsUUID(c.UUID) {
 		return errors.New("server: configuration returned by the Panel contains an invalid server uuid")
 	}
-	if id := s.ID(); id != "" && id != c.Uuid {
+	if id := s.ID(); id != "" && id != c.UUID {
 		return errors.New("server: configuration returned by the Panel is for a different server")
 	}
 

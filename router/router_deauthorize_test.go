@@ -31,7 +31,7 @@ func authenticationMessageFor(t *testing.T, userUUID string) websocket.Message {
 		},
 		Scoped:      tokens.Scoped{Scope: string(tokens.Websocket)},
 		UserUUID:    userUUID,
-		ServerUUID:  websocketTestServerUuid,
+		ServerUUID:  websocketTestServerUUID,
 		Permissions: []string{websocket.PermissionConnect},
 	}
 	token, err := jwt.Sign(&payload, config.GetJwtAlgorithm())
@@ -78,7 +78,7 @@ func TestDeauthorizeUserLeavesOtherUsersWebsocketsOpen(t *testing.T) {
 	require.True(t, authenticateAs(t, otherConn, otherUser))
 
 	base := url[:strings.Index(url, "/api/")]
-	body, err := json.Marshal(map[string]any{"user": revokedUser, "servers": []string{websocketTestServerUuid}})
+	body, err := json.Marshal(map[string]any{"user": revokedUser, "servers": []string{websocketTestServerUUID}})
 	require.NoError(t, err)
 	req, err := http.NewRequest(http.MethodPost, "http"+strings.TrimPrefix(base, "ws")+"/api/deauthorize-user", bytes.NewReader(body))
 	require.NoError(t, err)

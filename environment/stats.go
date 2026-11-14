@@ -15,7 +15,7 @@ type Stats struct {
 
 	// The absolute CPU usage is the amount of CPU used in relation to the entire system and
 	// does not take into account any limits on the server process itself.
-	CpuAbsolute float64 `json:"cpu_absolute"`
+	CPUAbsolute float64 `json:"cpu_absolute"`
 
 	// Current network transmit in & out for a container.
 	Network NetworkStats `json:"network"`

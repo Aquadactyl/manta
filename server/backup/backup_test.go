@@ -24,7 +24,7 @@ func TestBackupGenerateRequiresUuidIdentifier(t *testing.T) {
 
 	for name, createBackup := range tests {
 		t.Run(name, func(t *testing.T) {
-			testBackupGenerateRequiresUuidIdentifier(t, createBackup)
+			testBackupGenerateRequiresUUIDIdentifier(t, createBackup)
 		})
 	}
 }
@@ -54,7 +54,7 @@ func TestBackupPathUsesBackupDirectory(t *testing.T) {
 	}
 }
 
-func testBackupGenerateRequiresUuidIdentifier(t *testing.T, createBackup func(string) BackupInterface) {
+func testBackupGenerateRequiresUUIDIdentifier(t *testing.T, createBackup func(string) BackupInterface) {
 	t.Helper()
 
 	root := t.TempDir()

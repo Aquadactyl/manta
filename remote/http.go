@@ -39,9 +39,9 @@ type Client interface {
 
 type client struct {
 	httpClient  *http.Client
-	baseUrl     string
+	baseURL     string
 	mu          sync.RWMutex
-	tokenId     string
+	tokenID     string
 	token       string
 	maxAttempts int
 }
@@ -50,7 +50,7 @@ type client struct {
 // requests to the Panel that this instance is running under.
 func New(base string, opts ...ClientOption) Client {
 	c := client{
-		baseUrl: strings.TrimSuffix(base, "/") + "/api/remote",
+		baseURL: strings.TrimSuffix(base, "/") + "/api/remote",
 		httpClient: &http.Client{
 			Timeout: time.Second * 15,
 		},
@@ -83,7 +83,7 @@ func New(base string, opts ...ClientOption) Client {
 // API endpoint.
 func WithCredentials(id, token string) ClientOption {
 	return func(c *client) {
-		c.tokenId = id
+		c.tokenID = id
 		c.token = token
 	}
 }
@@ -93,7 +93,7 @@ func WithCredentials(id, token string) ClientOption {
 func (c *client) SetCredentials(id, token string) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	c.tokenId = id
+	c.tokenID = id
 	c.token = token
 }
 
@@ -101,12 +101,12 @@ func (c *client) SetCredentials(id, token string) {
 func (c *client) credentials() (string, string) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	return c.tokenId, c.token
+	return c.tokenID, c.token
 }
 
-// WithHttpClient sets the underlying HTTP client instance to use when making
+// WithHTTPClient sets the underlying HTTP client instance to use when making
 // requests to the Panel API.
-func WithHttpClient(httpClient *http.Client) ClientOption {
+func WithHTTPClient(httpClient *http.Client) ClientOption {
 	return func(c *client) {
 		c.httpClient = httpClient
 	}
@@ -136,16 +136,16 @@ func (c *client) Post(ctx context.Context, path string, data interface{}) (*Resp
 // over this method when possible. It appends the path to the endpoint of the
 // client and adds the authentication token to the request.
 func (c *client) requestOnce(ctx context.Context, method, path string, body io.Reader, opts ...func(r *http.Request)) (*Response, error) {
-	req, err := http.NewRequestWithContext(ctx, method, c.baseUrl+path, body)
+	req, err := http.NewRequestWithContext(ctx, method, c.baseURL+path, body)
 	if err != nil {
 		return nil, err
 	}
 
-	tokenId, token := c.credentials()
-	req.Header.Set("User-Agent", fmt.Sprintf("Pterodactyl Wings/v%s (id:%s)", system.Version, tokenId))
+	tokenID, token := c.credentials()
+	req.Header.Set("User-Agent", fmt.Sprintf("Pterodactyl Wings/v%s (id:%s)", system.Version, tokenID))
 	req.Header.Set("Accept", "application/vnd.pterodactyl.v1+json")
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s.%s", tokenId, token))
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s.%s", tokenID, token))
 
 	// Call all opts functions to allow modifying the request
 	for _, o := range opts {

@@ -43,9 +43,9 @@ func AttachServerManager(m *server.Manager) gin.HandlerFunc {
 	}
 }
 
-// AttachApiClient attaches the application API client which allows routes to
+// AttachAPIClient attaches the application API client which allows routes to
 // access server resources from the Panel easily.
-func AttachApiClient(client remote.Client) gin.HandlerFunc {
+func AttachAPIClient(client remote.Client) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Set("api_client", client)
 		c.Next()
@@ -241,8 +241,8 @@ func ExtractServer(c *gin.Context) *server.Server {
 	return v.(*server.Server)
 }
 
-// ExtractApiClient returns the API client defined for the routes.
-func ExtractApiClient(c *gin.Context) remote.Client {
+// ExtractAPIClient returns the API client defined for the routes.
+func ExtractAPIClient(c *gin.Context) remote.Client {
 	if v, ok := c.Get("api_client"); ok {
 		return v.(remote.Client)
 	}

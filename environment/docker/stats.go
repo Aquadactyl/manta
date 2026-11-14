@@ -76,7 +76,7 @@ func (e *Environment) pollResources(ctx context.Context) error {
 	e.log().Info("starting resource polling for container")
 	defer e.log().Debug("stopped resource polling for container")
 
-	stats, err := e.client.ContainerStats(ctx, e.Id, true)
+	stats, err := e.client.ContainerStats(ctx, e.ID, true)
 	if err != nil {
 		return err
 	}
@@ -126,7 +126,7 @@ func decodeResourceStats(dec *json.Decoder, uptime int64) (environment.Stats, er
 	st := environment.Stats{
 		Uptime: uptime, Memory: calculateDockerMemory(v.MemoryStats),
 		MemoryLimit: v.MemoryStats.Limit,
-		CpuAbsolute: calculateDockerAbsoluteCpu(v.PreCPUStats, v.CPUStats),
+		CPUAbsolute: calculateDockerAbsoluteCPU(v.PreCPUStats, v.CPUStats),
 	}
 	for _, nw := range v.Networks {
 		st.Network.RxBytes += nw.RxBytes
@@ -159,7 +159,7 @@ func calculateDockerMemory(stats resourceMemoryStats) uint64 {
 // by the defined CPU limits on the container.
 //
 // @see https://github.com/docker/cli/blob/aa097cf1aa19099da70930460250797c8920b709/cli/command/container/stats_helpers.go#L166
-func calculateDockerAbsoluteCpu(pStats container.CPUStats, stats container.CPUStats) float64 {
+func calculateDockerAbsoluteCPU(pStats container.CPUStats, stats container.CPUStats) float64 {
 	// Calculate the change in CPU usage between the current and previous reading.
 	cpuDelta := float64(stats.CPUUsage.TotalUsage) - float64(pStats.CPUUsage.TotalUsage)
 

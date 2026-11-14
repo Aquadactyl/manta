@@ -129,14 +129,14 @@ func SetCpuBurst(ctx context.Context, cli *client.Client, containerID string, qu
 // applyCpuBurst applies the configured CFS burst to the environment's container
 // using its current CPU limit.
 func (e *Environment) applyCpuBurst(ctx context.Context) {
-	quota := e.Configuration.Limits().CpuLimit * config.Get().Docker.CpuPeriodMicroseconds() / 100
-	SetCpuBurst(ctx, e.client, e.Id, quota)
+	quota := e.Configuration.Limits().CPULimit * config.Get().Docker.CpuPeriodMicroseconds() / 100
+	SetCpuBurst(ctx, e.client, e.ID, quota)
 }
 
-// clearCpuBurst zeroes the CFS burst for the given container process. This must
+// clearCPUBurst zeroes the CFS burst for the given container process. This must
 // happen before a quota change is applied since the kernel rejects a quota lower
 // than the current burst. It runs even when bursting is disabled so a value set
 // before the feature was turned off cannot block future quota changes.
-func (e *Environment) clearCpuBurst(pid int) {
+func (e *Environment) clearCPUBurst(pid int) {
 	writeCpuBurst(e.log(), pid, 0)
 }

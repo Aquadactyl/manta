@@ -63,7 +63,7 @@ type InstallationScript struct {
 
 // RawServerData is a raw response from the API for a server.
 type RawServerData struct {
-	Uuid                 string          `json:"uuid"`
+	UUID                 string          `json:"uuid"`
 	Settings             json.RawMessage `json:"settings"`
 	ProcessConfiguration json.RawMessage `json:"process_configuration"`
 }

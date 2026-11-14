@@ -21,7 +21,7 @@ type Activity struct {
 	// User is UUID of the user that triggered this event, or an empty string if the event
 	// cannot be tied to a specific user, in which case we will assume it was the system
 	// user.
-	User JsonNullString `gorm:"type:uuid" json:"user"`
+	User JSONNullString `gorm:"type:uuid" json:"user"`
 	// Server is the UUID of the server this event is associated with.
 	Server string `gorm:"type:uuid;not null" json:"server"`
 	// Event is a string that describes what occurred, and is used by the Panel instance to
@@ -40,7 +40,7 @@ type Activity struct {
 // SetUser sets the current user that performed the action. If an empty string is provided
 // it is cast into a null value when stored.
 func (a Activity) SetUser(u string) *Activity {
-	a.User = JsonNullString{NullString: sql.NullString{String: u, Valid: u != ""}}
+	a.User = JSONNullString{NullString: sql.NullString{String: u, Valid: u != ""}}
 	return &a
 }
 

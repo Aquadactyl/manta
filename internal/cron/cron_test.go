@@ -134,7 +134,7 @@ func TestCronEdgeCasesAndDeliveryErrors(t *testing.T) {
 	defer srv403.Close()
 
 	cli403 := remote.New(srv403.URL)
-	err403 := cli403.SendActivityLogs(context.Background(), []models.Activity{{Server: testServerUuid}})
+	err403 := cli403.SendActivityLogs(context.Background(), []models.Activity{{Server: testServerUUID}})
 	assert.Error(t, err403)
 	assert.False(t, isRefused(err403))
 
@@ -154,8 +154,8 @@ func TestCronEdgeCasesAndDeliveryErrors(t *testing.T) {
 	defer srvSplitFail.Close()
 
 	_, err = deliver(context.Background(), remote.New(srvSplitFail.URL), []batchItem{
-		{activity: models.Activity{Server: testServerUuid, Event: "e1"}, ids: []int{1}},
-		{activity: models.Activity{Server: testServerUuid, Event: "e2"}, ids: []int{2}},
+		{activity: models.Activity{Server: testServerUUID, Event: "e1"}, ids: []int{1}},
+		{activity: models.Activity{Server: testServerUUID, Event: "e2"}, ids: []int{2}},
 	})
 	assert.Error(t, err)
 
@@ -192,7 +192,7 @@ func TestCronEdgeCasesAndDeliveryErrors(t *testing.T) {
 	em := &eventMap{max: 1, m: map[mapKey]*eventGroup{}}
 	tNow := time.Date(2026, 1, 1, 12, 30, 45, 0, time.UTC)
 	a1 := models.Activity{
-		Server:    testServerUuid,
+		Server:    testServerUUID,
 		Event:     "server:sftp.write",
 		IP:        validIP,
 		Timestamp: tNow,
@@ -202,7 +202,7 @@ func TestCronEdgeCasesAndDeliveryErrors(t *testing.T) {
 
 	// Earlier timestamp updates group timestamp
 	a1Earlier := models.Activity{
-		Server:    testServerUuid,
+		Server:    testServerUUID,
 		Event:     "server:sftp.write",
 		IP:        validIP,
 		Timestamp: tNow.Add(-10 * time.Second),
@@ -212,7 +212,7 @@ func TestCronEdgeCasesAndDeliveryErrors(t *testing.T) {
 
 	// Different event when len(em.m) >= em.max returns false
 	a2 := models.Activity{
-		Server:    testServerUuid,
+		Server:    testServerUUID,
 		Event:     "server:sftp.delete",
 		IP:        validIP,
 		Timestamp: tNow,

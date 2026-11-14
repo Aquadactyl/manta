@@ -68,7 +68,7 @@ func TestPollResourcesErrorAndStopPaths(t *testing.T) {
 			require.NoError(t, err)
 			defer cli.Close()
 			o = sync.Once{}
-			e := &Environment{Id: "poll-resources", client: cli, st: system.NewAtomicString(environment.ProcessRunningState), emitter: events.NewBus()}
+			e := &Environment{ID: "poll-resources", client: cli, st: system.NewAtomicString(environment.ProcessRunningState), emitter: events.NewBus()}
 			err = e.pollResources(ctx)
 			if tc.wantStatsErr {
 				require.Error(t, err)
@@ -109,7 +109,7 @@ func TestPollResourcesStopsAfterServerTurnsOffline(t *testing.T) {
 	require.NoError(t, err)
 	defer cli.Close()
 	o = sync.Once{}
-	e := &Environment{Id: "poll-resources-offline", client: cli, st: system.NewAtomicString(environment.ProcessRunningState), emitter: events.NewBus()}
+	e := &Environment{ID: "poll-resources-offline", client: cli, st: system.NewAtomicString(environment.ProcessRunningState), emitter: events.NewBus()}
 	done := make(chan error, 1)
 	go func() { done <- e.pollResources(context.Background()) }()
 	select {

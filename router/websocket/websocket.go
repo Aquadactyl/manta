@@ -83,14 +83,14 @@ type Handler struct {
 var (
 	ErrJwtNotPresent    = errors.New("jwt: no jwt present")
 	ErrJwtNoConnectPerm = errors.New("jwt: missing connect permission")
-	ErrJwtUuidMismatch  = errors.New("jwt: server uuid mismatch")
+	ErrJwtUUIDMismatch  = errors.New("jwt: server uuid mismatch")
 	ErrJwtOnDenylist    = errors.New("jwt: created too far in past (denylist)")
 )
 
 func IsJwtError(err error) bool {
 	return errors.Is(err, ErrJwtNotPresent) ||
 		errors.Is(err, ErrJwtNoConnectPerm) ||
-		errors.Is(err, ErrJwtUuidMismatch) ||
+		errors.Is(err, ErrJwtUUIDMismatch) ||
 		errors.Is(err, ErrJwtOnDenylist) ||
 		errors.Is(err, jwt.ErrExpValidation) ||
 		errors.Is(err, jwt.ErrNbfValidation) ||
@@ -159,7 +159,7 @@ func GetHandler(s *server.Server, w http.ResponseWriter, r *http.Request, c *gin
 	}, nil
 }
 
-func (h *Handler) Uuid() uuid.UUID {
+func (h *Handler) UUID() uuid.UUID {
 	return h.uuid
 }
 
@@ -173,15 +173,15 @@ func (h *Handler) OnAuthenticated(fn func() error) {
 
 func (h *Handler) Logger() *log.Entry {
 	return log.WithField("subsystem", "websocket").
-		WithField("connection", h.Uuid().String()).
+		WithField("connection", h.UUID().String()).
 		WithField("server", h.server.ID())
 }
 
-func (h *Handler) SendJson(v Message) error {
+func (h *Handler) SendJSON(v Message) error {
 	// Do not send JSON down the line if the JWT on the connection is not valid!
 	j, err := h.validJwt()
 	if err != nil {
-		_ = h.unsafeSendJson(Message{
+		_ = h.unsafeSendJSON(Message{
 			Event: JwtErrorEvent,
 			Args:  []string{err.Error()},
 		})
@@ -211,7 +211,7 @@ func (h *Handler) SendJson(v Message) error {
 		}
 	}
 
-	if err := h.unsafeSendJson(v); err != nil {
+	if err := h.unsafeSendJSON(v); err != nil {
 		// Not entirely sure how this happens (likely just when there is a ton of console spam)
 		// but I don't care to fix it right now, so just mask the error and throw a warning into
 		// the logs for us to look into later.
@@ -233,7 +233,7 @@ func (h *Handler) SendJson(v Message) error {
 // Sends JSON over the websocket connection, ignoring the authentication state of the
 // socket user. Do not call this directly unless you are positive a response should be
 // sent back to the client!
-func (h *Handler) unsafeSendJson(v interface{}) error {
+func (h *Handler) unsafeSendJSON(v interface{}) error {
 	h.writeMu.Lock()
 	defer h.writeMu.Unlock()
 
@@ -244,7 +244,7 @@ func (h *Handler) unsafeSendJson(v interface{}) error {
 // SendThrottled tells the client that messages are being dropped because too
 // many were sent.
 func (h *Handler) SendThrottled(scope string) error {
-	return h.unsafeSendJson(Message{Event: ThrottledEvent, Args: []string{scope}})
+	return h.unsafeSendJSON(Message{Event: ThrottledEvent, Args: []string{scope}})
 }
 
 // SendClose sends a close message with the given code and reason.
@@ -283,17 +283,17 @@ func (h *Handler) validJwt() (*tokens.WebsocketPayload, error) {
 		return nil, ErrJwtNoConnectPerm
 	}
 
-	if h.server.ID() != j.GetServerUuid() {
-		return nil, ErrJwtUuidMismatch
+	if h.server.ID() != j.GetServerUUID() {
+		return nil, ErrJwtUUIDMismatch
 	}
 
 	return j, nil
 }
 
-// SendErrorJson sends an error back to the connected websocket instance by checking the permissions
+// SendErrorJSON sends an error back to the connected websocket instance by checking the permissions
 // of the token. If the user has the "receive-errors" grant we will send back the actual
 // error message, otherwise we just send back a standard error message.
-func (h *Handler) SendErrorJson(msg Message, err error, shouldLog ...bool) error {
+func (h *Handler) SendErrorJSON(msg Message, err error, shouldLog ...bool) error {
 	j, _ := h.validJwt()
 	isJWTError := IsJwtError(err)
 
@@ -317,7 +317,7 @@ func (h *Handler) SendErrorJson(msg Message, err error, shouldLog ...bool) error
 			Errorf("error processing websocket event \"%s\"", msg.Event)
 	}
 
-	return h.unsafeSendJson(wsm)
+	return h.unsafeSendJSON(wsm)
 }
 
 // GetErrorMessage converts an error message into a more readable representation and returns a UUID
@@ -380,7 +380,7 @@ func (h *Handler) HandleInbound(ctx context.Context, m Message) error {
 	if m.Event != AuthenticationEvent {
 		var err error
 		if j, err = h.validJwt(); err != nil {
-			_ = h.unsafeSendJson(Message{
+			_ = h.unsafeSendJSON(Message{
 				Event: JwtErrorEvent,
 				Args:  []string{err.Error()},
 			})
@@ -397,8 +397,8 @@ func (h *Handler) HandleInbound(ctx context.Context, m Message) error {
 			}
 
 			// Only tokens issued for this server are stored on the socket.
-			if token.GetServerUuid() != h.server.ID() {
-				return ErrJwtUuidMismatch
+			if token.GetServerUUID() != h.server.ID() {
+				return ErrJwtUUIDMismatch
 			}
 
 			// Check if the user has previously authenticated successfully.
@@ -420,7 +420,7 @@ func (h *Handler) HandleInbound(ctx context.Context, m Message) error {
 			h.setJwt(token)
 
 			// Tell the client they authenticated successfully.
-			_ = h.unsafeSendJson(Message{Event: AuthenticationSuccessEvent})
+			_ = h.unsafeSendJSON(Message{Event: AuthenticationSuccessEvent})
 
 			// Check if the client was refreshing their authentication token
 			// instead of authenticating for the first time.
@@ -438,7 +438,7 @@ func (h *Handler) HandleInbound(ctx context.Context, m Message) error {
 			// On every authentication event, send the current server status back
 			// to the client. :)
 			state := h.server.Environment.State()
-			_ = h.SendJson(Message{
+			_ = h.SendJSON(Message{
 				Event: server.StatusEvent,
 				Args:  []string{state},
 			})
@@ -450,7 +450,7 @@ func (h *Handler) HandleInbound(ctx context.Context, m Message) error {
 					_ = h.server.Filesystem().HasSpaceAvailable(false)
 
 					b, _ := json.Marshal(h.server.Proc())
-					_ = h.SendJson(Message{
+					_ = h.SendJSON(Message{
 						Event: server.StatsEvent,
 						Args:  []string{string(b)},
 					})
@@ -480,7 +480,7 @@ func (h *Handler) HandleInbound(ctx context.Context, m Message) error {
 			if errors.Is(err, system.ErrLockerLocked) {
 				m, _ := h.GetErrorMessage("another power action is currently being processed for this server, please try again later")
 
-				_ = h.SendJson(Message{
+				_ = h.SendJSON(Message{
 					Event: ErrorEvent,
 					Args:  []string{m},
 				})
@@ -508,7 +508,7 @@ func (h *Handler) HandleInbound(ctx context.Context, m Message) error {
 			}
 
 			for _, line := range logs {
-				_ = h.SendJson(Message{
+				_ = h.SendJSON(Message{
 					Event: server.ConsoleOutputEvent,
 					Args:  []string{line},
 				})
@@ -519,7 +519,7 @@ func (h *Handler) HandleInbound(ctx context.Context, m Message) error {
 	case SendStatsEvent:
 		{
 			b, _ := json.Marshal(h.server.Proc())
-			_ = h.SendJson(Message{
+			_ = h.SendJSON(Message{
 				Event: server.StatsEvent,
 				Args:  []string{string(b)},
 			})

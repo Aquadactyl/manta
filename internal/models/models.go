@@ -7,11 +7,11 @@ import (
 	"emperror.dev/errors"
 )
 
-type JsonNullString struct {
+type JSONNullString struct {
 	sql.NullString
 }
 
-func (v JsonNullString) MarshalJSON() ([]byte, error) {
+func (v JSONNullString) MarshalJSON() ([]byte, error) {
 	if v.Valid {
 		return json.Marshal(v.String)
 	} else {
@@ -19,7 +19,7 @@ func (v JsonNullString) MarshalJSON() ([]byte, error) {
 	}
 }
 
-func (v *JsonNullString) UnmarshalJSON(data []byte) error {
+func (v *JSONNullString) UnmarshalJSON(data []byte) error {
 	var s *string
 	if err := json.Unmarshal(data, &s); err != nil {
 		return errors.WithStack(err)

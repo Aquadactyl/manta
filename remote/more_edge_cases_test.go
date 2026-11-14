@@ -20,7 +20,7 @@ func TestClientRedirectHandling(t *testing.T) {
 			return nil
 		},
 	}
-	c := New("http://example.com", WithCredentials("id", "token"), WithHttpClient(customClient)).(*client)
+	c := New("http://example.com", WithCredentials("id", "token"), WithHTTPClient(customClient)).(*client)
 	req, _ := http.NewRequest("GET", "http://example.com/redirect", nil)
 	viaReq, _ := http.NewRequest("GET", "http://example.com/initial", nil)
 	err := c.httpClient.CheckRedirect(req, []*http.Request{viaReq})
@@ -79,7 +79,7 @@ func TestServersMalformedJSONResponses(t *testing.T) {
 	}))
 	defer s.Close()
 
-	c := New(s.URL, WithCredentials("id", "token"), WithHttpClient(s.Client())).(*client)
+	c := New(s.URL, WithCredentials("id", "token"), WithHTTPClient(s.Client())).(*client)
 
 	// ValidateSftpCredentials
 	_, err := c.ValidateSftpCredentials(context.Background(), SftpAuthRequest{})

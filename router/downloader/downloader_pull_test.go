@@ -22,7 +22,7 @@ import (
 	"github.com/Aquadactyl/manta/server"
 )
 
-const pullTestServerUuid = "ffffffff-ffff-4fff-8fff-ffffffffffff"
+const pullTestServerUUID = "ffffffff-ffff-4fff-8fff-ffffffffffff"
 
 // newPullTestServer returns a server whose files are stored in a temporary data
 // directory and owned by the user running the tests, so that they pass without
@@ -38,9 +38,9 @@ func newPullTestServer(t *testing.T) *server.Server {
 	next.API.RemoteDownloadAllowlist = []string{"127.0.0.1"}
 	config.Set(&next)
 
-	settings, err := json.Marshal(map[string]string{"uuid": pullTestServerUuid})
+	settings, err := json.Marshal(map[string]string{"uuid": pullTestServerUUID})
 	require.NoError(t, err)
-	s, err := server.NewEmptyManager(nil).InitServer(pullTestServerUuid, remote.ServerConfigurationResponse{
+	s, err := server.NewEmptyManager(nil).InitServer(pullTestServerUUID, remote.ServerConfigurationResponse{
 		Settings:             settings,
 		ProcessConfiguration: &remote.ProcessConfiguration{},
 	})

@@ -29,7 +29,7 @@ func TestResourceEventCountersAndObserverDelivery(t *testing.T) {
 			if observed {
 				s.Events().On(c)
 			}
-			want := environment.Stats{Memory: 9007199254740993, MemoryLimit: ^uint64(0), CpuAbsolute: 12.763,
+			want := environment.Stats{Memory: 9007199254740993, MemoryLimit: ^uint64(0), CPUAbsolute: 12.763,
 				Network: environment.NetworkStats{RxBytes: ^uint64(0), TxBytes: 9007199254740995}, Uptime: 7365124}
 			data, err := json.Marshal(events.Event{Topic: environment.ResourceEvent, Data: want})
 			require.NoError(t, err)

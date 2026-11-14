@@ -38,7 +38,7 @@ func TestAttachReturnsDockerAttachError(t *testing.T) {
 	require.NoError(t, err)
 	defer dockerClient.Close()
 
-	env := &Environment{Id: "container-id", client: dockerClient}
+	env := &Environment{ID: "container-id", client: dockerClient}
 	err = env.Attach(context.Background())
 	require.Error(t, err)
 	require.False(t, env.IsAttached())
@@ -69,7 +69,7 @@ func TestAttachConsumesOutputAndClearsStoppedStream(t *testing.T) {
 	require.NoError(t, err)
 	defer cli.Close()
 	env := &Environment{
-		Id:      "container-id",
+		ID:      "container-id",
 		client:  cli,
 		st:      system.NewAtomicString(environment.ProcessRunningState),
 		emitter: events.NewBus(),
@@ -119,7 +119,7 @@ func TestAttachScannerErrorKeepsStreamWhenReattachSucceeds(t *testing.T) {
 		close(reattachCalled)
 		return true
 	}
-	env := &Environment{Id: "container-id", st: system.NewAtomicString(environment.ProcessRunningState)}
+	env := &Environment{ID: "container-id", st: system.NewAtomicString(environment.ProcessRunningState)}
 	require.NoError(t, env.Attach(context.Background()))
 	select {
 	case <-pollStarted:
@@ -137,7 +137,7 @@ func TestAttachScannerErrorKeepsStreamWhenReattachSucceeds(t *testing.T) {
 }
 
 func TestReportAttachPollError(t *testing.T) {
-	env := &Environment{Id: "container-id"}
+	env := &Environment{ID: "container-id"}
 	reportAttachPollError(env, errors.New("poll failed"))
 	reportAttachPollError(env, io.EOF)
 	reportAttachPollError(env, context.Canceled)

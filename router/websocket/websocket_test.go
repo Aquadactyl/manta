@@ -43,8 +43,8 @@ func init() {
 }
 
 const (
-	serverUuid      = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
-	otherServerUuid = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
+	serverUUID      = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+	otherServerUUID = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
 )
 
 var errCommandSent = errors.New("command sent")
@@ -112,8 +112,8 @@ func setupHandlerClient(t *testing.T) (*Handler, *commandEnvironment, *websocket
 	}
 	config.Set(cfg)
 
-	settings, _ := json.Marshal(map[string]string{"uuid": serverUuid})
-	s, err := server.NewEmptyManager(nil).InitServer(serverUuid, remote.ServerConfigurationResponse{
+	settings, _ := json.Marshal(map[string]string{"uuid": serverUUID})
+	s, err := server.NewEmptyManager(nil).InitServer(serverUUID, remote.ServerConfigurationResponse{
 		Settings:             settings,
 		ProcessConfiguration: &remote.ProcessConfiguration{},
 	})
@@ -149,7 +149,7 @@ func signToken(t *testing.T, forServer string, permissions ...string) (string, *
 	return signTokenFor(t, forServer, "cccccccc-cccc-4ccc-8ccc-cccccccccccc", permissions...)
 }
 
-func signTokenFor(t *testing.T, forServer string, userUuid string, permissions ...string) (string, *tokens.WebsocketPayload) {
+func signTokenFor(t *testing.T, forServer string, userUUID string, permissions ...string) (string, *tokens.WebsocketPayload) {
 	t.Helper()
 	// Tokens issued before Wings booted are rejected, and the issued time only has
 	// second precision.
@@ -160,7 +160,7 @@ func signTokenFor(t *testing.T, forServer string, userUuid string, permissions .
 			ExpirationTime: jwt.NumericDate(now.Add(time.Minute * 10)),
 		},
 		Scoped:      tokens.Scoped{Scope: string(tokens.Websocket)},
-		UserUUID:    userUuid,
+		UserUUID:    userUUID,
 		ServerUUID:  forServer,
 		Permissions: permissions,
 	}
@@ -179,8 +179,8 @@ func signTokenFor(t *testing.T, forServer string, userUuid string, permissions .
 // user's token is on the socket since.
 func TestActivityIsAttributedToTheAuthorizingToken(t *testing.T) {
 	h, _ := setupHandler(t)
-	_, authorizing := signTokenFor(t, serverUuid, "aaaaaaaa-0000-4000-8000-000000000001", PermissionConnect, PermissionSendCommand)
-	_, other := signTokenFor(t, serverUuid, "bbbbbbbb-0000-4000-8000-000000000002", PermissionConnect)
+	_, authorizing := signTokenFor(t, serverUUID, "aaaaaaaa-0000-4000-8000-000000000001", PermissionConnect, PermissionSendCommand)
+	_, other := signTokenFor(t, serverUUID, "bbbbbbbb-0000-4000-8000-000000000002", PermissionConnect)
 	h.setJwt(other)
 
 	a := h.activity(authorizing).Event(server.ActivityConsoleCommand, nil)
@@ -191,12 +191,12 @@ func TestActivityIsAttributedToTheAuthorizingToken(t *testing.T) {
 
 func TestAuthenticationRejectsTokenForDifferentServer(t *testing.T) {
 	h, _ := setupHandler(t)
-	_, current := signToken(t, serverUuid, PermissionConnect)
-	other, _ := signToken(t, otherServerUuid, PermissionConnect, PermissionSendCommand)
+	_, current := signToken(t, serverUUID, PermissionConnect)
+	other, _ := signToken(t, otherServerUUID, PermissionConnect, PermissionSendCommand)
 	h.setJwt(current)
 
 	err := h.HandleInbound(context.Background(), Message{Event: AuthenticationEvent, Args: []string{other}})
-	if !errors.Is(err, ErrJwtUuidMismatch) {
+	if !errors.Is(err, ErrJwtUUIDMismatch) {
 		t.Fatalf("expected a token for a different server to be rejected, got %v", err)
 	}
 	if h.GetJwt() != current {
@@ -211,8 +211,8 @@ func TestCommandIsNotAuthorizedByTokenForDifferentServer(t *testing.T) {
 		t.Skip("the messages cannot be handled concurrently with a single CPU")
 	}
 	h, env := setupHandler(t)
-	_, current := signToken(t, serverUuid, PermissionConnect)
-	other, _ := signToken(t, otherServerUuid, PermissionConnect, PermissionSendCommand)
+	_, current := signToken(t, serverUUID, PermissionConnect)
+	other, _ := signToken(t, otherServerUUID, PermissionConnect, PermissionSendCommand)
 
 	deadline := time.Now().Add(time.Second * 5)
 	for i := 0; i < 20000 && time.Now().Before(deadline); i++ {
@@ -245,7 +245,7 @@ func TestIsJwtError(t *testing.T) {
 	if !IsJwtError(ErrJwtNoConnectPerm) {
 		t.Error("expected ErrJwtNoConnectPerm to be jwt error")
 	}
-	if !IsJwtError(ErrJwtUuidMismatch) {
+	if !IsJwtError(ErrJwtUUIDMismatch) {
 		t.Error("expected ErrJwtUuidMismatch to be jwt error")
 	}
 	if !IsJwtError(ErrJwtOnDenylist) {
@@ -263,7 +263,7 @@ func TestHandlerMethods(t *testing.T) {
 	h, _, client := setupHandlerClient(t)
 
 	// Uuid & Logger
-	if h.Uuid().String() == "" {
+	if h.UUID().String() == "" {
 		t.Error("expected non-empty uuid")
 	}
 	if h.Logger() == nil {
@@ -281,7 +281,7 @@ func TestHandlerMethods(t *testing.T) {
 	}
 
 	// Authenticate
-	tok, payload := signToken(t, serverUuid, PermissionConnect, PermissionSendCommand)
+	tok, payload := signToken(t, serverUUID, PermissionConnect, PermissionSendCommand)
 	if err := h.HandleInbound(context.Background(), Message{Event: AuthenticationEvent, Args: []string{tok}}); err != nil {
 		t.Fatal(err)
 	}
@@ -299,10 +299,10 @@ func TestHandlerMethods(t *testing.T) {
 	}
 
 	// SendErrorJson
-	if err := h.SendErrorJson(Message{Event: SendCommandEvent}, errors.New("fail")); err != nil {
+	if err := h.SendErrorJSON(Message{Event: SendCommandEvent}, errors.New("fail")); err != nil {
 		t.Errorf("SendErrorJson: %v", err)
 	}
-	if err := h.SendErrorJson(Message{Event: SendCommandEvent}, ErrJwtNoConnectPerm); err != nil {
+	if err := h.SendErrorJSON(Message{Event: SendCommandEvent}, ErrJwtNoConnectPerm); err != nil {
 		t.Errorf("SendErrorJson JWT: %v", err)
 	}
 
@@ -331,14 +331,14 @@ func TestHandlerInboundEvents(t *testing.T) {
 	}
 
 	// 2. Authenticate with mismatched server UUID
-	tokBadServer, _ := signToken(t, otherServerUuid, PermissionConnect)
+	tokBadServer, _ := signToken(t, otherServerUUID, PermissionConnect)
 	err = h.HandleInbound(context.Background(), Message{Event: AuthenticationEvent, Args: []string{tokBadServer}})
-	if !errors.Is(err, ErrJwtUuidMismatch) {
+	if !errors.Is(err, ErrJwtUUIDMismatch) {
 		t.Errorf("expected ErrJwtUuidMismatch, got %v", err)
 	}
 
 	// 3. Authenticate successfully
-	tok, _ := signToken(t, serverUuid, PermissionConnect, PermissionSendCommand, PermissionSendPowerStart, PermissionSendPowerStop)
+	tok, _ := signToken(t, serverUUID, PermissionConnect, PermissionSendCommand, PermissionSendPowerStart, PermissionSendPowerStop)
 	err = h.HandleInbound(context.Background(), Message{Event: AuthenticationEvent, Args: []string{tok}})
 	if err != nil {
 		t.Fatalf("auth failed: %v", err)
@@ -384,14 +384,14 @@ func TestHandlerInboundEvents(t *testing.T) {
 	h.server.Config().SetSuspended(false)
 
 	// 9. SetStateEvent without permission
-	_, pNoPower := signToken(t, serverUuid, PermissionConnect)
+	_, pNoPower := signToken(t, serverUUID, PermissionConnect)
 	h.setJwt(pNoPower)
 	err = h.HandleInbound(context.Background(), Message{Event: SetStateEvent, Args: []string{"start"}})
 	if err != nil {
 		t.Errorf("expected nil for unauthorized power event, got %v", err)
 	}
 
-	_, pFull := signToken(t, serverUuid, PermissionConnect, PermissionSendCommand, PermissionSendPowerStart, PermissionSendPowerStop)
+	_, pFull := signToken(t, serverUUID, PermissionConnect, PermissionSendCommand, PermissionSendPowerStart, PermissionSendPowerStop)
 	h.setJwt(pFull)
 
 	// 10. SendCommandEvent without permission
@@ -404,13 +404,13 @@ func TestHandlerInboundEvents(t *testing.T) {
 
 	// 11. SendClose and then SendJson (triggers websocket.ErrCloseSent handling)
 	_ = h.SendClose(websocket.CloseNormalClosure, "closing test")
-	_ = h.SendJson(Message{Event: server.StatusEvent, Args: []string{"stopped"}})
+	_ = h.SendJSON(Message{Event: server.StatusEvent, Args: []string{"stopped"}})
 
 	// 12. validJwt branches
 	// a. Denylisted
-	_, pDeny := signToken(t, serverUuid, PermissionConnect)
+	_, pDeny := signToken(t, serverUUID, PermissionConnect)
 	pDeny.IssuedAt = jwt.NumericDate(time.Now().Add(-time.Minute))
-	tokens.DenyForServer(serverUuid, pDeny.UserUUID)
+	tokens.DenyForServer(serverUUID, pDeny.UserUUID)
 	h.setJwt(pDeny)
 	_, err = h.validJwt()
 	if !errors.Is(err, ErrJwtOnDenylist) {
@@ -425,7 +425,7 @@ func TestHandlerInboundEvents(t *testing.T) {
 		},
 		UserUUID:    "clean-user-uuid-1",
 		Scoped:      tokens.Scoped{Scope: string(tokens.Websocket)},
-		ServerUUID:  serverUuid,
+		ServerUUID:  serverUUID,
 		Permissions: []string{PermissionSendCommand},
 	}
 	h.setJwt(tokNoConnect)
@@ -442,12 +442,12 @@ func TestHandlerInboundEvents(t *testing.T) {
 		},
 		UserUUID:    "clean-user-uuid-2",
 		Scoped:      tokens.Scoped{Scope: string(tokens.Websocket)},
-		ServerUUID:  otherServerUuid,
+		ServerUUID:  otherServerUUID,
 		Permissions: []string{PermissionConnect},
 	}
 	h.setJwt(tokWrongSrv)
 	_, err = h.validJwt()
-	if !errors.Is(err, ErrJwtUuidMismatch) {
+	if !errors.Is(err, ErrJwtUUIDMismatch) {
 		t.Errorf("expected ErrJwtUuidMismatch, got %v", err)
 	}
 }

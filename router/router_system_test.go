@@ -214,7 +214,7 @@ func TestPostCreateServerAlreadyExists(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	s.Config().Uuid = "44444444-4444-4444-4444-444444444444"
+	s.Config().UUID = "44444444-4444-4444-4444-444444444444"
 	mgr.Add(s)
 
 	recorder := httptest.NewRecorder()

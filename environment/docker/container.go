@@ -81,7 +81,7 @@ func (e *Environment) Attach(ctx context.Context) error {
 	}
 
 	// Set the stream again with the container.
-	if st, err := dockerContainerAttach(ctx, e.client, e.Id, opts); err != nil {
+	if st, err := dockerContainerAttach(ctx, e.client, e.ID, opts); err != nil {
 		return errors.WrapIf(err, "environment/docker: error while attaching to container")
 	} else {
 		e.SetStream(&st)
@@ -117,7 +117,7 @@ func (e *Environment) Attach(ctx context.Context) error {
 				e.logCallback(v)
 			}
 		}); err != nil && err != io.EOF {
-			log.WithField("error", err).WithField("container_id", e.Id).Warn("error processing scanner line in console output")
+			log.WithField("error", err).WithField("container_id", e.ID).Warn("error processing scanner line in console output")
 			return
 		}
 	}()
@@ -205,14 +205,14 @@ func (e *Environment) InSituUpdate() error {
 	// The kernel rejects a CFS quota lower than the current burst, so remove the
 	// burst before updating the limits and re-apply it afterwards.
 	if c.State != nil {
-		e.clearCpuBurst(c.State.Pid)
+		e.clearCPUBurst(c.State.Pid)
 	}
 
 	// CPU pinning cannot be removed once it is applied to a container. The same is true
 	// for removing memory limits, a container must be re-created.
 	//
 	// @see https://github.com/moby/moby/issues/41946
-	if _, err := e.client.ContainerUpdate(ctx, e.Id, container.UpdateConfig{
+	if _, err := e.client.ContainerUpdate(ctx, e.ID, container.UpdateConfig{
 		Resources: e.Configuration.Limits().AsContainerResources(),
 	}); err != nil {
 		return errors.Wrap(err, "environment/docker: could not update container")
@@ -264,7 +264,7 @@ func (e *Environment) Create() error {
 	labels["ContainerType"] = "server_process"
 
 	conf := &container.Config{
-		Hostname:     e.Id,
+		Hostname:     e.ID,
 		Domainname:   cfg.Docker.Domainname,
 		AttachStdin:  true,
 		AttachStdout: true,
@@ -357,7 +357,7 @@ func (e *Environment) Create() error {
 		hostConf.Binds = binds
 	}
 
-	if _, err := e.client.ContainerCreate(ctx, conf, hostConf, nil, nil, e.Id); err != nil {
+	if _, err := e.client.ContainerCreate(ctx, conf, hostConf, nil, nil, e.ID); err != nil {
 		return errors.Wrap(err, "environment/docker: failed to create container")
 	}
 
@@ -370,7 +370,7 @@ func (e *Environment) Destroy() error {
 	// We set it to stopping than offline to prevent crash detection from being triggered.
 	e.SetState(environment.ProcessStoppingState)
 
-	err := e.client.ContainerRemove(context.Background(), e.Id, container.RemoveOptions{
+	err := e.client.ContainerRemove(context.Background(), e.ID, container.RemoveOptions{
 		RemoveVolumes: true,
 		RemoveLinks:   false,
 		Force:         true,
@@ -427,7 +427,7 @@ func (e *Environment) SendCommand(c string) error {
 // is running or not, it will simply try to read the last X bytes of the file
 // and return them.
 func (e *Environment) Readlog(lines int) ([]string, error) {
-	r, err := e.client.ContainerLogs(context.Background(), e.Id, container.LogsOptions{
+	r, err := e.client.ContainerLogs(context.Background(), e.ID, container.LogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,
 		Tail:       strconv.Itoa(lines),
@@ -537,7 +537,7 @@ func (e *Environment) ensureImageExists(img string) error {
 
 				log.WithFields(log.Fields{
 					"image":        img,
-					"container_id": e.Id,
+					"container_id": e.ID,
 					"err":          err.Error(),
 				}).Warn("unable to pull requested image from remote source, however the image exists locally")
 

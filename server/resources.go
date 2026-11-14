@@ -54,7 +54,7 @@ func (ru *ResourceUsage) Reset() {
 	defer ru.mu.Unlock()
 
 	ru.Memory = 0
-	ru.CpuAbsolute = 0
+	ru.CPUAbsolute = 0
 	ru.Uptime = 0
 	ru.Network.TxBytes = 0
 	ru.Network.RxBytes = 0

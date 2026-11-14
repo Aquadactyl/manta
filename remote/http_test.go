@@ -14,9 +14,9 @@ func createTestClient(h http.HandlerFunc) (*client, *httptest.Server) {
 	s := httptest.NewServer(h)
 	c := &client{
 		httpClient:  s.Client(),
-		baseUrl:     s.URL,
+		baseURL:     s.URL,
 		maxAttempts: 1,
-		tokenId:     "testid",
+		tokenID:     "testid",
 		token:       "testtoken",
 	}
 	return c, s

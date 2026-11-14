@@ -154,8 +154,8 @@ func TestMiddlewareExtractors(t *testing.T) {
 
 	// ExtractApiClient
 	client := remote.New("http://localhost")
-	AttachApiClient(client)(c)
-	assert.Equal(t, client, ExtractApiClient(c))
+	AttachAPIClient(client)(c)
+	assert.Equal(t, client, ExtractAPIClient(c))
 
 	// ExtractServer
 	srv := &server.Server{}
@@ -237,7 +237,7 @@ func TestMiddlewarePanicsAndBranches(t *testing.T) {
 		ExtractServer(cEmpty)
 	})
 	assert.Panics(t, func() {
-		ExtractApiClient(cEmpty)
+		ExtractAPIClient(cEmpty)
 	})
 	assert.Panics(t, func() {
 		ExtractManager(cEmpty)

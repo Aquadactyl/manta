@@ -214,7 +214,7 @@ func IsValidRedirectURL(raw string) bool {
 	return true
 }
 
-func isValidRedirectUrl(raw string) bool {
+func isValidRedirectURL(raw string) bool {
 	return IsValidRedirectURL(raw)
 }
 
@@ -238,7 +238,7 @@ func (dl *Download) Execute() error {
 	}
 
 	targetURL := dl.req.URL.String()
-	if !isValidRedirectUrl(targetURL) {
+	if !isValidRedirectURL(targetURL) {
 		return errors.WrapIf(ErrInvalidIPAddress, "downloader: invalid download URL")
 	}
 

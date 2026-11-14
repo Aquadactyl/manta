@@ -25,8 +25,8 @@ import (
 )
 
 const (
-	testServerUuid = "5b8ad3c2-6d1f-4e4a-9a53-0f4f2d7c1e10"
-	testUserUuid   = "9d1e2c3b-4a5f-4b6c-8d7e-1f2a3b4c5d6e"
+	testServerUUID = "5b8ad3c2-6d1f-4e4a-9a53-0f4f2d7c1e10"
+	testUserUUID   = "9d1e2c3b-4a5f-4b6c-8d7e-1f2a3b4c5d6e"
 	validIP        = "203.0.113.9"
 	// zoneIP is how an IPv6 address with a zone is recorded for an SFTP session.
 	zoneIP = "[fe80::1%eth0]:2022"
@@ -61,12 +61,12 @@ func insertActivity(t *testing.T, event models.Event, ip, file string) {
 		meta = models.ActivityMeta{"command": file}
 	}
 	a := (&models.Activity{
-		Server:    testServerUuid,
+		Server:    testServerUUID,
 		Event:     event,
 		Metadata:  meta,
 		IP:        ip,
 		Timestamp: time.Now(),
-	}).SetUser(testUserUuid)
+	}).SetUser(testUserUUID)
 	require.NoError(t, database.Instance().Create(a).Error)
 }
 
@@ -283,7 +283,7 @@ func insertMany(t *testing.T, n int, event models.Event, meta models.ActivityMet
 	batch := make([]models.Activity, 0, n)
 	for i := 0; i < n; i++ {
 		batch = append(batch, models.Activity{
-			Server:    testServerUuid,
+			Server:    testServerUUID,
 			Event:     event,
 			Metadata:  meta,
 			IP:        validIP,

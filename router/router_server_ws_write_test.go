@@ -93,7 +93,7 @@ func startBlockingWebsocketServer(t *testing.T) (string, *blockingListener, *syn
 	srv.Start()
 	t.Cleanup(srv.Close)
 
-	return "ws" + strings.TrimPrefix(srv.URL, "http") + "/api/servers/" + websocketTestServerUuid + "/ws", listener, recovered
+	return "ws" + strings.TrimPrefix(srv.URL, "http") + "/api/servers/" + websocketTestServerUUID + "/ws", listener, recovered
 }
 
 func isNetTimeout(err error) bool {

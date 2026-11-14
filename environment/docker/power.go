@@ -32,7 +32,7 @@ var dockerAttachForStart = func(e *Environment, ctx context.Context) error { ret
 // is running does not result in the server becoming un-bootable.
 func (e *Environment) OnBeforeStart(ctx context.Context) error {
 	// Always destroy and re-create the server container to ensure that synced data from the Panel is used.
-	if err := e.client.ContainerRemove(ctx, e.Id, container.RemoveOptions{RemoveVolumes: true}); err != nil {
+	if err := e.client.ContainerRemove(ctx, e.ID, container.RemoveOptions{RemoveVolumes: true}); err != nil {
 		if !cerrdefs.IsNotFound(err) {
 			return errors.WrapIf(err, "environment/docker: failed to remove container during pre-boot")
 		}
@@ -128,7 +128,7 @@ func (e *Environment) Start(ctx context.Context) error {
 		return errors.WrapIf(err, "environment/docker: failed to attach to container")
 	}
 
-	if err := e.client.ContainerStart(actx, e.Id, container.StartOptions{}); err != nil {
+	if err := e.client.ContainerStart(actx, e.ID, container.StartOptions{}); err != nil {
 		return errors.WrapIf(err, "environment/docker: failed to start container")
 	}
 
@@ -188,7 +188,7 @@ func (e *Environment) Stop(ctx context.Context) error {
 	}
 
 	if s.Type == "" {
-		log.WithField("container_id", e.Id).Warn("no stop configuration detected for environment, using native docker stop")
+		log.WithField("container_id", e.ID).Warn("no stop configuration detected for environment, using native docker stop")
 	}
 
 	// Fallback to a native docker stop. As we aren't passing a signal to ContainerStop docker will
@@ -199,7 +199,7 @@ func (e *Environment) Stop(ctx context.Context) error {
 	// rather than forcefully terminating it.  Value is in seconds, but -1 is
 	// treated as indefinitely.
 	timeout := -1
-	if err := e.client.ContainerStop(ctx, e.Id, container.StopOptions{Timeout: &timeout}); err != nil {
+	if err := e.client.ContainerStop(ctx, e.ID, container.StopOptions{Timeout: &timeout}); err != nil {
 		// If the container does not exist just mark the process as stopped and return without
 		// an error.
 		if cerrdefs.IsNotFound(err) {
@@ -257,7 +257,7 @@ func (e *Environment) WaitForStop(ctx context.Context, duration time.Duration, t
 	// Block the return of this function until the container as been marked as no
 	// longer running. If this wait does not end by the time seconds have passed,
 	// attempt to terminate the container, or return an error.
-	ok, errChan := waitForContainer(e.client, tctx, e.Id)
+	ok, errChan := waitForContainer(e.client, tctx, e.ID)
 	select {
 	case <-ctx.Done():
 		if err := ctx.Err(); err != nil {
@@ -311,7 +311,7 @@ func (e *Environment) SignalContainer(ctx context.Context, signal string) error 
 
 	// We set it to stopping than offline to prevent crash detection from being triggered.
 	e.SetState(environment.ProcessStoppingState)
-	if err := e.client.ContainerKill(ctx, e.Id, signal); err != nil && !cerrdefs.IsNotFound(err) {
+	if err := e.client.ContainerKill(ctx, e.ID, signal); err != nil && !cerrdefs.IsNotFound(err) {
 		return errors.WithStack(err)
 	}
 

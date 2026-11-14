@@ -55,7 +55,7 @@ func TestParseFormats(t *testing.T) {
 	jsonPath := filepath.Join(tmp, "server.json")
 	require.NoError(t, os.WriteFile(jsonPath, []byte(`{"server":{"port":25565,"online":true}}`), 0644))
 
-	var cfJson ConfigurationFile
+	var cfJSON ConfigurationFile
 	require.NoError(t, json.Unmarshal([]byte(`{
 		"file": "server.json",
 		"parser": "json",
@@ -63,17 +63,17 @@ func TestParseFormats(t *testing.T) {
 			{"match": "server.port", "replace_with": 25566},
 			{"match": "server.name", "replace_with": "TestServer"}
 		]
-	}`), &cfJson))
+	}`), &cfJSON))
 
-	fJson, err := os.OpenFile(jsonPath, os.O_RDWR, 0)
+	fJSON, err := os.OpenFile(jsonPath, os.O_RDWR, 0)
 	require.NoError(t, err)
-	require.NoError(t, cfJson.Parse(fJson))
-	fJson.Close()
+	require.NoError(t, cfJSON.Parse(fJSON))
+	fJSON.Close()
 
-	updatedJson, err := os.ReadFile(jsonPath)
+	updatedJSON, err := os.ReadFile(jsonPath)
 	require.NoError(t, err)
-	assert.Contains(t, string(updatedJson), "25566")
-	assert.Contains(t, string(updatedJson), "TestServer")
+	assert.Contains(t, string(updatedJSON), "25566")
+	assert.Contains(t, string(updatedJSON), "TestServer")
 
 	// 2. YAML Parsing
 	yamlPath := filepath.Join(tmp, "server.yaml")
@@ -173,19 +173,19 @@ func TestParseFormats(t *testing.T) {
 	xmlPath := filepath.Join(tmp, "server.xml")
 	require.NoError(t, os.WriteFile(xmlPath, []byte("<server><port>25565</port></server>"), 0644))
 
-	var cfXml ConfigurationFile
+	var cfXML ConfigurationFile
 	require.NoError(t, json.Unmarshal([]byte(`{
 		"file": "server.xml",
 		"parser": "xml",
 		"replace": [
 			{"match": "server.port", "replace_with": 25571}
 		]
-	}`), &cfXml))
+	}`), &cfXML))
 
-	fXml, err := os.OpenFile(xmlPath, os.O_RDWR, 0)
+	fXML, err := os.OpenFile(xmlPath, os.O_RDWR, 0)
 	require.NoError(t, err)
-	require.NoError(t, cfXml.Parse(fXml))
-	fXml.Close()
+	require.NoError(t, cfXML.Parse(fXML))
+	fXML.Close()
 }
 
 func TestParseFileTooLarge(t *testing.T) {
@@ -259,7 +259,7 @@ func TestParserUnmarshalAndWildcard(t *testing.T) {
 		]
 	}`), &cfWildcard))
 
-	c, err := cfWildcard.IterateOverJson(jsonData)
+	c, err := cfWildcard.IterateOverJSON(jsonData)
 	require.NoError(t, err)
 	assert.NotNil(t, c)
 	assert.Contains(t, c.String(), "99")
@@ -322,7 +322,7 @@ func TestParserMoreCases(t *testing.T) {
 	xmlPath := filepath.Join(tmp, "config.xml")
 	require.NoError(t, os.WriteFile(xmlPath, []byte(`<ServerSettings><ServerPort>25565</ServerPort></ServerSettings>`), 0644))
 
-	var cfXml ConfigurationFile
+	var cfXML ConfigurationFile
 	require.NoError(t, json.Unmarshal([]byte(`{
 		"file": "config.xml",
 		"parser": "xml",
@@ -330,11 +330,11 @@ func TestParserMoreCases(t *testing.T) {
 			{"match": "ServerSettings.ServerPort", "replace_with": "[attr='true']"},
 			{"match": "ServerSettings.NewTag.Inner", "replace_with": "inner_value"}
 		]
-	}`), &cfXml))
+	}`), &cfXML))
 
 	fx, err := os.OpenFile(xmlPath, os.O_RDWR, 0)
 	require.NoError(t, err)
-	require.NoError(t, cfXml.Parse(fx))
+	require.NoError(t, cfXML.Parse(fx))
 	_ = fx.Close()
 
 	xmlBytes, err := os.ReadFile(xmlPath)
@@ -371,15 +371,15 @@ func TestParserErrorPaths(t *testing.T) {
 	tmp := t.TempDir()
 
 	// 1. Invalid JSON
-	badJsonPath := filepath.Join(tmp, "bad.json")
-	require.NoError(t, os.WriteFile(badJsonPath, []byte(`{"key": `), 0644))
-	f, err := os.OpenFile(badJsonPath, os.O_RDWR, 0)
+	badJSONPath := filepath.Join(tmp, "bad.json")
+	require.NoError(t, os.WriteFile(badJSONPath, []byte(`{"key": `), 0644))
+	f, err := os.OpenFile(badJSONPath, os.O_RDWR, 0)
 	require.NoError(t, err)
 	defer f.Close()
 
-	var cfJson ConfigurationFile
-	require.NoError(t, json.Unmarshal([]byte(`{"file":"bad.json","parser":"json","replace":[{"match":"key","replace_with":"v"}]}`), &cfJson))
-	assert.Error(t, cfJson.Parse(f))
+	var cfJSON ConfigurationFile
+	require.NoError(t, json.Unmarshal([]byte(`{"file":"bad.json","parser":"json","replace":[{"match":"key","replace_with":"v"}]}`), &cfJSON))
+	assert.Error(t, cfJSON.Parse(f))
 
 	// 2. Invalid YAML
 	badYamlPath := filepath.Join(tmp, "bad.yaml")
@@ -393,15 +393,15 @@ func TestParserErrorPaths(t *testing.T) {
 	assert.Error(t, cfYaml.Parse(fYaml))
 
 	// 3. Invalid XML
-	badXmlPath := filepath.Join(tmp, "bad.xml")
-	require.NoError(t, os.WriteFile(badXmlPath, []byte(`<Server><Unclosed`), 0644))
-	fXml, err := os.OpenFile(badXmlPath, os.O_RDWR, 0)
+	badXMLPath := filepath.Join(tmp, "bad.xml")
+	require.NoError(t, os.WriteFile(badXMLPath, []byte(`<Server><Unclosed`), 0644))
+	fXML, err := os.OpenFile(badXMLPath, os.O_RDWR, 0)
 	require.NoError(t, err)
-	defer fXml.Close()
+	defer fXML.Close()
 
-	var cfXml ConfigurationFile
-	require.NoError(t, json.Unmarshal([]byte(`{"file":"bad.xml","parser":"xml","replace":[{"match":"Server.Port","replace_with":"8080"}]}`), &cfXml))
-	assert.Error(t, cfXml.Parse(fXml))
+	var cfXML ConfigurationFile
+	require.NoError(t, json.Unmarshal([]byte(`{"file":"bad.xml","parser":"xml","replace":[{"match":"Server.Port","replace_with":"8080"}]}`), &cfXML))
+	assert.Error(t, cfXML.Parse(fXML))
 
 	// 4. Invalid INI
 	badIniPath := filepath.Join(tmp, "bad.ini")
@@ -515,23 +515,23 @@ func TestParserRemainingCoverage(t *testing.T) {
 	require.NoError(t, err)
 	_ = fClosed.Close()
 
-	cf := ConfigurationFile{FileName: "closed.json", Parser: Json}
+	cf := ConfigurationFile{FileName: "closed.json", Parser: JSON}
 	assert.Error(t, cf.Parse(fClosed))
 
 	// 4. Empty XML file (doc.Root() == nil) creates ProcInst and root element
-	emptyXmlPath := filepath.Join(tmp, "empty.xml")
-	require.NoError(t, os.WriteFile(emptyXmlPath, []byte(""), 0o644))
-	fEmptyXml, err := os.OpenFile(emptyXmlPath, os.O_RDWR, 0)
+	emptyXMLPath := filepath.Join(tmp, "empty.xml")
+	require.NoError(t, os.WriteFile(emptyXMLPath, []byte(""), 0o644))
+	fEmptyXML, err := os.OpenFile(emptyXMLPath, os.O_RDWR, 0)
 	require.NoError(t, err)
-	var cfEmptyXml ConfigurationFile
+	var cfEmptyXML ConfigurationFile
 	require.NoError(t, json.Unmarshal([]byte(`{
 		"file": "empty.xml",
 		"parser": "xml",
 		"replace": [{"match": "Root.Child", "replace_with": "val"}]
-	}`), &cfEmptyXml))
-	require.NoError(t, cfEmptyXml.Parse(fEmptyXml))
-	_ = fEmptyXml.Close()
-	xmlOut, err := os.ReadFile(emptyXmlPath)
+	}`), &cfEmptyXML))
+	require.NoError(t, cfEmptyXML.Parse(fEmptyXML))
+	_ = fEmptyXML.Close()
+	xmlOut, err := os.ReadFile(emptyXMLPath)
 	require.NoError(t, err)
 	assert.Contains(t, string(xmlOut), "<Root>")
 
@@ -587,7 +587,7 @@ func TestParserRemainingCoverage(t *testing.T) {
 			{"match": "arr[0]", "replace_with": "first"}
 		]
 	}`), &cfHelpers))
-	container, err := cfHelpers.IterateOverJson([]byte(`{"items":{"a":{"other":"1"}},"existing":"hello"}`))
+	container, err := cfHelpers.IterateOverJSON([]byte(`{"items":{"a":{"other":"1"}},"existing":"hello"}`))
 	require.NoError(t, err)
 	assert.NotNil(t, container)
 
@@ -598,7 +598,7 @@ func TestParserRemainingCoverage(t *testing.T) {
 		"parser": "json",
 		"replace": [{"match": "items.*.arr[5].sub", "replace_with": "bar"}]
 	}`), &cfWildErr))
-	_, err = cfWildErr.IterateOverJson([]byte(`{"items":{"a":{}}}`))
+	_, err = cfWildErr.IterateOverJSON([]byte(`{"items":{"a":{}}}`))
 	assert.Error(t, err)
 
 	// Non-wildcard error (array index 5 on missing array)
@@ -608,7 +608,7 @@ func TestParserRemainingCoverage(t *testing.T) {
 		"parser": "json",
 		"replace": [{"match": "arr[5].sub", "replace_with": "bar"}]
 	}`), &cfNonWildErr))
-	_, err = cfNonWildErr.IterateOverJson([]byte(`{}`))
+	_, err = cfNonWildErr.IterateOverJSON([]byte(`{}`))
 	assert.Error(t, err)
 
 	// 8. LookupConfigurationValue with Object target and with malformed f.configuration
@@ -633,15 +633,15 @@ func TestParserRemainingCoverage(t *testing.T) {
 	assert.Error(t, err)
 
 	// Trigger LookupConfigurationValue error in IterateOverJson, parseXmlFile, parseIniFile, parsePropertiesFile, parseYamlFile
-	_, err = cfBadConfig.IterateOverJson([]byte(`{}`))
+	_, err = cfBadConfig.IterateOverJSON([]byte(`{}`))
 	assert.Error(t, err)
 
 	xmlValidPath := filepath.Join(tmp, "valid_for_err.xml")
 	require.NoError(t, os.WriteFile(xmlValidPath, []byte("<Root></Root>"), 0o644))
-	fXmlDummy, err := os.OpenFile(xmlValidPath, os.O_RDWR, 0)
+	fXMLDummy, err := os.OpenFile(xmlValidPath, os.O_RDWR, 0)
 	require.NoError(t, err)
-	defer fXmlDummy.Close()
-	assert.Error(t, cfBadConfig.parseXmlFile(fXmlDummy))
+	defer fXMLDummy.Close()
+	assert.Error(t, cfBadConfig.parseXMLFile(fXMLDummy))
 
 	fDummy, err := os.OpenFile(iniPath, os.O_RDWR, 0)
 	require.NoError(t, err)
@@ -659,7 +659,7 @@ func TestParserRemainingCoverage(t *testing.T) {
 
 	// 9. Read errors and rewrite Seek/Write errors via mockParserFile
 	mfReadErr := &mockParserFile{statInfo: st, readErr: errors.New("read failed")}
-	assert.Error(t, (&ConfigurationFile{Parser: Json}).Parse(mfReadErr))
+	assert.Error(t, (&ConfigurationFile{Parser: JSON}).Parse(mfReadErr))
 	assert.Error(t, (&ConfigurationFile{Parser: Yaml}).Parse(mfReadErr))
 	assert.Error(t, (&ConfigurationFile{Parser: Properties}).Parse(mfReadErr))
 	assert.Error(t, (&ConfigurationFile{Parser: File}).Parse(mfReadErr))

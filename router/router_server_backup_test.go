@@ -172,7 +172,7 @@ func newBackupRestoreContext(t *testing.T, client backupTestRemoteClient, backup
 	if err != nil {
 		t.Fatal(err)
 	}
-	s.Config().Uuid = "server"
+	s.Config().UUID = "server"
 	s.Environment = backupTestEnvironment{}
 
 	c.Set("server", s)
@@ -296,7 +296,7 @@ func TestParseBackupUuid(t *testing.T) {
 	for value, test := range tests {
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
-		got, ok := parseBackupUuid(c, value)
+		got, ok := parseBackupUUID(c, value)
 		if ok != test.valid {
 			t.Fatalf("expected validity for %q to be %v, got %v", value, test.valid, ok)
 		}
@@ -357,7 +357,7 @@ func TestBackupRestoreDestinationAllowlist(t *testing.T) {
 }
 
 func TestBackupRestoreHTTPClientDoesNotLimitResponseBodyRead(t *testing.T) {
-	client := backupRestoreHttpClient()
+	client := backupRestoreHTTPClient()
 	if client.Timeout != 0 {
 		t.Fatalf("expected restore client not to set total request timeout, got %s", client.Timeout)
 	}

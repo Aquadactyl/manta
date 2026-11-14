@@ -28,7 +28,7 @@ func TestListenForExpirationMessages(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			h, _, client := setupHandlerClient(t)
-			_, payload := signToken(t, serverUuid, PermissionConnect)
+			_, payload := signToken(t, serverUUID, PermissionConnect)
 			payload.ExpirationTime = jwt.NumericDate(time.Now().Add(tc.exp))
 			h.setJwt(payload)
 
@@ -103,7 +103,7 @@ func TestBusEventsRetainWebsocketAuthorization(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			h, _, client := setupHandlerClient(t)
-			_, token := signToken(t, serverUuid, PermissionConnect, tc.permission)
+			_, token := signToken(t, serverUUID, PermissionConnect, tc.permission)
 			h.setJwt(token)
 			ctx, cancel := context.WithCancel(context.Background())
 			done := make(chan error, 1)
@@ -151,7 +151,7 @@ func TestBusEventsRetainWebsocketAuthorization(t *testing.T) {
 			h.server.Events().Push([]byte("not json"))
 
 			if tc.expired {
-				_, expired := signToken(t, serverUuid, PermissionConnect)
+				_, expired := signToken(t, serverUUID, PermissionConnect)
 				expired.ExpirationTime = jwt.NumericDate(time.Now().Add(-time.Hour))
 				h.setJwt(expired)
 			}

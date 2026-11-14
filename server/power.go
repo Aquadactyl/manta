@@ -67,8 +67,8 @@ func (s *Server) HandlePowerAction(action PowerAction, waitSeconds ...int) error
 		return ErrServerIsInstalling
 	}
 
-	lockId, _ := uuid.NewUUID()
-	log := s.Log().WithField("lock_id", lockId.String()).WithField("action", action)
+	lockID, _ := uuid.NewUUID()
+	log := s.Log().WithField("lock_id", lockID.String()).WithField("action", action)
 
 	cleanup := func() {
 		log.Info("releasing exclusive lock for power action")

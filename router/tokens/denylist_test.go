@@ -43,18 +43,18 @@ func payloadsIssuedAt(issuedAt time.Time, serverUUID, userUUID string) map[strin
 		},
 		"file download": &FilePayload{
 			Payload:    payload(),
-			ServerUuid: serverUUID,
-			UserUuid:   userUUID,
+			ServerUUID: serverUUID,
+			UserUUID:   userUUID,
 		},
 		"backup download": &BackupPayload{
 			Payload:    payload(),
-			ServerUuid: serverUUID,
-			UserUuid:   userUUID,
+			ServerUUID: serverUUID,
+			UserUUID:   userUUID,
 		},
 		"file upload": &UploadPayload{
 			Payload:    payload(),
-			ServerUuid: serverUUID,
-			UserUuid:   userUUID,
+			ServerUUID: serverUUID,
+			UserUUID:   userUUID,
 		},
 	}
 }
@@ -104,16 +104,16 @@ func TestDownloadPayloadsDecodeUserUUID(t *testing.T) {
 	if err := json.Unmarshal([]byte(encoded), &file); err != nil {
 		t.Fatal(err)
 	}
-	if file.UserUuid != "user" {
-		t.Fatalf("expected file payload user UUID to be decoded, got %q", file.UserUuid)
+	if file.UserUUID != "user" {
+		t.Fatalf("expected file payload user UUID to be decoded, got %q", file.UserUUID)
 	}
 
 	var backup BackupPayload
 	if err := json.Unmarshal([]byte(encoded), &backup); err != nil {
 		t.Fatal(err)
 	}
-	if backup.UserUuid != "user" {
-		t.Fatalf("expected backup payload user UUID to be decoded, got %q", backup.UserUuid)
+	if backup.UserUUID != "user" {
+		t.Fatalf("expected backup payload user UUID to be decoded, got %q", backup.UserUUID)
 	}
 }
 
@@ -123,16 +123,16 @@ func TestUserBoundPayloadsFailClosedWithoutRevocationClaims(t *testing.T) {
 
 	tests := map[string]denylistable{
 		"missing issued at": &FilePayload{
-			ServerUuid: "server",
-			UserUuid:   "user",
+			ServerUUID: "server",
+			UserUUID:   "user",
 		},
 		"missing server UUID": &BackupPayload{
 			Payload:  jwt.Payload{IssuedAt: jwt.NumericDate(issuedAt)},
-			UserUuid: "user",
+			UserUUID: "user",
 		},
 		"missing user UUID": &UploadPayload{
 			Payload:    jwt.Payload{IssuedAt: jwt.NumericDate(issuedAt)},
-			ServerUuid: "server",
+			ServerUUID: "server",
 		},
 	}
 

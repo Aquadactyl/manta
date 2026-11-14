@@ -57,11 +57,11 @@ func (e *Environment) ContainerInspect(ctx context.Context) (container.InspectRe
 	// wrong for now it is easy enough for people to switch back to the older method
 	// of fetching stats.
 	if !fastEnabled {
-		return e.client.ContainerInspect(ctx, e.Id)
+		return e.client.ContainerInspect(ctx, e.ID)
 	}
 
 	var st container.InspectResponse
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "/containers/"+e.Id+"/json", nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "/containers/"+e.ID+"/json", nil)
 	if err != nil {
 		return st, errors.WithStack(err)
 	}

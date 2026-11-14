@@ -481,10 +481,10 @@ func TestMoreRouterRoutes(t *testing.T) {
 			ExpirationTime: jwt.NumericDate(now.Add(time.Hour)),
 		},
 		Scoped:     tokens.Scoped{Scope: string(tokens.FileDownload)},
-		ServerUuid: s.ID(),
-		UserUuid:   "user-123",
+		ServerUUID: s.ID(),
+		UserUUID:   "user-123",
 		FilePath:   "written.txt",
-		UniqueId:   uuid.New().String(),
+		UniqueID:   uuid.New().String(),
 	}
 	fileJwtBytes, err := jwt.Sign(&tokFile, config.GetJwtAlgorithm())
 	require.NoError(t, err)
@@ -512,10 +512,10 @@ func TestMoreRouterRoutes(t *testing.T) {
 			ExpirationTime: jwt.NumericDate(now.Add(time.Hour)),
 		},
 		Scoped:     tokens.Scoped{Scope: string(tokens.BackupDownload)},
-		ServerUuid: s.ID(),
-		UserUuid:   "user-123",
-		BackupUuid: backupID,
-		UniqueId:   uuid.New().String(),
+		ServerUUID: s.ID(),
+		UserUUID:   "user-123",
+		BackupUUID: backupID,
+		UniqueID:   uuid.New().String(),
 	}
 	backupJwtBytes, err := jwt.Sign(&tokBackup, config.GetJwtAlgorithm())
 	require.NoError(t, err)
@@ -545,9 +545,9 @@ func TestMoreRouterRoutes(t *testing.T) {
 }
 
 func TestBackupValidationHelpers(t *testing.T) {
-	assert.Error(t, validateBackupDownloadUrl("invalid url : //"))
-	assert.Error(t, validateBackupDownloadUrl("ftp://example.com/backup.tar.gz"))
-	assert.Error(t, validateBackupDownloadUrl("http://127.0.0.1/backup.tar.gz"))
+	assert.Error(t, validateBackupDownloadURL("invalid url : //"))
+	assert.Error(t, validateBackupDownloadURL("ftp://example.com/backup.tar.gz"))
+	assert.Error(t, validateBackupDownloadURL("http://127.0.0.1/backup.tar.gz"))
 
 	assert.True(t, isBlockedBackupRestoreIP("invalid-ip", net.IP{1, 2}))
 	assert.True(t, isBlockedBackupRestoreIP("127.0.0.1", net.ParseIP("127.0.0.1")))
@@ -557,7 +557,7 @@ func TestBackupValidationHelpers(t *testing.T) {
 	assert.True(t, isSupportedBackupRestoreContentType("application/gzip; charset=utf-8"))
 	assert.False(t, isSupportedBackupRestoreContentType("text/plain"))
 
-	c := backupRestoreHttpClient()
+	c := backupRestoreHTTPClient()
 	assert.NotNil(t, c.Transport)
 }
 
@@ -683,9 +683,9 @@ func TestMoreFilesAndBackupRoutes(t *testing.T) {
 			ExpirationTime: jwt.NumericDate(now.Add(time.Hour)),
 		},
 		Scoped:     tokens.Scoped{Scope: string(tokens.FileUpload)},
-		ServerUuid: s.ID(),
-		UserUuid:   "user-123",
-		UniqueId:   uuid.New().String(),
+		ServerUUID: s.ID(),
+		UserUUID:   "user-123",
+		UniqueID:   uuid.New().String(),
 	}
 	uploadJwt, err := jwt.Sign(&uploadToken, config.GetJwtAlgorithm())
 	require.NoError(t, err)
@@ -712,9 +712,9 @@ func TestMoreFilesAndBackupRoutes(t *testing.T) {
 			ExpirationTime: jwt.NumericDate(now.Add(time.Hour)),
 		},
 		Scoped:     tokens.Scoped{Scope: string(tokens.FileUpload)},
-		ServerUuid: s.ID(),
-		UserUuid:   "user-123",
-		UniqueId:   uuid.New().String(),
+		ServerUUID: s.ID(),
+		UserUUID:   "user-123",
+		UniqueID:   uuid.New().String(),
 	}
 	uploadJwt2, err := jwt.Sign(&uploadToken2, config.GetJwtAlgorithm())
 	require.NoError(t, err)
@@ -1004,10 +1004,10 @@ func TestMoreServerAndDownloadRoutes(t *testing.T) {
 			JWTID:          "dl-file-jti-" + uuid.NewString(),
 		},
 		Scoped:     tokens.Scoped{Scope: string(tokens.FileDownload)},
-		ServerUuid: s.ID(),
-		UserUuid:   "user-1",
+		ServerUUID: s.ID(),
+		UserUUID:   "user-1",
 		FilePath:   "/testfile.txt",
-		UniqueId:   "unique-" + uuid.NewString(),
+		UniqueID:   "unique-" + uuid.NewString(),
 	}
 	signedFileToken, err := jwt.Sign(fileTokenPayload, config.GetJwtAlgorithm())
 	require.NoError(t, err)
@@ -1523,10 +1523,10 @@ func TestDownloadAndUploadAdvanced(t *testing.T) {
 
 	// 1. getDownloadBackup with invalid backup UUID in token
 	bpBad := tokens.BackupPayload{
-		ServerUuid: s.ID(),
-		UserUuid:   "usr-1",
-		BackupUuid: "not-a-uuid",
-		UniqueId:   "unique-bp-1",
+		ServerUUID: s.ID(),
+		UserUUID:   "usr-1",
+		BackupUUID: "not-a-uuid",
+		UniqueID:   "unique-bp-1",
 		Scoped:     tokens.Scoped{Scope: string(tokens.BackupDownload)},
 		Payload: jwt.Payload{
 			IssuedAt:       jwt.NumericDate(now),
@@ -1544,10 +1544,10 @@ func TestDownloadAndUploadAdvanced(t *testing.T) {
 
 	// 2. getDownloadBackup backup not found (404)
 	bpNotFound := tokens.BackupPayload{
-		ServerUuid: s.ID(),
-		UserUuid:   "usr-1",
-		BackupUuid: bUUID,
-		UniqueId:   "unique-bp-2",
+		ServerUUID: s.ID(),
+		UserUUID:   "usr-1",
+		BackupUUID: bUUID,
+		UniqueID:   "unique-bp-2",
 		Scoped:     tokens.Scoped{Scope: string(tokens.BackupDownload)},
 		Payload: jwt.Payload{
 			IssuedAt:       jwt.NumericDate(now),
@@ -1569,10 +1569,10 @@ func TestDownloadAndUploadAdvanced(t *testing.T) {
 	defer func() { _ = os.Remove(backupFile) }()
 
 	bpValid := tokens.BackupPayload{
-		ServerUuid: s.ID(),
-		UserUuid:   "usr-1",
-		BackupUuid: bUUID,
-		UniqueId:   "unique-bp-3",
+		ServerUUID: s.ID(),
+		UserUUID:   "usr-1",
+		BackupUUID: bUUID,
+		UniqueID:   "unique-bp-3",
 		Scoped:     tokens.Scoped{Scope: string(tokens.BackupDownload)},
 		Payload: jwt.Payload{
 			IssuedAt:       jwt.NumericDate(now),
@@ -1590,7 +1590,7 @@ func TestDownloadAndUploadAdvanced(t *testing.T) {
 	assert.Equal(t, "tar-gz-content", w.Body.String())
 
 	bpNoServer := bpValid
-	bpNoServer.ServerUuid, bpNoServer.UniqueId = uuid.New().String(), "unique-bp-no-server"
+	bpNoServer.ServerUUID, bpNoServer.UniqueID = uuid.New().String(), "unique-bp-no-server"
 	tokenNoServer, err := jwt.Sign(&bpNoServer, config.GetJwtAlgorithm())
 	require.NoError(t, err)
 	req = httptest.NewRequest(http.MethodGet, "/download/backup?token="+string(tokenNoServer), nil)
@@ -1602,7 +1602,7 @@ func TestDownloadAndUploadAdvanced(t *testing.T) {
 	bUUIDDirectory := uuid.New().String()
 	require.NoError(t, os.Mkdir(filepath.Join(config.Get().System.BackupDirectory, bUUIDDirectory+".tar.gz"), 0o755))
 	bpDirectory := bpValid
-	bpDirectory.BackupUuid, bpDirectory.UniqueId = bUUIDDirectory, "unique-bp-directory"
+	bpDirectory.BackupUUID, bpDirectory.UniqueID = bUUIDDirectory, "unique-bp-directory"
 	tokenDirectory, err := jwt.Sign(&bpDirectory, config.GetJwtAlgorithm())
 	require.NoError(t, err)
 	req = httptest.NewRequest(http.MethodGet, "/download/backup?token="+string(tokenDirectory), nil)
@@ -1614,7 +1614,7 @@ func TestDownloadAndUploadAdvanced(t *testing.T) {
 	previousOpen := openLocalBackup
 	openLocalBackup = func(string) (*os.File, error) { return nil, errors.New("backup open failed") }
 	bpOpenFailure := bpValid
-	bpOpenFailure.UniqueId = "unique-bp-open-failure"
+	bpOpenFailure.UniqueID = "unique-bp-open-failure"
 	tokenOpenFailure, err := jwt.Sign(&bpOpenFailure, config.GetJwtAlgorithm())
 	require.NoError(t, err)
 	req = httptest.NewRequest(http.MethodGet, "/download/backup?token="+string(tokenOpenFailure), nil)
@@ -1625,10 +1625,10 @@ func TestDownloadAndUploadAdvanced(t *testing.T) {
 
 	// 4. getDownloadFile downloading directory (404)
 	fpDir := tokens.FilePayload{
-		ServerUuid: s.ID(),
-		UserUuid:   "usr-1",
+		ServerUUID: s.ID(),
+		UserUUID:   "usr-1",
 		FilePath:   "/",
-		UniqueId:   "unique-fp-1",
+		UniqueID:   "unique-fp-1",
 		Scoped:     tokens.Scoped{Scope: string(tokens.FileDownload)},
 		Payload: jwt.Payload{
 			IssuedAt:       jwt.NumericDate(now),
@@ -1647,10 +1647,10 @@ func TestDownloadAndUploadAdvanced(t *testing.T) {
 	// 5. getDownloadFile downloading file success (200)
 	require.NoError(t, s.Filesystem().Write("dl.txt", strings.NewReader("download content"), int64(len("download content")), 0644))
 	fpFile := tokens.FilePayload{
-		ServerUuid: s.ID(),
-		UserUuid:   "usr-1",
+		ServerUUID: s.ID(),
+		UserUUID:   "usr-1",
 		FilePath:   "/dl.txt",
-		UniqueId:   "unique-fp-2",
+		UniqueID:   "unique-fp-2",
 		Scoped:     tokens.Scoped{Scope: string(tokens.FileDownload)},
 		Payload: jwt.Payload{
 			IssuedAt:       jwt.NumericDate(now),
@@ -1669,7 +1669,7 @@ func TestDownloadAndUploadAdvanced(t *testing.T) {
 
 	// 5b. getDownloadFile when the token references a missing file.
 	fpMissing := fpFile
-	fpMissing.FilePath, fpMissing.UniqueId = "/missing.txt", "unique-fp-missing"
+	fpMissing.FilePath, fpMissing.UniqueID = "/missing.txt", "unique-fp-missing"
 	tokenMissing, err := jwt.Sign(&fpMissing, config.GetJwtAlgorithm())
 	require.NoError(t, err)
 	req = httptest.NewRequest(http.MethodGet, "/download/file?token="+string(tokenMissing), nil)
@@ -1679,9 +1679,9 @@ func TestDownloadAndUploadAdvanced(t *testing.T) {
 
 	// 6. postServerUploadFiles not multipart (400)
 	upBad := tokens.UploadPayload{
-		ServerUuid: s.ID(),
-		UserUuid:   "usr-1",
-		UniqueId:   "unique-up-1",
+		ServerUUID: s.ID(),
+		UserUUID:   "usr-1",
+		UniqueID:   "unique-up-1",
 		Scoped:     tokens.Scoped{Scope: string(tokens.FileUpload)},
 		Payload: jwt.Payload{
 			IssuedAt:       jwt.NumericDate(now),
@@ -1699,9 +1699,9 @@ func TestDownloadAndUploadAdvanced(t *testing.T) {
 
 	// 7. postServerUploadFiles valid multipart (200)
 	upValid := tokens.UploadPayload{
-		ServerUuid: s.ID(),
-		UserUuid:   "usr-1",
-		UniqueId:   "unique-up-2",
+		ServerUUID: s.ID(),
+		UserUUID:   "usr-1",
+		UniqueID:   "unique-up-2",
 		Scoped:     tokens.Scoped{Scope: string(tokens.FileUpload)},
 		Payload: jwt.Payload{
 			IssuedAt:       jwt.NumericDate(now),
@@ -1992,7 +1992,7 @@ func TestMoreBackupAndSystemOperations(t *testing.T) {
 	s.SetRestoring(false)
 
 	// 6. Direct CheckRedirect tests on backupRestoreHttpClient
-	client := backupRestoreHttpClient()
+	client := backupRestoreHTTPClient()
 	reqRedirect, _ := http.NewRequest(http.MethodGet, "http://127.0.0.1", nil)
 	via := make([]*http.Request, 10)
 	assert.Error(t, client.CheckRedirect(reqRedirect, via))
@@ -2553,9 +2553,9 @@ func TestFileOperationsComprehensiveCoverage(t *testing.T) {
 		Scoped: tokens.Scoped{
 			Scope: string(tokens.FileUpload),
 		},
-		ServerUuid: uuid.New().String(),
-		UserUuid:   "user-uuid",
-		UniqueId:   uuid.New().String(),
+		ServerUUID: uuid.New().String(),
+		UserUUID:   "user-uuid",
+		UniqueID:   uuid.New().String(),
 	}
 	signedTok, err := jwt.Sign(&missingTok, config.GetJwtAlgorithm())
 	require.NoError(t, err)
@@ -2577,9 +2577,9 @@ func TestFileOperationsComprehensiveCoverage(t *testing.T) {
 		Scoped: tokens.Scoped{
 			Scope: string(tokens.FileUpload),
 		},
-		ServerUuid: s.ID(),
-		UserUuid:   "user-uuid",
-		UniqueId:   uuid.New().String(),
+		ServerUUID: s.ID(),
+		UserUUID:   "user-uuid",
+		UniqueID:   uuid.New().String(),
 	}
 	signedValidTok, err := jwt.Sign(&validTok, config.GetJwtAlgorithm())
 	require.NoError(t, err)
@@ -2599,7 +2599,7 @@ func TestFileOperationsComprehensiveCoverage(t *testing.T) {
 	// A malformed subsequent multipart part causes NextPart to fail after parsing starts.
 	malformedMultipart := "--broken\r\nContent-Disposition: form-data; name=\"other\"\r\n\r\nvalue\r\n--broken\r\nMalformed Header\r\n\r\n"
 	malformedTok := validTok
-	malformedTok.UniqueId = uuid.New().String()
+	malformedTok.UniqueID = uuid.New().String()
 	signedMalformedTok, err := jwt.Sign(&malformedTok, config.GetJwtAlgorithm())
 	require.NoError(t, err)
 	req = httptest.NewRequest(http.MethodPost, "/upload/file?token="+string(signedMalformedTok), strings.NewReader(malformedMultipart))

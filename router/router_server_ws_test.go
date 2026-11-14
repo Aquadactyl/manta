@@ -23,7 +23,7 @@ import (
 	"github.com/Aquadactyl/manta/server"
 )
 
-const websocketTestServerUuid = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+const websocketTestServerUUID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
 
 type runningEnvironment struct {
 	environment.ProcessEnvironment
@@ -50,7 +50,7 @@ func startWebsocketTestServerFor(t *testing.T) (string, *server.Server) {
 	manager, s := newWebsocketTestManager(t)
 	srv := httptest.NewServer(Configure(manager, nil))
 	t.Cleanup(srv.Close)
-	return "ws" + strings.TrimPrefix(srv.URL, "http") + "/api/servers/" + websocketTestServerUuid + "/ws", s
+	return "ws" + strings.TrimPrefix(srv.URL, "http") + "/api/servers/" + websocketTestServerUUID + "/ws", s
 }
 
 // newWebsocketTestManager returns a manager holding a single running server.
@@ -79,7 +79,7 @@ func newWebsocketTestManager(t *testing.T) (*server.Manager, *server.Server) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	settings, _ := json.Marshal(map[string]string{"uuid": websocketTestServerUuid})
+	settings, _ := json.Marshal(map[string]string{"uuid": websocketTestServerUUID})
 	if err := s.SyncWithConfiguration(remote.ServerConfigurationResponse{Settings: settings, ProcessConfiguration: &remote.ProcessConfiguration{}}); err != nil {
 		t.Fatal(err)
 	}
@@ -111,7 +111,7 @@ func authenticationMessage(t *testing.T) websocket.Message {
 		},
 		Scoped:      tokens.Scoped{Scope: string(tokens.Websocket)},
 		UserUUID:    "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
-		ServerUUID:  websocketTestServerUuid,
+		ServerUUID:  websocketTestServerUUID,
 		Permissions: []string{websocket.PermissionConnect},
 	}
 	token, err := jwt.Sign(&payload, config.GetJwtAlgorithm())

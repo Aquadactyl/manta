@@ -63,7 +63,7 @@ func TestSyncWithConfigurationWhileReading(t *testing.T) {
 				defer wg.Done()
 				for j := 0; j < 500; j++ {
 					_ = s.DiskSpace()
-					_ = s.Config().GetUuid()
+					_ = s.Config().GetUUID()
 					_ = s.cfg.snapshot()
 				}
 			}()

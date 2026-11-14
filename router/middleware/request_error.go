@@ -50,11 +50,11 @@ func (re *RequestError) SetStatus(s int) {
 // logs the event into the logs. The error that is output will include the unique
 // request ID if it is present.
 func (re *RequestError) Abort(c *gin.Context, status int) {
-	reqId := c.Writer.Header().Get("X-Request-Id")
+	reqID := c.Writer.Header().Get("X-Request-Id")
 
 	// Generate the base logger instance, attaching the unique request ID and
 	// the URL that was requested.
-	event := log.WithField("request_id", reqId).WithField("url", system.LogURL(c.Request.URL.String()))
+	event := log.WithField("request_id", reqID).WithField("url", system.LogURL(c.Request.URL.String()))
 	// If there is a server present in the gin.Context stack go ahead and pull it
 	// and attach that server UUID to the logs as well so that we can see what specific
 	// server triggered this error.
@@ -92,7 +92,7 @@ func (re *RequestError) Abort(c *gin.Context, status int) {
 	// Now abort the request with the error message and include the unique request
 	// ID that was present to make things super easy on people who don't know how
 	// or cannot view the response headers (where X-Request-Id would be present).
-	c.AbortWithStatusJSON(status, gin.H{"error": re.msg, "request_id": reqId})
+	c.AbortWithStatusJSON(status, gin.H{"error": re.msg, "request_id": reqID})
 }
 
 // Cause returns the underlying error.

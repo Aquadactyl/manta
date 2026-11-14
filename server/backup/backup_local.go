@@ -28,7 +28,7 @@ func NewLocal(client remote.Client, uuid string, ignore string) *LocalBackup {
 	return &LocalBackup{
 		Backup{
 			client:  client,
-			Uuid:    uuid,
+			UUID:    uuid,
 			Ignore:  ignore,
 			adapter: LocalBackupAdapter,
 		},

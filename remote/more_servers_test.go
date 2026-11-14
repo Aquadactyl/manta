@@ -239,8 +239,8 @@ func TestGetServers_SinglePage(t *testing.T) {
 	c, s := createTestClient(func(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewEncoder(w).Encode(map[string]any{
 			"data": []RawServerData{
-				{Uuid: "s1"},
-				{Uuid: "s2"},
+				{UUID: "s1"},
+				{UUID: "s2"},
 			},
 			"meta": Pagination{
 				CurrentPage: 1,

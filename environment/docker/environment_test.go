@@ -465,11 +465,11 @@ func TestDockerPowerAndImageHelpers(t *testing.T) {
 	}
 	assert.Error(t, parseErrorFromResponse(res500, []byte("internal server error")))
 
-	resBadJson := &http.Response{
+	resBadJSON := &http.Response{
 		StatusCode: 500,
 		Header:     http.Header{"Content-Type": []string{"application/json"}},
 	}
-	assert.Error(t, parseErrorFromResponse(resBadJson, []byte("{broken-json")))
+	assert.Error(t, parseErrorFromResponse(resBadJSON, []byte("{broken-json")))
 
 	// 7. convertMounts
 	env.Configuration = environment.NewConfiguration(environment.Settings{

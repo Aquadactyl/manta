@@ -28,7 +28,7 @@ func TestParseRejectsUnknownTypeOversizedAndUnstatableFiles(t *testing.T) {
 		f, err := os.Create(large)
 		require.NoError(t, err)
 		require.NoError(t, f.Truncate(maxConfigFileSize+1))
-		require.ErrorContains(t, (&ConfigurationFile{Parser: Json}).Parse(f), "exceeds limit")
+		require.ErrorContains(t, (&ConfigurationFile{Parser: JSON}).Parse(f), "exceeds limit")
 		require.NoError(t, f.Close())
 	})
 
@@ -36,7 +36,7 @@ func TestParseRejectsUnknownTypeOversizedAndUnstatableFiles(t *testing.T) {
 		f, err := os.Open(path)
 		require.NoError(t, err)
 		require.NoError(t, f.Close())
-		require.Error(t, (&ConfigurationFile{Parser: Json}).Parse(f))
+		require.Error(t, (&ConfigurationFile{Parser: JSON}).Parse(f))
 	})
 }
 
@@ -46,9 +46,9 @@ func TestParseRejectsMalformedInputForEachParser(t *testing.T) {
 		parser   ConfigurationParser
 		contents string
 	}{
-		{parser: Xml, contents: "<root>"},
+		{parser: XML, contents: "<root>"},
 		{parser: Ini, contents: "[section\nkey=value"},
-		{parser: Json, contents: "{"},
+		{parser: JSON, contents: "{"},
 		{parser: Yaml, contents: "key: [unterminated"},
 		{parser: Properties, contents: "\\u12"},
 	}

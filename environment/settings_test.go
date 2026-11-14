@@ -24,10 +24,10 @@ func TestLimitsAndSettings(t *testing.T) {
 	})
 
 	// 1. ConvertedCpuLimit
-	lUnlimited := Limits{CpuLimit: 0}
+	lUnlimited := Limits{CPULimit: 0}
 	assert.Equal(t, int64(-1), lUnlimited.ConvertedCpuLimit())
 
-	lLimited := Limits{CpuLimit: 200}
+	lLimited := Limits{CPULimit: 200}
 	assert.Equal(t, int64(200000), lLimited.ConvertedCpuLimit())
 
 	// 2. MemoryOverheadMultiplier and BoundedMemoryLimit
@@ -48,7 +48,7 @@ func TestLimitsAndSettings(t *testing.T) {
 
 	// 5. AsContainerResources
 	lFull := Limits{
-		CpuLimit:    150,
+		CPULimit:    150,
 		MemoryLimit: 2048,
 		Swap:        256,
 		IoWeight:    500,
@@ -131,10 +131,10 @@ func TestConfigurationStruct(t *testing.T) {
 		Settings{
 			Allocations: Allocations{
 				DefaultMapping: struct {
-					Ip   string `json:"ip"`
+					IP   string `json:"ip"`
 					Port int    `json:"port"`
 				}{
-					Ip:   "127.0.0.1",
+					IP:   "127.0.0.1",
 					Port: 25565,
 				},
 			},
