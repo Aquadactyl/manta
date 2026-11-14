@@ -5,15 +5,19 @@ version: "2"
 # _darwin files.
 
 linters:
-  # errcheck, govet, ineffassign, staticcheck, unused
   default: standard
   enable:
     - gosec
+    - staticcheck
   settings:
     gosec:
       excludes:
         - G104 # unhandled errors, already reported by errcheck
         - G115 # integer overflow on conversion, too noisy for stat/syscall code
+    # Optional: Configure staticcheck minimum Go version if needed
+    staticcheck:
+      checks: ["all"]
+
   exclusions:
     generated: lax
     presets:
