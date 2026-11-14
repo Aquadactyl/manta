@@ -353,6 +353,9 @@ func TestInstallationProcessPullPolicies(t *testing.T) {
 	require.NoError(t, p.pullInstallationImage())
 	p.Script.ContainerImage = "ghcr.io/pterodactyl/installers:debian"
 	cfg := config.Get()
+	cfg.Docker.ImagePullPolicy = ""
+	config.Set(cfg)
+	require.NoError(t, p.pullInstallationImage())
 	cfg.Docker.ImagePullPolicy = config.ImagePullPolicyNever
 	config.Set(cfg)
 	require.ErrorContains(t, p.pullInstallationImage(), "not present locally")

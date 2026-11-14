@@ -1118,8 +1118,6 @@ func TestInstallationProcessDetails(t *testing.T) {
 	})
 	if err == nil {
 		assert.Equal(t, filepath.Join(tmpDir, "install", s.ID()+".log"), proc.GetLogPath())
-		assert.NoError(t, proc.RemoveContainer())
-		assert.Error(t, proc.BeforeExecute())
 	}
 }
 

@@ -11,6 +11,7 @@ import (
 	"github.com/pterodactyl/wings/environment"
 	"github.com/pterodactyl/wings/environment/docker"
 	"github.com/pterodactyl/wings/remote"
+	"github.com/pterodactyl/wings/server/filesystem"
 )
 
 // setTestConfig stores a configuration for tests that use the global one, so
@@ -87,6 +88,11 @@ func TestInitServerReturnsConstructionErrors(t *testing.T) {
 	root := t.TempDir()
 	config.Get().System.RootDirectory = root
 	config.Get().System.Data = filepath.Join(root, "volumes")
+	oldFilesystem := newServerFilesystem
+	newServerFilesystem = func(_ string, size int64, denylist []string) (*filesystem.Filesystem, error) {
+		return oldFilesystem(filepath.Join(t.TempDir(), "server"), size, denylist)
+	}
+	t.Cleanup(func() { newServerFilesystem = oldFilesystem })
 	const id = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
 
 	t.Run("server defaults", func(t *testing.T) {

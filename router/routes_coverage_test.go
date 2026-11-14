@@ -39,6 +39,7 @@ import (
 )
 
 func TestSystemInformationRoutes(t *testing.T) {
+	useTestSystemInformation(t)
 	h := newTransferHarness(t, &transferTestPanel{})
 
 	// 1. GET /api/system (v1)

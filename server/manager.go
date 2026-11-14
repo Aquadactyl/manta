@@ -32,6 +32,7 @@ type Manager struct {
 }
 
 var newServerEnvironment = docker.New
+var newServerFilesystem = filesystem.New
 
 // NewManager returns a new server manager instance. This will boot up all the
 // servers that are currently present on the filesystem and set them into the
@@ -239,7 +240,7 @@ func (m *Manager) InitServer(uuid string, data remote.ServerConfigurationRespons
 		return nil, errors.New("server: configuration returned by the Panel is for a different server")
 	}
 
-	s.fs, err = filesystem.New(filepath.Join(config.Get().System.Data, s.ID()), s.DiskSpace(), s.Config().Egg.FileDenylist)
+	s.fs, err = newServerFilesystem(filepath.Join(config.Get().System.Data, s.ID()), s.DiskSpace(), s.Config().Egg.FileDenylist)
 	if err != nil {
 		return nil, errors.WithStackIf(err)
 	}

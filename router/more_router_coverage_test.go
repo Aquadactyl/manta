@@ -84,6 +84,7 @@ func (p *failingPanel) GetServerConfiguration(ctx context.Context, u string) (re
 }
 
 func TestRouterRemainingCoverage(t *testing.T) {
+	useTestSystemInformation(t)
 	fp := &failingPanel{}
 	h := newTransferHarness(t, &fp.transferTestPanel)
 	s := h.seedServer()

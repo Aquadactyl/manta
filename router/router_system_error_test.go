@@ -16,6 +16,24 @@ import (
 	"github.com/pterodactyl/wings/system"
 )
 
+func useTestSystemInformation(t *testing.T) {
+	t.Helper()
+	old := readSystemInformation
+	readSystemInformation = func() (*system.Information, error) {
+		return &system.Information{
+			Version: "test-version",
+			System: system.System{
+				Architecture:  "test-arch",
+				CPUThreads:    4,
+				KernelVersion: "test-kernel",
+				OSType:        "test-os",
+			},
+			Capabilities: map[string]bool{"system_usage": true},
+		}, nil
+	}
+	t.Cleanup(func() { readSystemInformation = old })
+}
+
 func TestPostUpdateConfigurationRejectsInvalidTokenAndWriteFailures(t *testing.T) {
 	for _, tc := range []struct {
 		name       string

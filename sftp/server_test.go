@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -91,6 +92,9 @@ func TestUnauthenticatedConnectionsAreClosedAfterTimeout(t *testing.T) {
 }
 
 func TestUnauthenticatedConnectionsAreLimited(t *testing.T) {
+	if runtime.GOOS == "darwin" {
+		t.Skip("Darwin CI does not permit binding TCP clients to additional loopback addresses")
+	}
 	addr := startTestServer(t, connectionLimits{handshakeTimeout: time.Minute, maxPending: 3, maxPendingPerIP: 2})
 
 	// Two connections from one address are accepted, the third is not.
@@ -124,6 +128,29 @@ func TestUnauthenticatedConnectionsAreLimited(t *testing.T) {
 			t.Fatal("expected slot to be released when a pending connection closes")
 		}
 		time.Sleep(time.Millisecond * 50)
+	}
+}
+
+func TestConnectionCounterLimitsAndRelease(t *testing.T) {
+	var cc connectionCounter
+	if !cc.acquire("user-a", 3, 2) {
+		t.Fatal("expected first connection for a key to be accepted")
+	}
+	if !cc.acquire("user-a", 3, 2) {
+		t.Fatal("expected two connections for one key to be accepted")
+	}
+	if cc.acquire("user-a", 3, 2) {
+		t.Fatal("expected per-key limit to reject another connection")
+	}
+	if !cc.acquire("user-b", 3, 2) {
+		t.Fatal("expected a different key to be accepted")
+	}
+	if cc.acquire("user-c", 3, 2) {
+		t.Fatal("expected total limit to reject another connection")
+	}
+	cc.release("user-a")
+	if !cc.acquire("user-a", 3, 2) {
+		t.Fatal("expected release to free the per-key and total slots")
 	}
 }
 
