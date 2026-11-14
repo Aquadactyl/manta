@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"github.com/apex/log"
-	"github.com/mitchellh/colorstring"
 
+	"github.com/Aquadactyl/manta/internal/termcolor"
 	"github.com/Aquadactyl/manta/server"
 	"github.com/Aquadactyl/manta/system"
 )
@@ -112,7 +112,7 @@ func (t *Transfer) SetStatus(s Status) {
 func (t *Transfer) SendMessage(v string) {
 	t.Server.Events().Publish(
 		server.TransferLogsEvent,
-		colorstring.Color("[yellow][bold]"+time.Now().Format(time.RFC1123)+" [Transfer System] [Source Node]:[default] "+v),
+		termcolor.Color("[yellow][bold]"+time.Now().Format(time.RFC1123)+" [Transfer System] [Source Node]:[default] "+v),
 	)
 }
 

@@ -21,7 +21,6 @@ import (
 	"github.com/acobaugh/osrelease"
 	"github.com/apex/log"
 	"github.com/creasty/defaults"
-	"github.com/gbrlsnchs/jwt/v3"
 	"gopkg.in/yaml.v2"
 
 	"github.com/Aquadactyl/manta/system"
@@ -49,7 +48,7 @@ var DefaultTLSConfig = &tls.Config{
 var (
 	mu                 sync.RWMutex
 	_config            *Configuration
-	_jwtAlgo           *jwt.HMACSHA
+	_jwtKey            []byte
 	_debugViaFlag      bool
 	logrotateDirectory = "/etc/logrotate.d"
 )
@@ -480,9 +479,9 @@ func Set(c *Configuration) {
 		token = c.Token.Token
 	}
 	if token != "" && (_config == nil || _config.Token.Token != token) {
-		_jwtAlgo = jwt.NewHS256([]byte(token))
+		_jwtKey = []byte(token)
 	} else if token == "" {
-		_jwtAlgo = nil
+		_jwtKey = nil
 	}
 	_config = c
 }
@@ -570,11 +569,11 @@ func Update(callback func(c *Configuration)) {
 	callback(_config)
 }
 
-// GetJwtAlgorithm returns the in-memory JWT algorithm.
-func GetJwtAlgorithm() *jwt.HMACSHA {
+// GetJWTKey returns a copy of the in-memory JWT signing key.
+func GetJWTKey() []byte {
 	mu.RLock()
 	defer mu.RUnlock()
-	return _jwtAlgo
+	return append([]byte(nil), _jwtKey...)
 }
 
 // WriteToDisk writes the configuration to the disk. This is a thread safe operation

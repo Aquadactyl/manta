@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gbrlsnchs/jwt/v3"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -18,39 +18,39 @@ func TestScoped(t *testing.T) {
 
 func TestPayloadGetters(t *testing.T) {
 	now := time.Now()
-	jwtPayload := jwt.Payload{
-		JWTID:    "jti-123",
-		IssuedAt: jwt.NumericDate(now),
+	jwtPayload := jwt.RegisteredClaims{
+		ID:       "jti-123",
+		IssuedAt: jwt.NewNumericDate(now),
 	}
 
 	fp := FilePayload{
-		Payload:    jwtPayload,
-		ServerUUID: "srv-uuid",
-		UserUUID:   "usr-uuid",
+		RegisteredClaims: jwtPayload,
+		ServerUUID:       "srv-uuid",
+		UserUUID:         "usr-uuid",
 	}
-	assert.Equal(t, "jti-123", fp.GetPayload().JWTID)
+	assert.Equal(t, "jti-123", fp.RegisteredClaims.ID)
 
 	bp := BackupPayload{
-		Payload:    jwtPayload,
-		ServerUUID: "srv-uuid",
-		UserUUID:   "usr-uuid",
+		RegisteredClaims: jwtPayload,
+		ServerUUID:       "srv-uuid",
+		UserUUID:         "usr-uuid",
 	}
-	assert.Equal(t, "jti-123", bp.GetPayload().JWTID)
+	assert.Equal(t, "jti-123", bp.RegisteredClaims.ID)
 
 	up := UploadPayload{
-		Payload:    jwtPayload,
-		ServerUUID: "srv-uuid",
-		UserUUID:   "usr-uuid",
+		RegisteredClaims: jwtPayload,
+		ServerUUID:       "srv-uuid",
+		UserUUID:         "usr-uuid",
 	}
-	assert.Equal(t, "jti-123", up.GetPayload().JWTID)
+	assert.Equal(t, "jti-123", up.RegisteredClaims.ID)
 
 	wp := WebsocketPayload{
-		Payload:     jwtPayload,
-		ServerUUID:  "srv-uuid",
-		UserUUID:    "usr-uuid",
-		Permissions: []string{"control.start", "control.stop"},
+		RegisteredClaims: jwtPayload,
+		ServerUUID:       "srv-uuid",
+		UserUUID:         "usr-uuid",
+		Permissions:      []string{"control.start", "control.stop"},
 	}
-	assert.Equal(t, "jti-123", wp.GetPayload().JWTID)
+	assert.Equal(t, "jti-123", wp.RegisteredClaims.ID)
 	assert.Equal(t, "srv-uuid", wp.GetServerUUID())
 }
 
@@ -59,9 +59,9 @@ func TestWebsocketPermissionsAndDenyJTI(t *testing.T) {
 	resetDenylistState(t, bootTime)
 
 	wp := &WebsocketPayload{
-		Payload: jwt.Payload{
-			JWTID:    "ws-token-1",
-			IssuedAt: jwt.NumericDate(time.Now()),
+		RegisteredClaims: jwt.RegisteredClaims{
+			ID:       "ws-token-1",
+			IssuedAt: jwt.NewNumericDate(time.Now()),
 		},
 		ServerUUID:  "srv-1",
 		UserUUID:    "usr-1",
@@ -80,9 +80,9 @@ func TestWebsocketPermissionsAndDenyJTI(t *testing.T) {
 
 	// Non-matching permission
 	wp2 := &WebsocketPayload{
-		Payload: jwt.Payload{
-			JWTID:    "ws-token-2",
-			IssuedAt: jwt.NumericDate(time.Now()),
+		RegisteredClaims: jwt.RegisteredClaims{
+			ID:       "ws-token-2",
+			IssuedAt: jwt.NewNumericDate(time.Now()),
 		},
 		ServerUUID:  "srv-2",
 		UserUUID:    "usr-2",

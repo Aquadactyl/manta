@@ -6,8 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gbrlsnchs/jwt/v3"
-	"github.com/patrickmn/go-cache"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/require"
 )
 
@@ -29,12 +28,10 @@ func TestTokenIsAcceptedOnce(t *testing.T) {
 }
 
 func TestTokenStoreRetainsTokensUntilSignedExpiry(t *testing.T) {
-	store := &TokenStore{cache: cache.New(time.Hour, 0)}
+	store := &TokenStore{}
 	expiresAt := time.Now().Add(3 * time.Hour)
 	require.True(t, store.IsValidUntil("long-lived-token", expiresAt))
-	_, cachedExpiry, found := store.cache.GetWithExpiration("long-lived-token")
-	require.True(t, found)
-	require.WithinDuration(t, expiresAt, cachedExpiry, time.Second)
+	require.WithinDuration(t, expiresAt, store.tokens["long-lived-token"], time.Second)
 	require.False(t, store.IsValidUntil("long-lived-token", expiresAt))
 	require.False(t, store.IsValidUntil("", expiresAt))
 	require.False(t, store.IsValidUntil("expired", time.Now().Add(-time.Second)))
@@ -46,9 +43,9 @@ func TestOneTimePayloadsRequireIDAndExpiry(t *testing.T) {
 	} {
 		t.Run(name+" missing expiry", func(t *testing.T) { require.False(t, payload.IsUniqueRequest()) })
 	}
-	p := jwt.Payload{ExpirationTime: jwt.NumericDate(time.Now().Add(time.Minute))}
+	p := jwt.RegisteredClaims{ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute))}
 	for name, payload := range map[string]interface{ IsUniqueRequest() bool }{
-		"file": &FilePayload{Payload: p}, "backup": &BackupPayload{Payload: p}, "upload": &UploadPayload{Payload: p},
+		"file": &FilePayload{RegisteredClaims: p}, "backup": &BackupPayload{RegisteredClaims: p}, "upload": &UploadPayload{RegisteredClaims: p},
 	} {
 		t.Run(name+" missing ID", func(t *testing.T) { require.False(t, payload.IsUniqueRequest()) })
 	}

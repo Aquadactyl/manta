@@ -25,10 +25,10 @@ require (
 	github.com/franela/goblin v0.0.0-20211003143422-0a4f594942bf
 	github.com/gabriel-vasile/mimetype v1.4.16
 	github.com/gammazero/workerpool v1.3.0
-	github.com/gbrlsnchs/jwt/v3 v3.0.1
 	github.com/gin-gonic/gin v1.12.0
 	github.com/glebarez/sqlite v1.11.0
 	github.com/go-co-op/gocron/v2 v2.23.1
+	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.3
 	github.com/iancoleman/strcase v0.3.0
@@ -39,11 +39,9 @@ require (
 	github.com/magiconair/properties v1.18.13
 	github.com/mattn/go-colorable v0.1.16
 	github.com/mholt/archives v0.1.5
-	github.com/mitchellh/colorstring v0.0.0-20190213212951-d06e56a500db
 	github.com/moby/moby/api v1.57.0
 	github.com/moby/moby/client v0.6.3
 	github.com/moby/moby/v2 v2.0.0-beta.30
-	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pkg/sftp v1.13.12
 	github.com/sabhiram/go-gitignore v0.0.0-20210923224102-525f6e181f06
 	github.com/spf13/cobra v1.10.2
@@ -97,7 +95,6 @@ require (
 	github.com/klauspost/cpuid/v2 v2.4.2 // indirect
 	github.com/kr/fs v0.1.0 // indirect
 	github.com/leodido/go-urn v1.5.0 // indirect
-	github.com/magefile/mage v1.17.2 // indirect
 	github.com/mattn/go-isatty v0.0.24 // indirect
 	github.com/mgutz/ansi v0.0.0-20200706080929-d51e80ef957d // indirect
 	github.com/mikelolasagasti/xz v1.0.1 // indirect
@@ -138,7 +135,6 @@ require (
 	golang.org/x/term v0.48.0 // indirect
 	golang.org/x/text v0.44.0 // indirect
 	golang.org/x/tools v0.52.1-0.20261106145633-d407941a339a // indirect
-	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da // indirect
 	google.golang.org/protobuf v1.36.12 // indirect
 	modernc.org/libc v1.81.0 // indirect
 	modernc.org/mathutil v1.7.1 // indirect

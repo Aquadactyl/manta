@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/apex/log"
-	"github.com/gbrlsnchs/jwt/v3"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 // The time at which Wings was booted. No JWT's created before this time are allowed to
@@ -49,7 +49,7 @@ func DenyForServer(s string, u string) {
 
 // Checks if a user-bound JWT has been denied because it was issued before Wings
 // booted, or before the Panel revoked the user's access to a server.
-func isDenylisted(payload *jwt.Payload, serverUUID, userUUID string) bool {
+func isDenylisted(payload *jwt.RegisteredClaims, serverUUID, userUUID string) bool {
 	// A token without all of the claims needed to check revocation cannot be
 	// safely accepted.
 	if payload.IssuedAt == nil || serverUUID == "" || userUUID == "" {
@@ -62,7 +62,7 @@ func isDenylisted(payload *jwt.Payload, serverUUID, userUUID string) bool {
 
 	// This list is deprecated, but we maintain the check here so that custom
 	// instances are able to continue working. We'll remove it in a future release.
-	if t, ok := denylist.Load(payload.JWTID); ok {
+	if t, ok := denylist.Load(payload.ID); ok {
 		if !payload.IssuedAt.Time.After(t.(time.Time)) {
 			return true
 		}
@@ -80,21 +80,13 @@ func isDenylisted(payload *jwt.Payload, serverUUID, userUUID string) bool {
 // WebsocketPayload defines the JWT payload for a websocket connection. This JWT is passed along to
 // the websocket after it has been connected to by sending an "auth" event.
 type WebsocketPayload struct {
-	jwt.Payload
+	jwt.RegisteredClaims
 	sync.RWMutex
 	Scoped
 
 	UserUUID    string   `json:"user_uuid"`
 	ServerUUID  string   `json:"server_uuid"`
 	Permissions []string `json:"permissions"`
-}
-
-// GetPayload returns the JWT payload.
-func (p *WebsocketPayload) GetPayload() *jwt.Payload {
-	p.RLock()
-	defer p.RUnlock()
-
-	return &p.Payload
 }
 
 // GetServerUUID returns the server UUID associated with this JWT.
@@ -109,7 +101,7 @@ func (p *WebsocketPayload) GetServerUUID() string {
 // before Wings was booted, or because we have denied all tokens with the same JTI
 // occurring before a set time.
 func (p *WebsocketPayload) Denylisted() bool {
-	return isDenylisted(&p.Payload, p.ServerUUID, p.UserUUID)
+	return isDenylisted(&p.RegisteredClaims, p.ServerUUID, p.UserUUID)
 }
 
 // HasPermission reports whether the token payload has the given permission.

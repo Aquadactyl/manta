@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gbrlsnchs/jwt/v3"
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/assert"
@@ -163,14 +163,14 @@ func TestNewTokenPayload_DenylistAndPermissions(t *testing.T) {
 	tokens.DenyJTI(jti)
 	now := time.Now()
 	customPayload := &tokens.WebsocketPayload{
-		Payload: jwt.Payload{
-			Issuer:         "pterodactyl",
-			Subject:        "websocket",
-			Audience:       jwt.Audience{"pterodactyl"},
-			ExpirationTime: jwt.NumericDate(now.Add(time.Hour)),
-			NotBefore:      jwt.NumericDate(now.Add(-time.Hour)),
-			IssuedAt:       jwt.NumericDate(now.Add(-time.Hour)),
-			JWTID:          jti,
+		RegisteredClaims: jwt.RegisteredClaims{
+			Issuer:    "pterodactyl",
+			Subject:   "websocket",
+			Audience:  jwt.ClaimStrings{"pterodactyl"},
+			ExpiresAt: jwt.NewNumericDate(now.Add(time.Hour)),
+			NotBefore: jwt.NewNumericDate(now.Add(-time.Hour)),
+			IssuedAt:  jwt.NewNumericDate(now.Add(-time.Hour)),
+			ID:        jti,
 		},
 		Scoped:      tokens.Scoped{Scope: string(tokens.Websocket)},
 		ServerUUID:  serverUUID,
@@ -178,27 +178,27 @@ func TestNewTokenPayload_DenylistAndPermissions(t *testing.T) {
 		Permissions: []string{PermissionConnect},
 	}
 
-	denylistedBytes, err := jwt.Sign(customPayload, config.GetJwtAlgorithm())
+	denylistedBytes, err := jwt.NewWithClaims(jwt.SigningMethodHS256, customPayload).SignedString(config.GetJWTKey())
 	require.NoError(t, err)
-	_, err = NewTokenPayload(denylistedBytes)
+	_, err = NewTokenPayload([]byte(denylistedBytes))
 	assert.ErrorIs(t, err, ErrJwtOnDenylist)
 
 	// 3. Missing connect permission
 	noPermPayload := &tokens.WebsocketPayload{
-		Payload: jwt.Payload{
-			ExpirationTime: jwt.NumericDate(now.Add(time.Hour)),
-			NotBefore:      jwt.NumericDate(now.Add(-time.Minute)),
-			IssuedAt:       jwt.NumericDate(now.Add(time.Second * 2)),
-			JWTID:          "no-perm-jti",
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(now.Add(time.Hour)),
+			NotBefore: jwt.NewNumericDate(now.Add(-time.Minute)),
+			IssuedAt:  jwt.NewNumericDate(now.Add(time.Second * 2)),
+			ID:        "no-perm-jti",
 		},
 		Scoped:      tokens.Scoped{Scope: string(tokens.Websocket)},
 		ServerUUID:  serverUUID,
 		UserUUID:    "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
 		Permissions: []string{PermissionSendCommand},
 	}
-	noPermBytes, err := jwt.Sign(noPermPayload, config.GetJwtAlgorithm())
+	noPermBytes, err := jwt.NewWithClaims(jwt.SigningMethodHS256, noPermPayload).SignedString(config.GetJWTKey())
 	require.NoError(t, err)
-	_, err = NewTokenPayload(noPermBytes)
+	_, err = NewTokenPayload([]byte(noPermBytes))
 	assert.ErrorIs(t, err, ErrJwtNoConnectPerm)
 }
 

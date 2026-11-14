@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gbrlsnchs/jwt/v3"
+	"github.com/golang-jwt/jwt/v5"
 	ws "github.com/gorilla/websocket"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -105,16 +105,16 @@ func authenticationMessage(t *testing.T) websocket.Message {
 	// second precision.
 	now := time.Now().Add(time.Second * 2)
 	payload := tokens.WebsocketPayload{
-		Payload: jwt.Payload{
-			IssuedAt:       jwt.NumericDate(now),
-			ExpirationTime: jwt.NumericDate(now.Add(time.Minute * 10)),
+		RegisteredClaims: jwt.RegisteredClaims{
+			IssuedAt:  jwt.NewNumericDate(now),
+			ExpiresAt: jwt.NewNumericDate(now.Add(time.Minute * 10)),
 		},
 		Scoped:      tokens.Scoped{Scope: string(tokens.Websocket)},
 		UserUUID:    "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
 		ServerUUID:  websocketTestServerUUID,
 		Permissions: []string{websocket.PermissionConnect},
 	}
-	token, err := jwt.Sign(&payload, config.GetJwtAlgorithm())
+	token, err := jwt.NewWithClaims(jwt.SigningMethodHS256, &payload).SignedString(config.GetJWTKey())
 	if err != nil {
 		t.Fatal(err)
 	}

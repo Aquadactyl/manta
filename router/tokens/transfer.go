@@ -1,15 +1,10 @@
 package tokens
 
 import (
-	"github.com/gbrlsnchs/jwt/v3"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 type TransferPayload struct {
-	jwt.Payload
+	jwt.RegisteredClaims
 	Scoped
-}
-
-// GetPayload returns the JWT payload.
-func (p *TransferPayload) GetPayload() *jwt.Payload {
-	return &p.Payload
 }

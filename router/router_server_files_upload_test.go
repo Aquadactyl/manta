@@ -14,7 +14,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gbrlsnchs/jwt/v3"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 
@@ -115,16 +115,16 @@ func (u *uploadTest) token(t *testing.T) string {
 	// second precision.
 	now := time.Now().Add(time.Second * 2)
 	payload := tokens.UploadPayload{
-		Payload: jwt.Payload{
-			IssuedAt:       jwt.NumericDate(now),
-			ExpirationTime: jwt.NumericDate(now.Add(time.Minute * 15)),
+		RegisteredClaims: jwt.RegisteredClaims{
+			IssuedAt:  jwt.NewNumericDate(now),
+			ExpiresAt: jwt.NewNumericDate(now.Add(time.Minute * 15)),
 		},
 		Scoped:     tokens.Scoped{Scope: string(tokens.FileUpload)},
 		ServerUUID: uploadTestServerUUID,
 		UserUUID:   "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
 		UniqueID:   uuid.NewString(),
 	}
-	token, err := jwt.Sign(&payload, config.GetJwtAlgorithm())
+	token, err := jwt.NewWithClaims(jwt.SigningMethodHS256, &payload).SignedString(config.GetJWTKey())
 	require.NoError(t, err)
 	return string(token)
 }

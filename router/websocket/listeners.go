@@ -56,9 +56,9 @@ func (h *Handler) listenForExpiration(ctx context.Context) {
 		case <-ticker.C:
 			jwt := h.GetJwt()
 			if jwt != nil {
-				if jwt.ExpirationTime.Unix()-time.Now().Unix() <= 0 {
+				if jwt.ExpiresAt.Unix()-time.Now().Unix() <= 0 {
 					_ = h.SendJSON(Message{Event: TokenExpiredEvent})
-				} else if jwt.ExpirationTime.Unix()-time.Now().Unix() <= 60 {
+				} else if jwt.ExpiresAt.Unix()-time.Now().Unix() <= 60 {
 					_ = h.SendJSON(Message{Event: TokenExpiringEvent})
 				}
 			}

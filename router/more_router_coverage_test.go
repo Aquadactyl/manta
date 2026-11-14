@@ -16,7 +16,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gbrlsnchs/jwt/v3"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -293,10 +293,10 @@ func TestRouterRemainingCoverage(t *testing.T) {
 	// 6. getDownloadBackup & getDownloadFile branches
 	now := time.Now().Add(2 * time.Second)
 	badBackupTok := tokens.BackupPayload{
-		Payload: jwt.Payload{
-			IssuedAt:       jwt.NumericDate(now),
-			NotBefore:      jwt.NumericDate(now.Add(-5 * time.Second)),
-			ExpirationTime: jwt.NumericDate(now.Add(10 * time.Minute)),
+		RegisteredClaims: jwt.RegisteredClaims{
+			IssuedAt:  jwt.NewNumericDate(now),
+			NotBefore: jwt.NewNumericDate(now.Add(-5 * time.Second)),
+			ExpiresAt: jwt.NewNumericDate(now.Add(10 * time.Minute)),
 		},
 		Scoped:     tokens.Scoped{Scope: string(tokens.BackupDownload)},
 		ServerUUID: s.ID(),
@@ -304,7 +304,7 @@ func TestRouterRemainingCoverage(t *testing.T) {
 		BackupUUID: "not-a-valid-uuid",
 		UniqueID:   uuid.New().String(),
 	}
-	signedBadBackup, err := jwt.Sign(&badBackupTok, config.GetJwtAlgorithm())
+	signedBadBackup, err := jwt.NewWithClaims(jwt.SigningMethodHS256, &badBackupTok).SignedString(config.GetJWTKey())
 	require.NoError(t, err)
 	w = httptest.NewRecorder()
 	h.router.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/download/backup?token="+string(signedBadBackup), nil))
@@ -313,17 +313,17 @@ func TestRouterRemainingCoverage(t *testing.T) {
 	missingBackupTok := badBackupTok
 	missingBackupTok.BackupUUID = uuid.New().String()
 	missingBackupTok.UniqueID = uuid.New().String()
-	signedMissingBackup, err := jwt.Sign(&missingBackupTok, config.GetJwtAlgorithm())
+	signedMissingBackup, err := jwt.NewWithClaims(jwt.SigningMethodHS256, &missingBackupTok).SignedString(config.GetJWTKey())
 	require.NoError(t, err)
 	w = httptest.NewRecorder()
 	h.router.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/download/backup?token="+string(signedMissingBackup), nil))
 	assert.Equal(t, http.StatusNotFound, w.Code)
 
 	dirFileTok := tokens.FilePayload{
-		Payload: jwt.Payload{
-			IssuedAt:       jwt.NumericDate(now),
-			NotBefore:      jwt.NumericDate(now.Add(-5 * time.Second)),
-			ExpirationTime: jwt.NumericDate(now.Add(10 * time.Minute)),
+		RegisteredClaims: jwt.RegisteredClaims{
+			IssuedAt:  jwt.NewNumericDate(now),
+			NotBefore: jwt.NewNumericDate(now.Add(-5 * time.Second)),
+			ExpiresAt: jwt.NewNumericDate(now.Add(10 * time.Minute)),
 		},
 		Scoped:     tokens.Scoped{Scope: string(tokens.FileDownload)},
 		ServerUUID: s.ID(),
@@ -331,7 +331,7 @@ func TestRouterRemainingCoverage(t *testing.T) {
 		FilePath:   "/conflict_dir",
 		UniqueID:   uuid.New().String(),
 	}
-	signedDirFile, err := jwt.Sign(&dirFileTok, config.GetJwtAlgorithm())
+	signedDirFile, err := jwt.NewWithClaims(jwt.SigningMethodHS256, &dirFileTok).SignedString(config.GetJWTKey())
 	require.NoError(t, err)
 	w = httptest.NewRecorder()
 	h.router.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/download/file?token="+string(signedDirFile), nil))
@@ -342,7 +342,7 @@ func TestRouterRemainingCoverage(t *testing.T) {
 	validFileTok := dirFileTok
 	validFileTok.FilePath = "/downloadable.txt"
 	validFileTok.UniqueID = uuid.New().String()
-	signedValidFile, err := jwt.Sign(&validFileTok, config.GetJwtAlgorithm())
+	signedValidFile, err := jwt.NewWithClaims(jwt.SigningMethodHS256, &validFileTok).SignedString(config.GetJWTKey())
 	require.NoError(t, err)
 	w = httptest.NewRecorder()
 	h.router.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/download/file?token="+string(signedValidFile), nil))
@@ -362,7 +362,7 @@ func TestRouterRemainingCoverage(t *testing.T) {
 	validBackupTok := missingBackupTok
 	validBackupTok.BackupUUID = backupUUID
 	validBackupTok.UniqueID = uuid.New().String()
-	signedValidBackup, err := jwt.Sign(&validBackupTok, config.GetJwtAlgorithm())
+	signedValidBackup, err := jwt.NewWithClaims(jwt.SigningMethodHS256, &validBackupTok).SignedString(config.GetJWTKey())
 	require.NoError(t, err)
 	w = httptest.NewRecorder()
 	h.router.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/download/backup?token="+string(signedValidBackup), nil))
@@ -384,15 +384,15 @@ func TestRouterRemainingCoverage(t *testing.T) {
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
 
 	noScopeTok := tokens.TransferPayload{
-		Payload: jwt.Payload{
-			IssuedAt:       jwt.NumericDate(now),
-			NotBefore:      jwt.NumericDate(now.Add(-5 * time.Second)),
-			ExpirationTime: jwt.NumericDate(now.Add(10 * time.Minute)),
-			Subject:        uuid.New().String(),
+		RegisteredClaims: jwt.RegisteredClaims{
+			IssuedAt:  jwt.NewNumericDate(now),
+			NotBefore: jwt.NewNumericDate(now.Add(-5 * time.Second)),
+			ExpiresAt: jwt.NewNumericDate(now.Add(10 * time.Minute)),
+			Subject:   uuid.New().String(),
 		},
 		Scoped: tokens.Scoped{Scope: "not-transfer"},
 	}
-	signedNoScope, err := jwt.Sign(&noScopeTok, config.GetJwtAlgorithm())
+	signedNoScope, err := jwt.NewWithClaims(jwt.SigningMethodHS256, &noScopeTok).SignedString(config.GetJWTKey())
 	require.NoError(t, err)
 	w = httptest.NewRecorder()
 	reqNoScope := httptest.NewRequest(http.MethodPost, "/api/transfers", nil)
@@ -401,15 +401,15 @@ func TestRouterRemainingCoverage(t *testing.T) {
 	assert.Equal(t, http.StatusForbidden, w.Code)
 
 	badSubjTok := tokens.TransferPayload{
-		Payload: jwt.Payload{
-			IssuedAt:       jwt.NumericDate(now),
-			NotBefore:      jwt.NumericDate(now.Add(-5 * time.Second)),
-			ExpirationTime: jwt.NumericDate(now.Add(10 * time.Minute)),
-			Subject:        "not-a-uuid",
+		RegisteredClaims: jwt.RegisteredClaims{
+			IssuedAt:  jwt.NewNumericDate(now),
+			NotBefore: jwt.NewNumericDate(now.Add(-5 * time.Second)),
+			ExpiresAt: jwt.NewNumericDate(now.Add(10 * time.Minute)),
+			Subject:   "not-a-uuid",
 		},
 		Scoped: tokens.Scoped{Scope: string(tokens.ServerTransfer)},
 	}
-	signedBadSubj, err := jwt.Sign(&badSubjTok, config.GetJwtAlgorithm())
+	signedBadSubj, err := jwt.NewWithClaims(jwt.SigningMethodHS256, &badSubjTok).SignedString(config.GetJWTKey())
 	require.NoError(t, err)
 	w = httptest.NewRecorder()
 	reqBadSubj := httptest.NewRequest(http.MethodPost, "/api/transfers", nil)
@@ -418,15 +418,15 @@ func TestRouterRemainingCoverage(t *testing.T) {
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
 
 	conflictSubjTok := tokens.TransferPayload{
-		Payload: jwt.Payload{
-			IssuedAt:       jwt.NumericDate(now),
-			NotBefore:      jwt.NumericDate(now.Add(-5 * time.Second)),
-			ExpirationTime: jwt.NumericDate(now.Add(10 * time.Minute)),
-			Subject:        s.ID(),
+		RegisteredClaims: jwt.RegisteredClaims{
+			IssuedAt:  jwt.NewNumericDate(now),
+			NotBefore: jwt.NewNumericDate(now.Add(-5 * time.Second)),
+			ExpiresAt: jwt.NewNumericDate(now.Add(10 * time.Minute)),
+			Subject:   s.ID(),
 		},
 		Scoped: tokens.Scoped{Scope: string(tokens.ServerTransfer)},
 	}
-	signedConflictSubj, err := jwt.Sign(&conflictSubjTok, config.GetJwtAlgorithm())
+	signedConflictSubj, err := jwt.NewWithClaims(jwt.SigningMethodHS256, &conflictSubjTok).SignedString(config.GetJWTKey())
 	require.NoError(t, err)
 	w = httptest.NewRecorder()
 	reqConflictSubj := httptest.NewRequest(http.MethodPost, "/api/transfers", nil)
@@ -436,15 +436,15 @@ func TestRouterRemainingCoverage(t *testing.T) {
 
 	newTransferUUID := uuid.New().String()
 	validTrTok := tokens.TransferPayload{
-		Payload: jwt.Payload{
-			IssuedAt:       jwt.NumericDate(now),
-			NotBefore:      jwt.NumericDate(now.Add(-5 * time.Second)),
-			ExpirationTime: jwt.NumericDate(now.Add(10 * time.Minute)),
-			Subject:        newTransferUUID,
+		RegisteredClaims: jwt.RegisteredClaims{
+			IssuedAt:  jwt.NewNumericDate(now),
+			NotBefore: jwt.NewNumericDate(now.Add(-5 * time.Second)),
+			ExpiresAt: jwt.NewNumericDate(now.Add(10 * time.Minute)),
+			Subject:   newTransferUUID,
 		},
 		Scoped: tokens.Scoped{Scope: string(tokens.ServerTransfer)},
 	}
-	signedValidTr, err := jwt.Sign(&validTrTok, config.GetJwtAlgorithm())
+	signedValidTr, err := jwt.NewWithClaims(jwt.SigningMethodHS256, &validTrTok).SignedString(config.GetJWTKey())
 	require.NoError(t, err)
 	w = httptest.NewRecorder()
 	reqNonMultipart := httptest.NewRequest(http.MethodPost, "/api/transfers", strings.NewReader(`{}`))
@@ -455,7 +455,7 @@ func TestRouterRemainingCoverage(t *testing.T) {
 
 	checksumTok := validTrTok
 	checksumTok.Subject = uuid.New().String()
-	signedChecksum, err := jwt.Sign(&checksumTok, config.GetJwtAlgorithm())
+	signedChecksum, err := jwt.NewWithClaims(jwt.SigningMethodHS256, &checksumTok).SignedString(config.GetJWTKey())
 	require.NoError(t, err)
 	var checksumBody bytes.Buffer
 	checksumWriter := multipart.NewWriter(&checksumBody)
@@ -626,11 +626,11 @@ func TestRouterRemainingCoverage(t *testing.T) {
 	require.NoError(t, os.WriteFile(realBackupPath, []byte("dummy-backup-archive-content"), 0644))
 
 	realBackupTok := tokens.BackupPayload{
-		Payload: jwt.Payload{
-			IssuedAt:       jwt.NumericDate(now),
-			NotBefore:      jwt.NumericDate(now.Add(-5 * time.Second)),
-			ExpirationTime: jwt.NumericDate(now.Add(10 * time.Minute)),
-			Subject:        "user-1",
+		RegisteredClaims: jwt.RegisteredClaims{
+			IssuedAt:  jwt.NewNumericDate(now),
+			NotBefore: jwt.NewNumericDate(now.Add(-5 * time.Second)),
+			ExpiresAt: jwt.NewNumericDate(now.Add(10 * time.Minute)),
+			Subject:   "user-1",
 		},
 		UserUUID:   "user-1",
 		ServerUUID: s.ID(),
@@ -638,7 +638,7 @@ func TestRouterRemainingCoverage(t *testing.T) {
 		UniqueID:   uuid.New().String(),
 		Scoped:     tokens.Scoped{Scope: string(tokens.BackupDownload)},
 	}
-	signedRealBackup, err := jwt.Sign(&realBackupTok, config.GetJwtAlgorithm())
+	signedRealBackup, err := jwt.NewWithClaims(jwt.SigningMethodHS256, &realBackupTok).SignedString(config.GetJWTKey())
 	require.NoError(t, err)
 
 	w = httptest.NewRecorder()

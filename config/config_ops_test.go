@@ -48,9 +48,8 @@ func TestConfigOperations(t *testing.T) {
 	SetDebugViaFlag(true)
 	assert.True(t, Get().Debug)
 
-	// 6. GetJwtAlgorithm
-	algo := GetJwtAlgorithm()
-	assert.NotNil(t, algo)
+	// 6. GetJWTKey
+	assert.NotEmpty(t, GetJWTKey())
 
 	// 7. WriteToDisk
 	require.NoError(t, WriteToDisk(cfg))

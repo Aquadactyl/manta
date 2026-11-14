@@ -1,16 +1,13 @@
 package tokens
 
 import (
+	"fmt"
 	"time"
 
-	"github.com/gbrlsnchs/jwt/v3"
+	"github.com/golang-jwt/jwt/v5"
 
 	"github.com/Aquadactyl/manta/config"
 )
-
-type TokenData interface {
-	GetPayload() *jwt.Payload
-}
 
 // Allow small differences between the Panel and node clocks for issuance and
 // not-before claims. Expiry remains strict, including at the expiry boundary.
@@ -21,21 +18,33 @@ const tokenClockSkew = 30 * time.Second
 // server, nor does it ensure that the user providing the token is able to actually do things.
 //
 // This simply returns a parsed token.
-func ParseToken(token []byte, data TokenData) error {
+func ParseToken(token []byte, claims jwt.Claims) error {
 	now := time.Now()
-	verifyOptions := jwt.ValidatePayload(
-		data.GetPayload(),
-		func(p *jwt.Payload) error {
-			if p.ExpirationTime == nil || !now.Before(p.ExpirationTime.Time) {
-				return jwt.ErrExpValidation
-			}
-			return nil
-		},
-		jwt.NotBeforeValidator(now.Add(tokenClockSkew)),
-		jwt.IssuedAtValidator(now.Add(tokenClockSkew)),
-	)
-
-	_, err := jwt.Verify(token, config.GetJwtAlgorithm(), &data, verifyOptions)
-
-	return err
+	parsed, err := jwt.ParseWithClaims(string(token), claims, func(token *jwt.Token) (any, error) {
+		if token.Method != jwt.SigningMethodHS256 {
+			return nil, fmt.Errorf("unexpected JWT signing method %q", token.Method.Alg())
+		}
+		return config.GetJWTKey(), nil
+	}, jwt.WithoutClaimsValidation())
+	if err != nil {
+		return err
+	}
+	if parsed == nil || !parsed.Valid {
+		return jwt.ErrTokenInvalidClaims
+	}
+	expiresAt, _ := claims.GetExpirationTime()
+	if expiresAt == nil {
+		return jwt.ErrTokenRequiredClaimMissing
+	} else if !now.Before(expiresAt.Time) {
+		return jwt.ErrTokenExpired
+	}
+	notBefore, _ := claims.GetNotBefore()
+	if notBefore != nil && now.Add(tokenClockSkew).Before(notBefore.Time) {
+		return jwt.ErrTokenNotValidYet
+	}
+	issuedAt, _ := claims.GetIssuedAt()
+	if issuedAt != nil && now.Add(tokenClockSkew).Before(issuedAt.Time) {
+		return jwt.ErrTokenUsedBeforeIssued
+	}
+	return nil
 }

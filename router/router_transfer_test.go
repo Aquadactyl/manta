@@ -19,7 +19,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gbrlsnchs/jwt/v3"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -277,13 +277,13 @@ func transferTestMultipart(t *testing.T, archive []byte, checksum string) (*byte
 func signTransferTestToken(t *testing.T, subject string) string {
 	t.Helper()
 
-	token, err := jwt.Sign(tokens.TransferPayload{
-		Payload: jwt.Payload{
-			Subject:        subject,
-			ExpirationTime: jwt.NumericDate(time.Now().Add(15 * time.Minute)),
+	token, err := jwt.NewWithClaims(jwt.SigningMethodHS256, tokens.TransferPayload{
+		RegisteredClaims: jwt.RegisteredClaims{
+			Subject:   subject,
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(15 * time.Minute)),
 		},
 		Scoped: tokens.Scoped{Scope: string(tokens.ServerTransfer)},
-	}, config.GetJwtAlgorithm())
+	}).SignedString(config.GetJWTKey())
 	require.NoError(t, err)
 	return string(token)
 }
@@ -424,24 +424,24 @@ func TestPostTransfersValidationBranches(t *testing.T) {
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
 
 	// 3. Token with invalid scope -> 403
-	badScopeToken, _ := jwt.Sign(tokens.TransferPayload{
-		Payload: jwt.Payload{
-			Subject:        transferTestUUID,
-			ExpirationTime: jwt.NumericDate(time.Now().Add(15 * time.Minute)),
+	badScopeToken, _ := jwt.NewWithClaims(jwt.SigningMethodHS256, tokens.TransferPayload{
+		RegisteredClaims: jwt.RegisteredClaims{
+			Subject:   transferTestUUID,
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(15 * time.Minute)),
 		},
 		Scoped: tokens.Scoped{Scope: "bad-scope"},
-	}, config.GetJwtAlgorithm())
+	}).SignedString(config.GetJWTKey())
 	w = h.postTransfer(bytes.NewBuffer(nil), "multipart/form-data", string(badScopeToken))
 	assert.Equal(t, http.StatusForbidden, w.Code)
 
 	// 4. Token subject is not a UUID -> 400 or 500
-	badUUIDToken, _ := jwt.Sign(tokens.TransferPayload{
-		Payload: jwt.Payload{
-			Subject:        "not-a-valid-uuid",
-			ExpirationTime: jwt.NumericDate(time.Now().Add(15 * time.Minute)),
+	badUUIDToken, _ := jwt.NewWithClaims(jwt.SigningMethodHS256, tokens.TransferPayload{
+		RegisteredClaims: jwt.RegisteredClaims{
+			Subject:   "not-a-valid-uuid",
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(15 * time.Minute)),
 		},
 		Scoped: tokens.Scoped{Scope: string(tokens.ServerTransfer)},
-	}, config.GetJwtAlgorithm())
+	}).SignedString(config.GetJWTKey())
 	w = h.postTransfer(bytes.NewBuffer(nil), "multipart/form-data", string(badUUIDToken))
 	assert.Contains(t, []int{http.StatusBadRequest, http.StatusInternalServerError}, w.Code)
 

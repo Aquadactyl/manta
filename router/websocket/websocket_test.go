@@ -15,7 +15,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gbrlsnchs/jwt/v3"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/gorilla/websocket"
 
 	"github.com/Aquadactyl/manta/config"
@@ -155,20 +155,20 @@ func signTokenFor(t *testing.T, forServer string, userUUID string, permissions .
 	// second precision.
 	now := time.Now().Add(time.Second * 2)
 	payload := tokens.WebsocketPayload{
-		Payload: jwt.Payload{
-			IssuedAt:       jwt.NumericDate(now),
-			ExpirationTime: jwt.NumericDate(now.Add(time.Minute * 10)),
+		RegisteredClaims: jwt.RegisteredClaims{
+			IssuedAt:  jwt.NewNumericDate(now),
+			ExpiresAt: jwt.NewNumericDate(now.Add(time.Minute * 10)),
 		},
 		Scoped:      tokens.Scoped{Scope: string(tokens.Websocket)},
 		UserUUID:    userUUID,
 		ServerUUID:  forServer,
 		Permissions: permissions,
 	}
-	b, err := jwt.Sign(&payload, config.GetJwtAlgorithm())
+	b, err := jwt.NewWithClaims(jwt.SigningMethodHS256, &payload).SignedString(config.GetJWTKey())
 	if err != nil {
 		t.Fatal(err)
 	}
-	parsed, err := NewTokenPayload(b)
+	parsed, err := NewTokenPayload([]byte(b))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -251,8 +251,8 @@ func TestIsJwtError(t *testing.T) {
 	if !IsJwtError(ErrJwtOnDenylist) {
 		t.Error("expected ErrJwtOnDenylist to be jwt error")
 	}
-	if !IsJwtError(jwt.ErrExpValidation) {
-		t.Error("expected jwt.ErrExpValidation to be jwt error")
+	if !IsJwtError(jwt.ErrTokenExpired) {
+		t.Error("expected jwt.ErrTokenExpired to be jwt error")
 	}
 	if IsJwtError(errors.New("generic error")) {
 		t.Error("expected generic error not to be jwt error")
@@ -409,7 +409,7 @@ func TestHandlerInboundEvents(t *testing.T) {
 	// 12. validJwt branches
 	// a. Denylisted
 	_, pDeny := signToken(t, serverUUID, PermissionConnect)
-	pDeny.IssuedAt = jwt.NumericDate(time.Now().Add(-time.Minute))
+	pDeny.IssuedAt = jwt.NewNumericDate(time.Now().Add(-time.Minute))
 	tokens.DenyForServer(serverUUID, pDeny.UserUUID)
 	h.setJwt(pDeny)
 	_, err = h.validJwt()
@@ -419,9 +419,9 @@ func TestHandlerInboundEvents(t *testing.T) {
 
 	// b. Missing PermissionConnect
 	tokNoConnect := &tokens.WebsocketPayload{
-		Payload: jwt.Payload{
-			IssuedAt:       jwt.NumericDate(time.Now().Add(time.Second * 2)),
-			ExpirationTime: jwt.NumericDate(time.Now().Add(time.Hour)),
+		RegisteredClaims: jwt.RegisteredClaims{
+			IssuedAt:  jwt.NewNumericDate(time.Now().Add(time.Second * 2)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour)),
 		},
 		UserUUID:    "clean-user-uuid-1",
 		Scoped:      tokens.Scoped{Scope: string(tokens.Websocket)},
@@ -436,9 +436,9 @@ func TestHandlerInboundEvents(t *testing.T) {
 
 	// c. Server UUID mismatch
 	tokWrongSrv := &tokens.WebsocketPayload{
-		Payload: jwt.Payload{
-			IssuedAt:       jwt.NumericDate(time.Now().Add(time.Second * 2)),
-			ExpirationTime: jwt.NumericDate(time.Now().Add(time.Hour)),
+		RegisteredClaims: jwt.RegisteredClaims{
+			IssuedAt:  jwt.NewNumericDate(time.Now().Add(time.Second * 2)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour)),
 		},
 		UserUUID:    "clean-user-uuid-2",
 		Scoped:      tokens.Scoped{Scope: string(tokens.Websocket)},

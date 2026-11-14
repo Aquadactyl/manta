@@ -21,7 +21,6 @@ import (
 	"github.com/apex/log/handlers/multi"
 	cerrdefs "github.com/containerd/errdefs"
 	"github.com/gammazero/workerpool"
-	"github.com/mitchellh/colorstring"
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/acme"
 	"golang.org/x/crypto/acme/autocert"
@@ -31,6 +30,7 @@ import (
 	"github.com/Aquadactyl/manta/internal/cron"
 	"github.com/Aquadactyl/manta/internal/database"
 	"github.com/Aquadactyl/manta/internal/network"
+	"github.com/Aquadactyl/manta/internal/termcolor"
 	"github.com/Aquadactyl/manta/loggers/cli"
 	"github.com/Aquadactyl/manta/remote"
 	"github.com/Aquadactyl/manta/router"
@@ -561,7 +561,7 @@ func initLogging() {
 
 // Prints the Manta logo.
 func printLogo() {
-	fmt.Printf(colorstring.Color(`
+	fmt.Printf(termcolor.Color(`
  __  __             _
 |  \/  | __ _ _ __ | |_ __ _
 | |\/| |/ _`+"`"+` | '_ \| __/ _`+"`"+` |
@@ -581,7 +581,7 @@ in all copies or substantial portions of the Software.%s`), system.Version, time
 }
 
 func exitWithConfigurationNotice() {
-	fmt.Printf(colorstring.Color(`
+	fmt.Printf(termcolor.Color(`
 [_red_][white][bold]Error: Configuration File Not Found[reset]
 
 Manta was not able to locate your configuration file, and therefore is not

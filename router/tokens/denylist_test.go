@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gbrlsnchs/jwt/v3"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 type denylistable interface {
@@ -28,33 +28,33 @@ func resetDenylistState(t *testing.T, bootTime time.Time) {
 }
 
 func payloadsIssuedAt(issuedAt time.Time, serverUUID, userUUID string) map[string]denylistable {
-	payload := func() jwt.Payload {
-		return jwt.Payload{
-			IssuedAt: jwt.NumericDate(issuedAt),
-			JWTID:    "token-id",
+	payload := func() jwt.RegisteredClaims {
+		return jwt.RegisteredClaims{
+			IssuedAt: jwt.NewNumericDate(issuedAt),
+			ID:       "token-id",
 		}
 	}
 
 	return map[string]denylistable{
 		"websocket": &WebsocketPayload{
-			Payload:    payload(),
-			ServerUUID: serverUUID,
-			UserUUID:   userUUID,
+			RegisteredClaims: payload(),
+			ServerUUID:       serverUUID,
+			UserUUID:         userUUID,
 		},
 		"file download": &FilePayload{
-			Payload:    payload(),
-			ServerUUID: serverUUID,
-			UserUUID:   userUUID,
+			RegisteredClaims: payload(),
+			ServerUUID:       serverUUID,
+			UserUUID:         userUUID,
 		},
 		"backup download": &BackupPayload{
-			Payload:    payload(),
-			ServerUUID: serverUUID,
-			UserUUID:   userUUID,
+			RegisteredClaims: payload(),
+			ServerUUID:       serverUUID,
+			UserUUID:         userUUID,
 		},
 		"file upload": &UploadPayload{
-			Payload:    payload(),
-			ServerUUID: serverUUID,
-			UserUUID:   userUUID,
+			RegisteredClaims: payload(),
+			ServerUUID:       serverUUID,
+			UserUUID:         userUUID,
 		},
 	}
 }
@@ -127,12 +127,12 @@ func TestUserBoundPayloadsFailClosedWithoutRevocationClaims(t *testing.T) {
 			UserUUID:   "user",
 		},
 		"missing server UUID": &BackupPayload{
-			Payload:  jwt.Payload{IssuedAt: jwt.NumericDate(issuedAt)},
-			UserUUID: "user",
+			RegisteredClaims: jwt.RegisteredClaims{IssuedAt: jwt.NewNumericDate(issuedAt)},
+			UserUUID:         "user",
 		},
 		"missing user UUID": &UploadPayload{
-			Payload:    jwt.Payload{IssuedAt: jwt.NumericDate(issuedAt)},
-			ServerUUID: "server",
+			RegisteredClaims: jwt.RegisteredClaims{IssuedAt: jwt.NewNumericDate(issuedAt)},
+			ServerUUID:       "server",
 		},
 	}
 

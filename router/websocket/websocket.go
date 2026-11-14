@@ -12,8 +12,8 @@ import (
 	"emperror.dev/errors"
 	"github.com/Aquadactyl/manta/internal/models"
 	"github.com/apex/log"
-	"github.com/gbrlsnchs/jwt/v3"
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 
@@ -92,9 +92,10 @@ func IsJwtError(err error) bool {
 		errors.Is(err, ErrJwtNoConnectPerm) ||
 		errors.Is(err, ErrJwtUUIDMismatch) ||
 		errors.Is(err, ErrJwtOnDenylist) ||
-		errors.Is(err, jwt.ErrExpValidation) ||
-		errors.Is(err, jwt.ErrNbfValidation) ||
-		errors.Is(err, jwt.ErrIatValidation)
+		errors.Is(err, jwt.ErrTokenExpired) ||
+		errors.Is(err, jwt.ErrTokenNotValidYet) ||
+		errors.Is(err, jwt.ErrTokenUsedBeforeIssued) ||
+		errors.Is(err, jwt.ErrTokenRequiredClaimMissing)
 }
 
 // NewTokenPayload parses a JWT into a websocket token payload.
@@ -271,8 +272,11 @@ func (h *Handler) validJwt() (*tokens.WebsocketPayload, error) {
 		return nil, ErrJwtNotPresent
 	}
 
-	if err := jwt.ExpirationTimeValidator(time.Now())(&j.Payload); err != nil {
-		return nil, err
+	if j.ExpiresAt == nil {
+		return nil, jwt.ErrTokenRequiredClaimMissing
+	}
+	if !time.Now().Before(j.ExpiresAt.Time) {
+		return nil, jwt.ErrTokenExpired
 	}
 
 	if j.Denylisted() {

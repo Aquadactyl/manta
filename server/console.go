@@ -5,9 +5,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/mitchellh/colorstring"
-
 	"github.com/Aquadactyl/manta/config"
+	"github.com/Aquadactyl/manta/internal/termcolor"
 	"github.com/Aquadactyl/manta/system"
 )
 
@@ -25,7 +24,7 @@ func (s *Server) PublishConsoleOutputFromDaemon(data string) {
 	})
 	s.Events().Publish(
 		ConsoleOutputEvent,
-		colorstring.Color(fmt.Sprintf("[yellow][bold][%s Daemon]:[default] %s", appName, data)),
+		termcolor.Color(fmt.Sprintf("[yellow][bold][%s Daemon]:[default] %s", appName, data)),
 	)
 }
 

@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gbrlsnchs/jwt/v3"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/require"
 
 	"github.com/Aquadactyl/manta/server"
@@ -29,7 +29,7 @@ func TestListenForExpirationMessages(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			h, _, client := setupHandlerClient(t)
 			_, payload := signToken(t, serverUUID, PermissionConnect)
-			payload.ExpirationTime = jwt.NumericDate(time.Now().Add(tc.exp))
+			payload.ExpiresAt = jwt.NewNumericDate(time.Now().Add(tc.exp))
 			h.setJwt(payload)
 
 			ctx, cancel := context.WithCancel(context.Background())
@@ -152,7 +152,7 @@ func TestBusEventsRetainWebsocketAuthorization(t *testing.T) {
 
 			if tc.expired {
 				_, expired := signToken(t, serverUUID, PermissionConnect)
-				expired.ExpirationTime = jwt.NumericDate(time.Now().Add(-time.Hour))
+				expired.ExpiresAt = jwt.NewNumericDate(time.Now().Add(-time.Hour))
 				h.setJwt(expired)
 			}
 			h.server.Events().Publish(tc.topic, map[string]uint64{"counter": 18446744073709551615})

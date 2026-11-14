@@ -1,15 +1,34 @@
 package tokens
 
 import (
+	"container/heap"
 	"sync"
 	"time"
-
-	"github.com/patrickmn/go-cache"
 )
 
 type TokenStore struct {
 	sync.Mutex
-	cache *cache.Cache
+	tokens map[string]time.Time
+	expiry tokenExpiryHeap
+}
+
+type tokenExpiry struct {
+	token string
+	at    time.Time
+}
+
+type tokenExpiryHeap []tokenExpiry
+
+func (h tokenExpiryHeap) Len() int           { return len(h) }
+func (h tokenExpiryHeap) Less(i, j int) bool { return h[i].at.Before(h[j].at) }
+func (h tokenExpiryHeap) Swap(i, j int)      { h[i], h[j] = h[j], h[i] }
+func (h *tokenExpiryHeap) Push(x any)        { *h = append(*h, x.(tokenExpiry)) }
+func (h *tokenExpiryHeap) Pop() any {
+	old := *h
+	n := len(old)
+	x := old[n-1]
+	*h = old[:n-1]
+	return x
 }
 
 var (
@@ -23,7 +42,7 @@ var (
 func getTokenStore() *TokenStore {
 	_tokensOnce.Do(func() {
 		_tokens = &TokenStore{
-			cache: cache.New(time.Minute*60, time.Minute*5),
+			tokens: make(map[string]time.Time),
 		}
 	})
 
@@ -44,12 +63,19 @@ func (t *TokenStore) IsValidUntil(token string, expiresAt time.Time) bool {
 	if token == "" || ttl <= 0 {
 		return false
 	}
-
-	_, exists := t.cache.Get(token)
-
-	if !exists {
-		t.cache.Set(token, "", ttl)
+	if t.tokens == nil {
+		t.tokens = make(map[string]time.Time)
 	}
-
-	return !exists
+	for len(t.expiry) > 0 && !t.expiry[0].at.After(time.Now()) {
+		entry := heap.Pop(&t.expiry).(tokenExpiry)
+		if t.tokens[entry.token].Equal(entry.at) {
+			delete(t.tokens, entry.token)
+		}
+	}
+	if expires, exists := t.tokens[token]; exists && expires.After(time.Now()) {
+		return false
+	}
+	t.tokens[token] = expiresAt
+	heap.Push(&t.expiry, tokenExpiry{token: token, at: expiresAt})
+	return true
 }
