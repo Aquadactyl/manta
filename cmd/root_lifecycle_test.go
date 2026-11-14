@@ -76,7 +76,10 @@ func TestPersistRootStatesUntilDone(t *testing.T) {
 	done := make(chan struct{})
 	go func() {
 		persistRootStatesUntilDone(ctx, ticker, func() error {
-			called <- struct{}{}
+			select {
+			case called <- struct{}{}:
+			default:
+			}
 			return errors.New("persist failed")
 		})
 		close(done)

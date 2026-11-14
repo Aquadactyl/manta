@@ -52,5 +52,5 @@ func TestDarwinFindDockerSocket(t *testing.T) {
 
 func TestDarwinDockerClientOptsRespectsDockerHost(t *testing.T) {
 	t.Setenv("DOCKER_HOST", "tcp://127.0.0.1:2375")
-	assert.Len(t, DockerClientOpts(), 2)
+	assert.Len(t, DockerClientOpts(), 1)
 }

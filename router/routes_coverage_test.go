@@ -2280,8 +2280,12 @@ func TestServerTransferAndLifecycleBranches(t *testing.T) {
 	w = httptest.NewRecorder()
 	h.router.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusAccepted, w.Code)
-	time.Sleep(10 * time.Millisecond)
-	s.SetTransferring(false)
+	deadline := time.Now().Add(5 * time.Second)
+	for (transfer.Outgoing().Get(s.ID()) != nil || s.IsTransferring()) && time.Now().Before(deadline) {
+		time.Sleep(time.Millisecond)
+	}
+	assert.Nil(t, transfer.Outgoing().Get(s.ID()))
+	assert.False(t, s.IsTransferring())
 
 	// A destination that consumes and accepts the multipart transfer exercises
 	// the successful asynchronous completion path.
@@ -2297,7 +2301,7 @@ func TestServerTransferAndLifecycleBranches(t *testing.T) {
 	w = httptest.NewRecorder()
 	h.router.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusAccepted, w.Code)
-	deadline := time.Now().Add(time.Second)
+	deadline = time.Now().Add(time.Second)
 	for transfer.Outgoing().Get(s.ID()) != nil && time.Now().Before(deadline) {
 		time.Sleep(time.Millisecond)
 	}
