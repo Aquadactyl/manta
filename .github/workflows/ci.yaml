@@ -18,7 +18,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        go: ["1.26.9", "1.27.2"]
+        go: ["1.27.3"]
         goos: [linux]
         goarch: [amd64, arm64]
     steps:
@@ -71,7 +71,7 @@ jobs:
           go test -race -coverpkg=./... -coverprofile=coverage.out -covermode=atomic ./...
 
       - name: Upload coverage
-        if: always() && matrix.goarch == 'amd64' && matrix.go == '1.27.2'
+        if: always() && matrix.goarch == 'amd64' && matrix.go == '1.27.3'
         uses: actions/upload-artifact@v7
         with:
           name: go-coverage
@@ -80,14 +80,14 @@ jobs:
 
       - name: Upload Release Artifact
         uses: actions/upload-artifact@v7
-        if: ${{ (github.ref == 'refs/heads/main' || github.event_name == 'pull_request') && matrix.go == '1.27.2' }}
+        if: ${{ (github.ref == 'refs/heads/main' || github.event_name == 'pull_request') && matrix.go == '1.27.3' }}
         with:
           name: wings_linux_${{ matrix.goarch }}
           path: dist/wings
 
       - name: Upload Debug Artifact
         uses: actions/upload-artifact@v7
-        if: ${{ (github.ref == 'refs/heads/main' || github.event_name == 'pull_request') && matrix.go == '1.27.2' }}
+        if: ${{ (github.ref == 'refs/heads/main' || github.event_name == 'pull_request') && matrix.go == '1.27.3' }}
         with:
           name: wings_linux_${{ matrix.goarch }}_debug
           path: dist/wings_debug
@@ -102,7 +102,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        go: ["1.26.9", "1.27.2"]
+        go: ["1.27.3"]
         goos: [darwin]
         goarch: [amd64, arm64]
     steps:
@@ -147,7 +147,7 @@ jobs:
           go test -coverprofile=coverage-darwin-docker.out -run 'Test(AttachReturnsDockerAttachError|AttachDoesNothingWhenAlreadyAttached|AttachConsumesOutputAndClearsStoppedStream|AttachScannerErrorKeepsStreamWhenReattachSucceeds|ReportAttachPollError|WriteBurstFileReadAndWritePaths|WriteCpuBurstPlatformIndependent|SetCpuBurstWithInspectedContainer|WaitForStopWaitErrorAndForcedTermination|WaitForStopParentCancellationAfterStop|EnsureImageExistsPullPolicies|ReadlogReturnsScannerErrorForOversizedLine|PollResourcesErrorAndStopPaths)$' ./environment/docker/
 
       - name: Upload Darwin coverage
-        if: always() && matrix.goarch == 'arm64' && matrix.go == '1.27.2'
+        if: always() && matrix.goarch == 'arm64' && matrix.go == '1.27.3'
         uses: actions/upload-artifact@v7
         with:
           name: go-coverage-darwin
@@ -164,14 +164,14 @@ jobs:
 
       - name: Upload Release Artifact
         uses: actions/upload-artifact@v7
-        if: ${{ (github.ref == 'refs/heads/main' || github.event_name == 'pull_request') && matrix.go == '1.27.2' }}
+        if: ${{ (github.ref == 'refs/heads/main' || github.event_name == 'pull_request') && matrix.go == '1.27.3' }}
         with:
           name: wings_darwin_${{ matrix.goarch }}
           path: dist/wings
 
       - name: Upload Debug Artifact
         uses: actions/upload-artifact@v7
-        if: ${{ (github.ref == 'refs/heads/main' || github.event_name == 'pull_request') && matrix.go == '1.27.2' }}
+        if: ${{ (github.ref == 'refs/heads/main' || github.event_name == 'pull_request') && matrix.go == '1.27.3' }}
         with:
           name: wings_darwin_${{ matrix.goarch }}_debug
           path: dist/wings_debug

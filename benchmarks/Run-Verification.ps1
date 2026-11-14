@@ -63,7 +63,7 @@ go vet ./...
         --mount "type=volume,source=$prefix-tmp,target=/tmp" `
         --mount 'type=volume,source=manta-go-mod,target=/go/pkg/mod' `
         --mount 'type=volume,source=manta-go-build,target=/root/.cache/go-build' `
-        -w /workspace golang:1.26.9-bookworm sh -c $testScript
+        -w /workspace golang:1.27.3-bookworm sh -c $testScript
 
     $rows = @(Get-Content -LiteralPath (Join-Path $resultsPath 'race.json') | ForEach-Object { $_ | ConvertFrom-Json })
     $failed = @($rows | Where-Object { $_.Action -eq 'fail' }).Count
