@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -115,4 +116,31 @@ func TestDirectoryAPIWireFormat(t *testing.T) {
 	require.Equal(t, false, file["symlink"])
 	require.NotEmpty(t, file["created"])
 	require.NotEmpty(t, file["modified"])
+}
+
+func TestServerFileSearchIsRecursiveScopedAndCapped(t *testing.T) {
+	h := newTransferHarness(t, &transferTestPanel{})
+	s := h.seedServer()
+	root := s.Filesystem().Path()
+	scope := filepath.Join(root, "scope", "nested")
+	require.NoError(t, os.MkdirAll(scope, 0o755))
+	for i := range 101 {
+		name := fmt.Sprintf("Needle-%03d.txt", i)
+		require.NoError(t, os.WriteFile(filepath.Join(scope, name), nil, 0o600))
+	}
+	require.NoError(t, os.MkdirAll(filepath.Join(root, "outside"), 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(root, "outside", "needle.txt"), nil, 0o600))
+
+	req := httptest.NewRequest(http.MethodGet, "/api/servers/"+s.ID()+"/files/search?directory=%2Fscope&query=NEEDLE", nil)
+	req.Header.Set("Authorization", "Bearer test-token")
+	res := httptest.NewRecorder()
+	h.router.ServeHTTP(res, req)
+	require.Equal(t, http.StatusOK, res.Code)
+
+	var paths []string
+	require.NoError(t, json.Unmarshal(res.Body.Bytes(), &paths))
+	require.Len(t, paths, fileSearchLimit)
+	for _, path := range paths {
+		require.True(t, strings.HasPrefix(path, "scope/nested/"), "unexpected result path %q", path)
+	}
 }

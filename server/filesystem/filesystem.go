@@ -590,6 +590,49 @@ func (fs *Filesystem) ListDirectory(p string) ([]Stat, error) {
 	return out, nil
 }
 
+// SearchFiles returns paths to regular files beneath directory whose path
+// contains query, case-insensitively. Paths are relative to the server root.
+// The walk is confined to the server filesystem and stops once limit matches
+// are found.
+func (fs *Filesystem) SearchFiles(directory, query string, limit int) ([]string, error) {
+	query = strings.ToLower(query)
+	if query == "" || limit <= 0 {
+		return nil, nil
+	}
+
+	dirfd, name, closeFd, err := fs.unixFS.SafePath(directory)
+	defer closeFd()
+	if err != nil {
+		return nil, err
+	}
+
+	paths := make([]string, 0, limit)
+	err = filesystemWalkDirat(fs.unixFS.UnixFS, dirfd, name, func(_ int, _ string, relative string, entry ufs.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if entry == nil || !entry.Type().IsRegular() || relative == "." {
+			return nil
+		}
+		match := relative
+		if directory != "." && directory != "/" {
+			base := strings.Trim(directory, "/")
+			match = filepath.ToSlash(filepath.Join(base, relative))
+		}
+		if strings.Contains(strings.ToLower(match), query) {
+			paths = append(paths, match)
+			if len(paths) >= limit {
+				return ufs.SkipAll
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return paths, nil
+}
+
 func statDirectoryEntry(e ufs.DirEntry) (Stat, error) {
 	info, err := e.Info()
 	if err != nil {

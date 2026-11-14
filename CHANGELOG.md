@@ -10,6 +10,7 @@ This project follows [Semantic Versioning](http://semver.org) guidelines.
 
 ### Added
 
+- Add an authenticated server file search endpoint that searches recursively beneath a supplied directory for case-insensitive path matches and returns up to 100 file paths.
 - Add native macOS support for Apple Silicon (`arm64`) and Intel (`amd64`). Manta manages containers through Docker Desktop, OrbStack, Colima or Rancher Desktop and runs unprivileged as the logged-in user. See [Running Manta on macOS](docs/macos.md).
 - Add `wings_darwin_arm64` and `wings_darwin_amd64` binaries to the release workflow and include them in `checksums.txt`.
 - Add a macOS CI job that mirrors the Linux one: Go 1.27.4 on both architectures, each built and tested natively (Apple Silicon on `macos-26`, Intel on `macos-26-intel`). It runs the filesystem, configuration and macOS specific tests, also under the race detector, and uploads the binaries as artifacts.

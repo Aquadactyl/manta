@@ -106,6 +106,25 @@ func getServerListDirectory(c *gin.Context) {
 	}
 }
 
+const fileSearchLimit = 100
+
+// getServerSearchFiles searches the server filesystem for matching file paths.
+func getServerSearchFiles(c *gin.Context) {
+	query := strings.TrimSpace(c.Query("query"))
+	if query == "" {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "A search query is required."})
+		return
+	}
+
+	directory := c.DefaultQuery("directory", "/")
+	paths, err := middleware.ExtractServer(c).Filesystem().SearchFiles(directory, query, fileSearchLimit)
+	if err != nil {
+		middleware.CaptureAndAbort(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, paths)
+}
+
 type renameFile struct {
 	To   string `json:"to"`
 	From string `json:"from"`
