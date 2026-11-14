@@ -419,13 +419,16 @@ func TestPushArchiveToTarget_AdvancedBranches(t *testing.T) {
 func TestPushArchiveToTargetHelpers(t *testing.T) {
 	ch := make(chan error, 1)
 	want := errors.New("copy failed")
-	assert.True(t, forwardTransferCopyError(ch, want))
+	var successCalled bool
+	finishTransferMultipart(checksumWriter{}, want, "abc", ch, func() { successCalled = true })
 	assert.ErrorIs(t, <-ch, want)
-	assert.False(t, forwardTransferCopyError(ch, nil))
+	assert.False(t, successCalled)
 
-	assert.False(t, writeTransferChecksum(ch, checksumWriter{}, "abc"))
-	assert.True(t, writeTransferChecksum(ch, checksumWriter{err: want}, "abc"))
+	finishTransferMultipart(checksumWriter{err: want}, nil, "abc", ch, func() { successCalled = true })
 	assert.ErrorContains(t, <-ch, "failed to stream checksum")
+	assert.False(t, successCalled)
+	finishTransferMultipart(checksumWriter{}, nil, "abc", ch, func() { successCalled = true })
+	assert.True(t, successCalled)
 	assert.True(t, isTransferContextCanceled(context.Canceled))
 	assert.False(t, isTransferContextCanceled(want))
 

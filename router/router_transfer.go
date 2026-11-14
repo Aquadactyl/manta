@@ -25,6 +25,12 @@ import (
 	"github.com/pterodactyl/wings/server/transfer"
 )
 
+var addTransferServer = func(manager *server.Manager, s *server.Server) bool {
+	return manager.AddIfMissing(s)
+}
+var addIncomingTransfer = func(tr *transfer.Transfer) bool { return transfer.Incoming().Add(tr) }
+var ensureTransferDataDirectory = func(s *server.Server) error { return s.EnsureDataDirectoryExists() }
+
 // postTransfers .
 var createTransferEnvironment = (*server.Server).CreateEnvironment
 var removeTransferServerFiles = os.RemoveAll
@@ -99,7 +105,7 @@ func postTransfers(c *gin.Context) {
 		}
 
 		i.Server().SetTransferring(true)
-		if !manager.AddIfMissing(i.Server()) {
+		if !addTransferServer(manager, i.Server()) {
 			i.Server().CleanupForDestroy()
 			c.AbortWithStatusJSON(http.StatusConflict, gin.H{
 				"error": "A server with this identifier already exists on this instance.",
@@ -109,7 +115,7 @@ func postTransfers(c *gin.Context) {
 
 		// We add the transfer to the list of transfers once we have a server instance to use.
 		trnsfr.Server = i.Server()
-		if !transfer.Incoming().Add(trnsfr) {
+		if !addIncomingTransfer(trnsfr) {
 			manager.Remove(func(match *server.Server) bool { return match == i.Server() })
 			i.Server().CleanupForDestroy()
 			c.AbortWithStatusJSON(http.StatusConflict, gin.H{
@@ -171,7 +177,7 @@ out:
 			case "archive":
 				trnsfr.Log().Debug("received archive")
 
-				if err := trnsfr.Server.EnsureDataDirectoryExists(); err != nil {
+				if err := ensureTransferDataDirectory(trnsfr.Server); err != nil {
 					middleware.CaptureAndAbort(c, err)
 					return
 				}

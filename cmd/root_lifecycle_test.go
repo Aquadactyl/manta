@@ -97,7 +97,7 @@ func TestPersistRootStatesUntilDone(t *testing.T) {
 func TestReadRootServerStatesLogsInvalidStateFile(t *testing.T) {
 	data := t.TempDir()
 	cfg := &config.Configuration{}
-	cfg.System.Data = data
+	cfg.System.RootDirectory = data
 	config.Set(cfg)
 	require.NoError(t, os.WriteFile(cfg.System.GetStatesPath(), []byte("{"), 0o600))
 	manager := server.NewEmptyManager(remote.New("http://panel.invalid"))

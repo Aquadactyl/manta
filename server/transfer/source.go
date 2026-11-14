@@ -157,19 +157,13 @@ func (t *Transfer) PushArchiveToTarget(targetURL, token string) ([]byte, error) 
 
 		// Wait for the copy to finish before we continue.
 		t.Log().Debug("waiting on copy to finish")
-		if forwardTransferCopyError(errChan, <-ch) {
-			return
-		}
+		finishTransferMultipart(mp, <-ch, hex.EncodeToString(h.Sum(nil)), errChan, func() {
+			cancel2()
+			t.SendMessage("Finished streaming archive to destination.")
 
-		if writeTransferChecksum(errChan, mp, hex.EncodeToString(h.Sum(nil))) {
-			return
-		}
-
-		cancel2()
-		t.SendMessage("Finished streaming archive to destination.")
-
-		logTransferMultipartClose(t, mp.Close())
-		t.Log().Debug("closed multipart writer")
+			logTransferMultipartClose(t, mp.Close())
+			t.Log().Debug("closed multipart writer")
+		})
 	}()
 
 	t.Log().Debug("sending archive to destination")
@@ -208,20 +202,16 @@ func (t *Transfer) PushArchiveToTarget(targetURL, token string) ([]byte, error) 
 	}
 }
 
-func forwardTransferCopyError(errChan chan<- error, err error) bool {
-	if err == nil {
-		return false
+func finishTransferMultipart(mp interface{ WriteField(string, string) error }, copyErr error, checksum string, errChan chan<- error, onSuccess func()) {
+	if copyErr != nil {
+		errChan <- copyErr
+		return
 	}
-	errChan <- err
-	return true
-}
-
-func writeTransferChecksum(errChan chan<- error, mp interface{ WriteField(string, string) error }, checksum string) bool {
 	if err := mp.WriteField("checksum", checksum); err != nil {
 		errChan <- errors.New("failed to stream checksum")
-		return true
+		return
 	}
-	return false
+	onSuccess()
 }
 
 func logTransferMultipartClose(t *Transfer, err error) {
