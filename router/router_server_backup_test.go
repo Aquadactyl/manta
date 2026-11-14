@@ -497,13 +497,13 @@ func TestDeleteServerBackupFlow(t *testing.T) {
 }
 
 func TestBackupRestoreURLValidation(t *testing.T) {
-	assert.False(t, isValidRedirectUrl(""))
-	assert.False(t, isValidRedirectUrl("://invalid-url"))
-	assert.False(t, isValidRedirectUrl("ftp://example.com/backup.tar.gz"))
-	assert.False(t, isValidRedirectUrl("http://attacker.com@internal/backup.tar.gz"))
-	assert.False(t, isValidRedirectUrl("http://internal/#attacker.com"))
-	assert.False(t, isValidRedirectUrl("javascript:alert(1)"))
-	assert.False(t, isValidRedirectUrl("http://127.0.0.1/backup.tar.gz"))
+	assert.False(t, isValidBackupRedirectURL(""))
+	assert.False(t, isValidBackupRedirectURL("://invalid-url"))
+	assert.False(t, isValidBackupRedirectURL("ftp://example.com/backup.tar.gz"))
+	assert.False(t, isValidBackupRedirectURL("http://attacker.com@internal/backup.tar.gz"))
+	assert.False(t, isValidBackupRedirectURL("http://internal/#attacker.com"))
+	assert.False(t, isValidBackupRedirectURL("javascript:alert(1)"))
+	assert.False(t, isValidBackupRedirectURL("http://127.0.0.1/backup.tar.gz"))
 
 	client := backupTestRemoteClient{restoreStatus: make(chan string, 1)}
 	backupID := "22222222-2222-2222-2222-222222222222"

@@ -169,7 +169,7 @@ func (s *Server) GetEnvironmentVariables() []string {
 		fmt.Sprintf("TZ=%s", tz),
 		fmt.Sprintf("STARTUP=%s", s.Config().Invocation),
 		fmt.Sprintf("SERVER_MEMORY=%d", s.MemoryLimit()),
-		fmt.Sprintf("SERVER_IP=%s", s.Config().Allocations.DefaultMapping.Ip),
+		fmt.Sprintf("SERVER_IP=%s", s.Config().Allocations.DefaultMapping.IP),
 		fmt.Sprintf("SERVER_PORT=%d", s.Config().Allocations.DefaultMapping.Port),
 	}
 

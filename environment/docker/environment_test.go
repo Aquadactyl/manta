@@ -380,23 +380,23 @@ func TestDockerHelpersAndBurst(t *testing.T) {
 
 	// 3. cgroup burst helpers
 	entry := log.WithField("test", "burst")
-	writeCpuBurst(entry, -1, 100)
-	writeCpuBurst(entry, os.Getpid(), 100)
+	writeCPUBurst(entry, -1, 100)
+	writeCPUBurst(entry, os.Getpid(), 100)
 	logBurstFailure(entry, 100)
 	logBurstFailure(entry, 0)
 
-	SetCpuBurst(context.Background(), nil, "nonexistent-container", 0)
+	SetCPUBurst(context.Background(), nil, "nonexistent-container", 0)
 
 	cfg := config.Get()
-	cfg.Docker.CpuBurst.Enabled = false
+	cfg.Docker.CPUBurst.Enabled = false
 	config.Set(cfg)
-	SetCpuBurst(context.Background(), nil, "nonexistent-container", 1000)
+	SetCPUBurst(context.Background(), nil, "nonexistent-container", 1000)
 
-	cfg.Docker.CpuBurst.Enabled = true
-	cfg.Docker.CpuBurst.Percent = 50
+	cfg.Docker.CPUBurst.Enabled = true
+	cfg.Docker.CPUBurst.Percent = 50
 	config.Set(cfg)
 	if dcli, err := environment.Docker(); err == nil {
-		SetCpuBurst(context.Background(), dcli, "nonexistent-container", 1000)
+		SetCPUBurst(context.Background(), dcli, "nonexistent-container", 1000)
 	}
 }
 

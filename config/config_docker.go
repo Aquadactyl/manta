@@ -30,7 +30,7 @@ type DockerNetworkConfiguration struct {
 	Interface string `default:"172.18.0.1" json:"interface" yaml:"interface"`
 
 	// The DNS settings for containers.
-	Dns []string `default:"[\"1.1.1.1\", \"1.0.0.1\"]"`
+	DNS []string `default:"[\"1.1.1.1\", \"1.0.0.1\"]"`
 
 	// The name of the network to use. If this network already exists it will not
 	// be created. If it is not found, a new network will be created using the interface
@@ -87,30 +87,30 @@ type DockerConfiguration struct {
 	// take precedence in the installer containers.
 	InstallerLimits struct {
 		Memory int64 `default:"1024" json:"memory" yaml:"memory"`
-		Cpu    int64 `default:"100" json:"cpu" yaml:"cpu"`
+		CPU    int64 `default:"100" json:"cpu" yaml:"cpu"`
 	} `json:"installer_limits" yaml:"installer_limits"`
 
-	// CpuPeriod is the length of a CFS scheduling window in microseconds. Server
+	// CPUPeriod is the length of a CFS scheduling window in microseconds. Server
 	// quotas scale with it, so the configured CPU limits stay the same. A shorter
 	// period reduces the worst case throttle latency at the cost of additional
 	// scheduler overhead.
-	CpuPeriod int64 `default:"100000" json:"cpu_period" yaml:"cpu_period"`
+	CPUPeriod int64 `default:"100000" json:"cpu_period" yaml:"cpu_period"`
 
-	// CpuBurst allows containers to bank unused CFS quota within a period and spend
+	// CPUBurst allows containers to bank unused CFS quota within a period and spend
 	// it on short spikes without raising their long term CPU limit. Percent sizes the
 	// burst relative to a server's quota and is capped at 100 by the kernel. Requires
 	// Linux 5.14 or newer, it is skipped silently otherwise.
-	CpuBurst struct {
+	CPUBurst struct {
 		Enabled bool  `default:"true" json:"enabled" yaml:"enabled"`
 		Percent int64 `default:"100" json:"percent" yaml:"percent"`
 	} `json:"cpu_burst" yaml:"cpu_burst"`
 
-	// CpuShares is the relative CFS weight of server containers when the host is
+	// CPUShares is the relative CFS weight of server containers when the host is
 	// fully saturated, it limits nothing on an idle host. Zero leaves containers
 	// at the engine default. Wings historically set 1024, which cgroup v2 converts
 	// to less than half of the default weight, set that value to restore the old
 	// bias towards host system services.
-	CpuShares int64 `default:"0" json:"cpu_shares" yaml:"cpu_shares"`
+	CPUShares int64 `default:"0" json:"cpu_shares" yaml:"cpu_shares"`
 
 	// Overhead controls the memory overhead given to all containers to circumvent certain
 	// software such as the JVM not staying below the maximum memory limit.
@@ -136,10 +136,10 @@ type DockerConfiguration struct {
 	ImagePullPolicy ImagePullPolicy `default:"Always" json:"image_pull_policy" yaml:"image_pull_policy"`
 }
 
-// CpuPeriodMicroseconds returns the configured CFS period clamped to the range
+// CPUPeriodMicroseconds returns the configured CFS period clamped to the range
 // the kernel accepts.
-func (c DockerConfiguration) CpuPeriodMicroseconds() int64 {
-	return min(max(c.CpuPeriod, 1_000), 1_000_000)
+func (c DockerConfiguration) CPUPeriodMicroseconds() int64 {
+	return min(max(c.CPUPeriod, 1_000), 1_000_000)
 }
 
 func (c DockerConfiguration) ContainerLogConfig() container.LogConfig {

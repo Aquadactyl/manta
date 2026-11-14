@@ -18,7 +18,7 @@ func TestWriteCpuBurstPlatformIndependent(t *testing.T) {
 		return nil
 	}
 
-	writeCpuBurstForPlatform(log.WithField("test", true), 123, 500, "linux")
+	writeCPUBurstForPlatform(log.WithField("test", true), 123, 500, "linux")
 	if !called {
 		t.Fatal("expected the Linux burst writer to be called")
 	}
@@ -109,7 +109,7 @@ func TestResolveCgroupCpuFile(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			f, err := resolveCgroupCpuFile(tt.procCgroup, tt.v2)
+			f, err := resolveCgroupCPUFile(tt.procCgroup, tt.v2)
 			if tt.wantErr {
 				if err == nil {
 					t.Errorf("expected an error, got %q", f)

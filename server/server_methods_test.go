@@ -942,7 +942,7 @@ func TestManagerAndInstallAndSync(t *testing.T) {
 	cfg.System.RootDirectory = tempDir
 	cfg.System.LogDirectory = filepath.Join(tempDir, "logs")
 	cfg.Docker.InstallerLimits.Memory = 512
-	cfg.Docker.InstallerLimits.Cpu = 100
+	cfg.Docker.InstallerLimits.CPU = 100
 	config.Set(cfg)
 
 	remoteCli := &fullMockRemoteClient{
@@ -1079,7 +1079,7 @@ func TestInstallationProcessDetails(t *testing.T) {
 	}
 	cfg.System.TmpDirectory = tmpDir
 	cfg.Docker.InstallerLimits.Memory = 512
-	cfg.Docker.InstallerLimits.Cpu = 100
+	cfg.Docker.InstallerLimits.CPU = 100
 	config.Set(cfg)
 
 	s, err := New(nil)
@@ -1110,7 +1110,7 @@ func TestInstallationProcessDetails(t *testing.T) {
 	assert.True(t, res.CPUQuota > 0)
 
 	// 4. resourceLimits with Cpu == 0
-	cfg.Docker.InstallerLimits.Cpu = 0
+	cfg.Docker.InstallerLimits.CPU = 0
 	config.Set(cfg)
 	resZero := ip.resourceLimits()
 	assert.Equal(t, int64(0), resZero.CPUQuota)

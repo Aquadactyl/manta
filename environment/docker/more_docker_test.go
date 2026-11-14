@@ -172,23 +172,23 @@ func TestDockerCgroupBurstDetails(t *testing.T) {
 
 	// 2. resolveCgroupCpuFile
 	v2Input := "0::/docker/abc123\n"
-	f, err := resolveCgroupCpuFile(v2Input, true)
+	f, err := resolveCgroupCPUFile(v2Input, true)
 	require.NoError(t, err)
 	assert.Equal(t, "/sys/fs/cgroup/docker/abc123/cpu.max.burst", f)
 
 	v1Input := "1:cpu,cpuacct:/docker/abc123\n"
-	f, err = resolveCgroupCpuFile(v1Input, false)
+	f, err = resolveCgroupCPUFile(v1Input, false)
 	require.NoError(t, err)
 	assert.Equal(t, "/sys/fs/cgroup/cpu/docker/abc123/cpu.cfs_burst_us", f)
 
 	// Invalid lines
-	_, err = resolveCgroupCpuFile("invalid-line\n", true)
+	_, err = resolveCgroupCPUFile("invalid-line\n", true)
 	assert.Error(t, err)
-	_, err = resolveCgroupCpuFile("0::not-absolute\n", true)
+	_, err = resolveCgroupCPUFile("0::not-absolute\n", true)
 	assert.Error(t, err)
-	_, err = resolveCgroupCpuFile("0::/path/with/../traversal\n", true)
+	_, err = resolveCgroupCPUFile("0::/path/with/../traversal\n", true)
 	assert.Error(t, err)
-	_, err = resolveCgroupCpuFile("1:memory:/docker/abc123\n", false)
+	_, err = resolveCgroupCPUFile("1:memory:/docker/abc123\n", false)
 	assert.Error(t, err)
 
 	// writeBurstFile error on bad pid
@@ -212,7 +212,7 @@ func TestDockerCreateVariations(t *testing.T) {
 	alloc := environment.Allocations{
 		ForceOutgoingIP: false,
 	}
-	alloc.DefaultMapping.Ip = "127.0.0.1"
+	alloc.DefaultMapping.IP = "127.0.0.1"
 	alloc.DefaultMapping.Port = 25565
 
 	envCfg := environment.NewConfiguration(environment.Settings{
@@ -236,7 +236,7 @@ func TestDockerCreateVariations(t *testing.T) {
 
 	// ForceOutgoingIP create attempt
 	allocForce := environment.Allocations{ForceOutgoingIP: true}
-	allocForce.DefaultMapping.Ip = "127.0.0.1"
+	allocForce.DefaultMapping.IP = "127.0.0.1"
 	allocForce.DefaultMapping.Port = 25566
 	envCfgForce := environment.NewConfiguration(environment.Settings{
 		Mounts:      []environment.Mount{{Target: "/home/container", Source: dataDir}},
@@ -371,20 +371,20 @@ func TestDockerExistingContainerOperations(t *testing.T) {
 func TestDockerCgroupBurstMore(t *testing.T) {
 	// 1. writeCpuBurst edge cases
 	l := log.WithField("test", true)
-	writeCpuBurst(l, -1, 100)
-	writeCpuBurst(l, 0, 100)
-	writeCpuBurst(l, 999999999, 100)
-	writeCpuBurst(l, 999999999, 0)
+	writeCPUBurst(l, -1, 100)
+	writeCPUBurst(l, 0, 100)
+	writeCPUBurst(l, 999999999, 100)
+	writeCPUBurst(l, 999999999, 0)
 
 	// 2. SetCpuBurst with enabled burst
 	c := &config.Configuration{
 		AuthenticationToken: "test-auth-token-12345",
 	}
-	c.Docker.CpuBurst.Enabled = true
-	c.Docker.CpuBurst.Percent = 50
+	c.Docker.CPUBurst.Enabled = true
+	c.Docker.CPUBurst.Percent = 50
 	config.Set(c)
 	defer func() {
-		c.Docker.CpuBurst.Enabled = false
+		c.Docker.CPUBurst.Enabled = false
 		config.Set(c)
 	}()
 
@@ -394,21 +394,21 @@ func TestDockerCgroupBurstMore(t *testing.T) {
 	env, err := New(burstContainerID, burstMeta, burstCfg)
 	require.NoError(t, err)
 
-	SetCpuBurst(context.Background(), env.client, burstContainerID, 1000)
-	SetCpuBurst(context.Background(), env.client, "nonexistent-container-uuid", 1000)
-	SetCpuBurst(context.Background(), env.client, burstContainerID, 0)
+	SetCPUBurst(context.Background(), env.client, burstContainerID, 1000)
+	SetCPUBurst(context.Background(), env.client, "nonexistent-container-uuid", 1000)
+	SetCPUBurst(context.Background(), env.client, burstContainerID, 0)
 
 	// 3. resolveCgroupCpuFile parsing variations
-	_, err = resolveCgroupCpuFile("1:memory:/docker/123", false)
+	_, err = resolveCgroupCPUFile("1:memory:/docker/123", false)
 	assert.Error(t, err)
-	_, err = resolveCgroupCpuFile("1:cpu:relative/path", false)
+	_, err = resolveCgroupCPUFile("1:cpu:relative/path", false)
 	assert.Error(t, err)
-	_, err = resolveCgroupCpuFile("1:cpu:/../escape", false)
+	_, err = resolveCgroupCPUFile("1:cpu:/../escape", false)
 	assert.Error(t, err)
-	_, err = resolveCgroupCpuFile("1:cpu:/docker/123", true)
+	_, err = resolveCgroupCPUFile("1:cpu:/docker/123", true)
 	assert.Error(t, err)
 
-	v2Path, err := resolveCgroupCpuFile("0::/docker.slice/docker-123.scope", true)
+	v2Path, err := resolveCgroupCPUFile("0::/docker.slice/docker-123.scope", true)
 	assert.NoError(t, err)
 	assert.Equal(t, "/sys/fs/cgroup/docker.slice/docker-123.scope/cpu.max.burst", v2Path)
 }
@@ -463,10 +463,10 @@ func TestSetCpuBurstWithInspectedContainer(t *testing.T) {
 	defer cli.Close()
 
 	configuration := &config.Configuration{}
-	configuration.Docker.CpuBurst.Enabled = true
-	configuration.Docker.CpuBurst.Percent = 50
+	configuration.Docker.CPUBurst.Enabled = true
+	configuration.Docker.CPUBurst.Percent = 50
 	config.Set(configuration)
-	SetCpuBurst(context.Background(), cli, "container-id", 1000)
+	SetCPUBurst(context.Background(), cli, "container-id", 1000)
 	require.Contains(t, <-requestedPath, "/containers/container-id/json")
 }
 

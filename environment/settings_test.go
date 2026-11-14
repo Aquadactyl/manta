@@ -19,16 +19,16 @@ func TestLimitsAndSettings(t *testing.T) {
 	config.Update(func(c *config.Configuration) {
 		c.Docker.Overhead.Override = false
 		c.Docker.ContainerPidLimit = 512
-		c.Docker.CpuShares = 1024
-		c.Docker.CpuPeriod = 100000
+		c.Docker.CPUShares = 1024
+		c.Docker.CPUPeriod = 100000
 	})
 
 	// 1. ConvertedCpuLimit
 	lUnlimited := Limits{CPULimit: 0}
-	assert.Equal(t, int64(-1), lUnlimited.ConvertedCpuLimit())
+	assert.Equal(t, int64(-1), lUnlimited.ConvertedCPULimit())
 
 	lLimited := Limits{CPULimit: 200}
-	assert.Equal(t, int64(200000), lLimited.ConvertedCpuLimit())
+	assert.Equal(t, int64(200000), lLimited.ConvertedCPULimit())
 
 	// 2. MemoryOverheadMultiplier and BoundedMemoryLimit
 	lMem := Limits{MemoryLimit: 1024} // < 2G -> 1.15

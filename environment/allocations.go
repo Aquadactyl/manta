@@ -21,7 +21,7 @@ type Allocations struct {
 	// what will be used for {SERVER_IP} and {SERVER_PORT} when modifying configuration
 	// files or the startup arguments for a server.
 	DefaultMapping struct {
-		Ip   string `json:"ip"`
+		IP   string `json:"ip"`
 		Port int    `json:"port"`
 	} `json:"default"`
 

@@ -257,7 +257,7 @@ var dialBackupRestore = func(ctx context.Context, network, address string) (net.
 	return (&net.Dialer{Timeout: 30 * time.Second, KeepAlive: 30 * time.Second}).DialContext(ctx, network, address)
 }
 
-func isValidRedirectUrl(raw string) bool {
+func isValidBackupRedirectURL(raw string) bool {
 	if !validBackupURLRegexp.MatchString(raw) {
 		return false
 	}
@@ -319,7 +319,7 @@ func backupRestoreHTTPClient() http.Client {
 				return backupDownloadError("The provided backup link redirects too many times.")
 			}
 			redirectURL := req.URL.String()
-			if !isValidRedirectUrl(redirectURL) {
+			if !isValidBackupRedirectURL(redirectURL) {
 				return backupDownloadError("The provided backup link is not a valid URL.")
 			}
 			return validateBackupDownloadURL(redirectURL)

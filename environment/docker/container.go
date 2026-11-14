@@ -218,7 +218,7 @@ func (e *Environment) InSituUpdate() error {
 		return errors.Wrap(err, "environment/docker: could not update container")
 	}
 
-	e.applyCpuBurst(ctx)
+	e.applyCPUBurst(ctx)
 	return nil
 }
 
@@ -287,7 +287,7 @@ func (e *Environment) Create() error {
 	networkMode := container.NetworkMode(cfg.Docker.Network.Mode)
 	if a.ForceOutgoingIP {
 		e.log().Debug("environment/docker: forcing outgoing IP address")
-		networkName := "ip-" + strings.ReplaceAll(strings.ReplaceAll(a.DefaultMapping.Ip, ".", "-"), ":", "-")
+		networkName := "ip-" + strings.ReplaceAll(strings.ReplaceAll(a.DefaultMapping.IP, ".", "-"), ":", "-")
 		networkMode = container.NetworkMode(networkName)
 
 		if _, err := e.client.NetworkInspect(ctx, networkName, network.InspectOptions{}); err != nil {
@@ -306,7 +306,7 @@ func (e *Environment) Create() error {
 				Options: map[string]string{
 					"encryption": "false",
 					"com.docker.network.bridge.default_bridge": "false",
-					"com.docker.network.host_ipv4":             a.DefaultMapping.Ip,
+					"com.docker.network.host_ipv4":             a.DefaultMapping.IP,
 				},
 			}); err != nil {
 				return err
@@ -331,7 +331,7 @@ func (e *Environment) Create() error {
 		// from the Panel.
 		Resources: e.Configuration.Limits().AsContainerResources(),
 
-		DNS: cfg.Docker.Network.Dns,
+		DNS: cfg.Docker.Network.DNS,
 
 		// Configure logging for the container to make it easier on the Daemon to grab
 		// the server output. Ensure that we don't use too much space on the host machine

@@ -556,7 +556,7 @@ func (ip *InstallationProcess) Execute() (string, error) {
 		Tmpfs: map[string]string{
 			"/tmp": "rw,exec,nosuid,size=" + tmpfsSize + "M",
 		},
-		DNS:         cfg.Docker.Network.Dns,
+		DNS:         cfg.Docker.Network.DNS,
 		LogConfig:   cfg.Docker.ContainerLogConfig(),
 		NetworkMode: container.NetworkMode(cfg.Docker.Network.Mode),
 		UsernsMode:  container.UsernsMode(cfg.Docker.UsernsMode),
@@ -607,7 +607,7 @@ func (ip *InstallationProcess) Execute() (string, error) {
 		return "", err
 	}
 
-	docker.SetCpuBurst(ctx, ip.client, r.ID, hostConf.Resources.CPUQuota)
+	docker.SetCPUBurst(ctx, ip.client, r.ID, hostConf.Resources.CPUQuota)
 
 	// Process the install event in the background by listening to the stream output until the
 	// container has stopped, at which point we'll disconnect from it.
@@ -676,10 +676,10 @@ func (ip *InstallationProcess) resourceLimits() container.Resources {
 	// Only apply the CPU limit if neither one is currently set to unlimited. If the
 	// installer CPU limit is unlimited don't even waste time with the logic, just
 	// set the config to unlimited for this.
-	if limits.Cpu == 0 {
+	if limits.CPU == 0 {
 		cfg.CPULimit = 0
-	} else if cfg.CPULimit != 0 && cfg.CPULimit < limits.Cpu {
-		cfg.CPULimit = limits.Cpu
+	} else if cfg.CPULimit != 0 && cfg.CPULimit < limits.CPU {
+		cfg.CPULimit = limits.CPU
 	}
 
 	resources := cfg.AsContainerResources()

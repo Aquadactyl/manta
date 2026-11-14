@@ -85,10 +85,10 @@ type Limits struct {
 	OOMDisabled bool `json:"oom_disabled"`
 }
 
-// ConvertedCpuLimit converts the CPU limit for a server build into a number
+// ConvertedCPULimit converts the CPU limit for a server build into a number
 // that can be better understood by the Docker environment. If there is no limit
 // set, return -1 which will indicate to Docker that it has unlimited CPU quota.
-func (l Limits) ConvertedCpuLimit() int64 {
+func (l Limits) ConvertedCPULimit() int64 {
 	if l.CPULimit == 0 {
 		return -1
 	}
@@ -148,10 +148,10 @@ func (l Limits) AsContainerResources() container.Resources {
 	// @see https://github.com/pterodactyl/panel/issues/3988
 	if l.CPULimit > 0 {
 		cfg := config.Get().Docker
-		period := cfg.CpuPeriodMicroseconds()
+		period := cfg.CPUPeriodMicroseconds()
 		resources.CPUQuota = l.CPULimit * period / 100
 		resources.CPUPeriod = period
-		resources.CPUShares = cfg.CpuShares
+		resources.CPUShares = cfg.CPUShares
 	}
 
 	// Similar to above, don't set the specific assigned CPUs if we didn't actually limit

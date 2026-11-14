@@ -96,8 +96,8 @@ func TestCpuPeriodMicroseconds(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg := DockerConfiguration{CpuPeriod: tt.period}
-			if v := cfg.CpuPeriodMicroseconds(); v != tt.expected {
+			cfg := DockerConfiguration{CPUPeriod: tt.period}
+			if v := cfg.CPUPeriodMicroseconds(); v != tt.expected {
 				t.Errorf("expected %d, got %d", tt.expected, v)
 			}
 		})

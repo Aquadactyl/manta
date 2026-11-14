@@ -206,7 +206,7 @@ func TestCreateForceOutgoingIPNetworkErrors(t *testing.T) {
 			defer cli.Close()
 
 			allocations := environment.Allocations{ForceOutgoingIP: true}
-			allocations.DefaultMapping.Ip = "10.0.0.1"
+			allocations.DefaultMapping.IP = "10.0.0.1"
 			e := &Environment{
 				ID:            "container-id",
 				Configuration: environment.NewConfiguration(environment.Settings{Allocations: allocations}, nil),

@@ -41,9 +41,9 @@ func cpuBurstMicroseconds(quota int64, percent int64) int64 {
 	return quota * percent / 100
 }
 
-// resolveCgroupCpuFile parses the contents of a /proc/<pid>/cgroup file and
+// resolveCgroupCPUFile parses the contents of a /proc/<pid>/cgroup file and
 // returns the absolute path of the CFS burst file for that process's cgroup.
-func resolveCgroupCpuFile(procCgroup string, v2 bool) (string, error) {
+func resolveCgroupCPUFile(procCgroup string, v2 bool) (string, error) {
 	for _, line := range strings.Split(procCgroup, "\n") {
 		parts := strings.SplitN(line, ":", 3)
 		if len(parts) != 3 || !strings.HasPrefix(parts[2], "/") || strings.Contains(parts[2], "..") {
@@ -64,14 +64,14 @@ func resolveCgroupCpuFile(procCgroup string, v2 bool) (string, error) {
 	return "", errors.New("environment/docker: no cpu controller found in cgroup file")
 }
 
-// writeCpuBurst writes a burst value in microseconds into the cpu cgroup of the
+// writeCPUBurst writes a burst value in microseconds into the cpu cgroup of the
 // given process. This is expected to fail on kernels older than 5.14 or when the
 // cgroup hierarchy is not writable by Wings, so failures are only logged.
-func writeCpuBurst(l *log.Entry, pid int, burst int64) {
-	writeCpuBurstForPlatform(l, pid, burst, runtime.GOOS)
+func writeCPUBurst(l *log.Entry, pid int, burst int64) {
+	writeCPUBurstForPlatform(l, pid, burst, runtime.GOOS)
 }
 
-func writeCpuBurstForPlatform(l *log.Entry, pid int, burst int64, goos string) {
+func writeCPUBurstForPlatform(l *log.Entry, pid int, burst int64, goos string) {
 	// Only Linux has the cgroup hierarchy. Elsewhere the container runs in a
 	// virtual machine whose processes can not be reached through the host.
 	if pid <= 0 || goos != "linux" {
@@ -89,7 +89,7 @@ func writeBurstFile(pid int, burst int64) error {
 	if err != nil {
 		return err
 	}
-	f, err := resolveCgroupCpuFile(string(b), cgroupV2())
+	f, err := resolveCgroupCPUFile(string(b), cgroupV2())
 	if err != nil {
 		return err
 	}
@@ -111,11 +111,11 @@ func logBurstFailure(l *log.Entry, burst int64) {
 	l.Debug("failed to set cpu burst")
 }
 
-// SetCpuBurst applies the configured CFS burst to a running container based on
+// SetCPUBurst applies the configured CFS burst to a running container based on
 // the CFS quota in microseconds it was created with. This is a no-op when
 // bursting is disabled or the container has no CPU limit.
-func SetCpuBurst(ctx context.Context, cli *client.Client, containerID string, quota int64) {
-	cfg := config.Get().Docker.CpuBurst
+func SetCPUBurst(ctx context.Context, cli *client.Client, containerID string, quota int64) {
+	cfg := config.Get().Docker.CPUBurst
 	if !cfg.Enabled || quota <= 0 {
 		return
 	}
@@ -123,14 +123,14 @@ func SetCpuBurst(ctx context.Context, cli *client.Client, containerID string, qu
 	if err != nil || c.State == nil {
 		return
 	}
-	writeCpuBurst(log.WithField("container_id", containerID), c.State.Pid, cpuBurstMicroseconds(quota, cfg.Percent))
+	writeCPUBurst(log.WithField("container_id", containerID), c.State.Pid, cpuBurstMicroseconds(quota, cfg.Percent))
 }
 
-// applyCpuBurst applies the configured CFS burst to the environment's container
+// applyCPUBurst applies the configured CFS burst to the environment's container
 // using its current CPU limit.
-func (e *Environment) applyCpuBurst(ctx context.Context) {
-	quota := e.Configuration.Limits().CPULimit * config.Get().Docker.CpuPeriodMicroseconds() / 100
-	SetCpuBurst(ctx, e.client, e.ID, quota)
+func (e *Environment) applyCPUBurst(ctx context.Context) {
+	quota := e.Configuration.Limits().CPULimit * config.Get().Docker.CPUPeriodMicroseconds() / 100
+	SetCPUBurst(ctx, e.client, e.ID, quota)
 }
 
 // clearCPUBurst zeroes the CFS burst for the given container process. This must
@@ -138,5 +138,5 @@ func (e *Environment) applyCpuBurst(ctx context.Context) {
 // than the current burst. It runs even when bursting is disabled so a value set
 // before the feature was turned off cannot block future quota changes.
 func (e *Environment) clearCPUBurst(pid int) {
-	writeCpuBurst(e.log(), pid, 0)
+	writeCPUBurst(e.log(), pid, 0)
 }
