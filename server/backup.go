@@ -18,6 +18,8 @@ import (
 	"github.com/pterodactyl/wings/server/filesystem"
 )
 
+var readServerwideIgnoreFile = io.ReadAll
+
 // Notifies the panel of a backup's state and returns an error if one is encountered
 // while performing this action.
 func (s *Server) notifyPanelOfBackup(uuid string, ad *backup.ArchiveDetails, successful bool) error {
@@ -50,7 +52,7 @@ func (s *Server) getServerwideIgnoredFiles() (string, error) {
 		// Don't read a symlinked ignore file, or a file larger than the maximum list size.
 		return "", nil
 	}
-	b, err := io.ReadAll(f)
+	b, err := readServerwideIgnoreFile(f)
 	if err != nil {
 		return "", err
 	}

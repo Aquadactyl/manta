@@ -81,7 +81,7 @@ func statFromFile(f ufs.File) (Stat, error) {
 // Stat stats a file or folder and returns the base stat object from go along
 // with the MIME data that can be used for editing files.
 func (fs *Filesystem) Stat(p string) (Stat, error) {
-	f, err := fs.unixFS.Open(p)
+	f, err := filesystemOpen(fs.unixFS, p)
 	if err != nil {
 		return Stat{}, err
 	}

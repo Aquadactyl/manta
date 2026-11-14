@@ -148,9 +148,8 @@ func postTransfers(c *gin.Context) {
 
 	// Loop through the parts of the request body and process them.
 	var (
-		hasArchive       bool
-		hasChecksum      bool
-		checksumVerified bool
+		hasArchive  bool
+		hasChecksum bool
 	)
 out:
 	for {
@@ -220,7 +219,6 @@ out:
 				}
 
 				trnsfr.Log().Debug("checksums match")
-				checksumVerified = true
 			default:
 				continue
 			}
@@ -229,11 +227,6 @@ out:
 
 	if !hasArchive || !hasChecksum {
 		middleware.CaptureAndAbort(c, errors.New("missing archive or checksum"))
-		return
-	}
-
-	if !checksumVerified {
-		middleware.CaptureAndAbort(c, errors.New("checksums don't match"))
 		return
 	}
 

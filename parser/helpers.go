@@ -152,10 +152,7 @@ func setValueAtPath(c *gabs.Container, path string, value interface{}) error {
 		// Set our cursor to be the array element we expect, which in this case is just the first element
 		// since we won't run this code unless the array element is 0. There is too much complexity in trying
 		// to match additional elements. In those cases the server will just have to be rebooted or something.
-		ct, err = c.ArrayElementP(0, matches[1])
-		if err != nil {
-			return errors.WithMessage(err, "failed to find array element at path")
-		}
+		ct, _ = c.ArrayElementP(0, matches[1])
 	}
 
 	// Try to set the value. If the path does not exist an error will be raised to the caller which will

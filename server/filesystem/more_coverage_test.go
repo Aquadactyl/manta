@@ -89,6 +89,8 @@ func TestFindCopySuffixUsesTimestampAfterExhaustingNames(t *testing.T) {
 	got, err := fs.findCopySuffix(dirfd, "file", ".txt")
 	require.NoError(t, err)
 	assert.True(t, strings.HasPrefix(got, "filecopy."), got)
+	_, err = fs.findCopySuffix(-1, "file", ".txt")
+	assert.Error(t, err)
 }
 
 func TestFilesystemDiskSpaceChecks(t *testing.T) {

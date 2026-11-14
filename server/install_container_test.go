@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -12,6 +13,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"text/template"
 
 	"github.com/docker/docker/api/types/container"
 	dockerclient "github.com/docker/docker/client"
@@ -23,6 +25,11 @@ import (
 	"github.com/pterodactyl/wings/remote"
 	"github.com/pterodactyl/wings/server/filesystem"
 )
+
+type installWriteError struct{ err error }
+
+func (w installWriteError) Write([]byte) (int, error) { return 0, w.err }
+func (installWriteError) Close() error                { return nil }
 
 const installTestUUID = "5c7a1b9e-2f40-4d8a-9b3e-7a1c2d3e4f50"
 
@@ -226,6 +233,49 @@ func TestInstallContainerIsRestricted(t *testing.T) {
 	}
 }
 
+func TestInstallationExecuteUsesSELinuxRelabelBinds(t *testing.T) {
+	fake := &fakeInstallerDocker{}
+	p := newInstallerTestProcess(t, fake)
+	config.Update(func(cfg *config.Configuration) {
+		cfg.Docker.SELinuxRelabel = "shared"
+	})
+
+	id, err := p.Execute()
+	require.NoError(t, err)
+	require.Equal(t, "installer-test-id", id)
+
+	fake.mu.Lock()
+	defer fake.mu.Unlock()
+	require.NotEmpty(t, fake.create.HostConfig.Binds)
+	require.Contains(t, fake.create.HostConfig.Binds[0], ":z")
+	require.Contains(t, fake.create.HostConfig.Binds[1], ":ro,z")
+}
+
+func TestInstallationExecuteRejectsInvalidSELinuxMode(t *testing.T) {
+	p := newInstallerTestProcess(t, &fakeInstallerDocker{})
+	config.Update(func(cfg *config.Configuration) {
+		cfg.Docker.SELinuxRelabel = "invalid"
+	})
+	_, err := p.Execute()
+	require.ErrorContains(t, err, "invalid SELinux relabel mode")
+}
+
+func TestInstallationExecutePublishesWaitCompletion(t *testing.T) {
+	oldWait := waitForInstallerContainer
+	waitForInstallerContainer = func(*dockerclient.Client, context.Context, string, container.WaitCondition) (<-chan container.WaitResponse, <-chan error) {
+		errCh := make(chan error, 1)
+		errCh <- nil
+		close(errCh)
+		return nil, errCh
+	}
+	t.Cleanup(func() { waitForInstallerContainer = oldWait })
+
+	p := newInstallerTestProcess(t, &fakeInstallerDocker{})
+	id, err := p.Execute()
+	require.NoError(t, err)
+	require.Equal(t, "installer-test-id", id)
+}
+
 // The install log records each environment variable exactly as it was passed to
 // the container.
 func TestInstallLogKeepsEnvironmentValuesVerbatim(t *testing.T) {
@@ -279,6 +329,11 @@ func TestInstallationProcessWithRegistryAuth(t *testing.T) {
 
 	require.NoError(t, os.MkdirAll(filepath.Join(config.Get().System.LogDirectory, "install"), 0o700))
 	require.NoError(t, p.pullInstallationImage())
+	oldEncode := encodeInstallRegistryAuth
+	t.Cleanup(func() { encodeInstallRegistryAuth = oldEncode })
+	want := errors.New("registry auth encoding failed")
+	encodeInstallRegistryAuth = func(*config.RegistryConfiguration) (string, error) { return "", want }
+	require.NoError(t, p.pullInstallationImage())
 }
 
 func TestInstallationProcessPullFallback(t *testing.T) {
@@ -294,16 +349,23 @@ func TestInstallationProcessPullFallback(t *testing.T) {
 func TestInstallationProcessPullPolicies(t *testing.T) {
 	fake := &fakeInstallerDocker{}
 	p := newInstallerTestProcess(t, fake)
+	p.Script.ContainerImage = "~local-image"
+	require.NoError(t, p.pullInstallationImage())
+	p.Script.ContainerImage = "ghcr.io/pterodactyl/installers:debian"
 	cfg := config.Get()
 	cfg.Docker.ImagePullPolicy = config.ImagePullPolicyNever
 	config.Set(cfg)
 	require.ErrorContains(t, p.pullInstallationImage(), "not present locally")
+	fake.imageExists = true
+	require.NoError(t, p.pullInstallationImage())
+	fake.imageExists = false
 	fake.failImageInspect = true
 	require.ErrorContains(t, p.pullInstallationImage(), "failed to inspect image")
 
-	fake.failImageInspect = false
 	cfg.Docker.ImagePullPolicy = config.ImagePullPolicyIfNotPresent
 	config.Set(cfg)
+	require.ErrorContains(t, p.pullInstallationImage(), "failed to inspect image")
+	fake.failImageInspect = false
 	// The mock reports that the image is not present, so this policy falls back
 	// to pulling it.
 	require.NoError(t, p.pullInstallationImage())
@@ -339,6 +401,36 @@ func TestInstallationProcessWriteScriptErrors(t *testing.T) {
 	assert.Error(t, p.writeScriptToDisk())
 	cfg.System.TmpDirectory = oldTmp
 	config.Set(cfg)
+}
+
+func TestInstallationProcessScriptAndLogWriteErrors(t *testing.T) {
+	want := errors.New("injected write error")
+	t.Run("script copy", func(t *testing.T) {
+		p := newInstallerTestProcess(t, &fakeInstallerDocker{})
+		old := copyInstallScript
+		t.Cleanup(func() { copyInstallScript = old })
+		copyInstallScript = func(io.Writer, io.Reader) (int64, error) { return 0, want }
+		require.ErrorIs(t, p.writeScriptToDisk(), want)
+	})
+
+	t.Run("log template parsing", func(t *testing.T) {
+		p := newInstallerTestProcess(t, &fakeInstallerDocker{logs: "output"})
+		require.NoError(t, os.MkdirAll(filepath.Join(config.Get().System.LogDirectory, "install"), 0o700))
+		old := parseInstallLogTemplate
+		t.Cleanup(func() { parseInstallLogTemplate = old })
+		parseInstallLogTemplate = func() (*template.Template, error) { return nil, want }
+		require.ErrorIs(t, p.AfterExecute("container-123"), want)
+	})
+
+	t.Run("log template execution", func(t *testing.T) {
+		p := newInstallerTestProcess(t, &fakeInstallerDocker{logs: "output"})
+		old := openInstallLogFile
+		t.Cleanup(func() { openInstallLogFile = old })
+		openInstallLogFile = func(string, int, os.FileMode) (io.WriteCloser, error) {
+			return installWriteError{err: want}, nil
+		}
+		require.ErrorIs(t, p.AfterExecute("container-123"), want)
+	})
 }
 
 func TestInstallationProcessBeforeExecuteErrors(t *testing.T) {

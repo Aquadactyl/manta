@@ -12,6 +12,11 @@ import (
 	"time"
 )
 
+var (
+	dialJavaPing    = net.DialTimeout
+	dialBedrockPing = net.DialTimeout
+)
+
 type snapshot struct {
 	CPU     uint64
 	Working uint64
@@ -201,7 +206,7 @@ func readVar(r io.Reader) (int, error) {
 	return 0, fmt.Errorf("bad varint")
 }
 func javaPing(host string, port int) (string, error) {
-	c, err := net.DialTimeout("tcp", net.JoinHostPort(host, fmt.Sprint(port)), 3*time.Second)
+	c, err := dialJavaPing("tcp", net.JoinHostPort(host, fmt.Sprint(port)), 3*time.Second)
 	if err != nil {
 		return "", err
 	}
@@ -242,7 +247,7 @@ func javaPing(host string, port int) (string, error) {
 	return data.Version.Name, err
 }
 func bedrockPing(host string, port int) (string, error) {
-	c, err := net.DialTimeout("udp", net.JoinHostPort(host, fmt.Sprint(port)), 3*time.Second)
+	c, err := dialBedrockPing("udp", net.JoinHostPort(host, fmt.Sprint(port)), 3*time.Second)
 	if err != nil {
 		return "", err
 	}

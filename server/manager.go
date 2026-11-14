@@ -31,6 +31,8 @@ type Manager struct {
 	byUUID map[string]*Server
 }
 
+var newServerEnvironment = docker.New
+
 // NewManager returns a new server manager instance. This will boot up all the
 // servers that are currently present on the filesystem and set them into the
 // manager.
@@ -190,10 +192,8 @@ func (m *Manager) PersistStates() error {
 	for _, s := range m.All() {
 		states[s.ID()] = s.Environment.State()
 	}
-	data, err := json.Marshal(states)
-	if err != nil {
-		return errors.WithStack(err)
-	}
+	// A string map cannot contain values json.Marshal cannot encode.
+	data, _ := json.Marshal(states)
 	if err := os.WriteFile(config.Get().System.GetStatesPath(), data, 0o600); err != nil {
 		return errors.WithStack(err)
 	}
@@ -259,7 +259,7 @@ func (m *Manager) InitServer(uuid string, data remote.ServerConfigurationRespons
 		Image: s.Config().Container.Image,
 	}
 
-	if env, err := docker.New(s.ID(), &meta, envCfg); err != nil {
+	if env, err := newServerEnvironment(s.ID(), &meta, envCfg); err != nil {
 		return nil, err
 	} else {
 		s.Environment = env

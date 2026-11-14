@@ -41,6 +41,11 @@ const maxConfigFileSize = 64 * 1024 * 1024
 // is rewritten. Real configuration files are far shallower than this.
 const maxXMLDepth = 512
 
+var (
+	marshalYAMLIntermediateJSON = json.Marshal
+	marshalYAMLResult           = yaml.Marshal
+)
+
 // xmlDepth returns the element nesting depth of the tree rooted at root.
 func xmlDepth(root *etree.Element) int {
 	if root == nil {
@@ -283,11 +288,8 @@ func (f *ConfigurationFile) Parse(file ufs.File) error {
 		return errors.Errorf("parser: refusing to parse configuration file %q: size %d exceeds limit of %d bytes", file.Name(), info.Size(), maxConfigFileSize)
 	}
 
-	if mb, err := json.Marshal(newTemplatableConfig(config.Get())); err != nil {
-		return err
-	} else {
-		f.configuration = mb
-	}
+	// This value contains only strings, so it cannot fail to marshal.
+	f.configuration, _ = json.Marshal(newTemplatableConfig(config.Get()))
 
 	var err error
 
@@ -381,9 +383,7 @@ func (f *ConfigurationFile) parseXmlFile(file ufs.File) error {
 	doc.Indent(2)
 
 	var buf bytes.Buffer
-	if _, err := doc.WriteTo(&buf); err != nil {
-		return err
-	}
+	_, _ = doc.WriteTo(&buf)
 	return rewrite(file, buf.Bytes())
 }
 
@@ -433,15 +433,6 @@ func (f *ConfigurationFile) parseIniFile(file ufs.File) error {
 			s = cfg.Section(path[0])
 		}
 
-		// If no section was found, create that new section now and then set the
-		// section value we're using to be the new one.
-		if s == nil {
-			s, err = cfg.NewSection(path[0])
-			if err != nil {
-				return err
-			}
-		}
-
 		// If the key exists in the file go ahead and set the value, otherwise try to
 		// create it in the section.
 		if s.HasKey(k) {
@@ -454,9 +445,7 @@ func (f *ConfigurationFile) parseIniFile(file ufs.File) error {
 	}
 
 	var buf bytes.Buffer
-	if _, err := cfg.WriteTo(&buf); err != nil {
-		return err
-	}
+	_, _ = cfg.WriteTo(&buf)
 	return rewrite(file, buf.Bytes())
 }
 
@@ -493,7 +482,7 @@ func (f *ConfigurationFile) parseYamlFile(file ufs.File) error {
 	// Unmarshal the yaml data into a JSON interface such that we can work with
 	// any arbitrary data structure. If we don't do this, I can't use gabs which
 	// makes working with unknown JSON significantly easier.
-	jsonBytes, err := json.Marshal(dyno.ConvertMapI2MapS(i))
+	jsonBytes, err := marshalYAMLIntermediateJSON(dyno.ConvertMapI2MapS(i))
 	if err != nil {
 		return err
 	}
@@ -506,7 +495,7 @@ func (f *ConfigurationFile) parseYamlFile(file ufs.File) error {
 	}
 
 	// Remarshal the JSON into YAML format before saving it back to the disk.
-	marshaled, err := yaml.Marshal(data.Data())
+	marshaled, err := marshalYAMLResult(data.Data())
 	if err != nil {
 		return err
 	}
@@ -625,10 +614,7 @@ func (f *ConfigurationFile) parsePropertiesFile(file ufs.File) error {
 
 	// Add the new file content to the string builder.
 	for _, key := range p.Keys() {
-		value, ok := p.Get(key)
-		if !ok {
-			continue
-		}
+		value, _ := p.Get(key)
 		// This escape is intentional!
 		//
 		// See the docblock for this function for more details, do not change this

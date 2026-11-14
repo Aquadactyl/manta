@@ -156,7 +156,7 @@ func resolveMountPath(p string, containerUid int) (string, error) {
 		return "", errors.New("path is not absolute")
 	}
 
-	resolved, err := filepath.EvalSymlinks(p)
+	resolved, err := mountPathEvalSymlinks(p)
 	if err != nil {
 		if !errors.Is(err, fs.ErrNotExist) {
 			return "", err
@@ -165,7 +165,7 @@ func resolveMountPath(p string, containerUid int) (string, error) {
 		existing, missing := p, ""
 		for {
 			existing, missing = filepath.Dir(existing), filepath.Join(filepath.Base(existing), missing)
-			if resolved, err = filepath.EvalSymlinks(existing); err == nil {
+			if resolved, err = mountPathEvalSymlinks(existing); err == nil {
 				resolved = filepath.Join(resolved, missing)
 				break
 			}
@@ -186,14 +186,18 @@ func resolveMountPath(p string, containerUid int) (string, error) {
 // mountPathCheckRoot is the highest directory checked by checkMountPathParents.
 // It is only changed by tests, which cannot control the permissions of the
 // directories above their temporary directory.
-var mountPathCheckRoot = "/"
+var (
+	mountPathCheckRoot    = "/"
+	mountPathEvalSymlinks = filepath.EvalSymlinks
+	mountPathLstat        = os.Lstat
+)
 
 // checkMountPathParents returns an error if any existing directory above the
 // path is owned by the user containers run as, or is writable by its group or
 // other users.
 func checkMountPathParents(p string, containerUid int) error {
 	for d := filepath.Dir(p); ; d = filepath.Dir(d) {
-		st, err := os.Lstat(d)
+		st, err := mountPathLstat(d)
 		if err != nil {
 			if !errors.Is(err, fs.ErrNotExist) {
 				return err

@@ -18,6 +18,15 @@ import (
 
 var readSystemInformation = system.GetSystemInformation
 
+var (
+	createInstallEnvironment = func(s *server.Server) error { return s.CreateEnvironment() }
+	runServerInstall         = func(s *server.Server) error { return s.Install() }
+	startServerInstall       = func(_ *server.Server, run func()) { go run() }
+	startServerAfterInstall  = func(s *server.Server) error {
+		return s.HandlePowerAction(server.PowerActionStart, 30)
+	}
+)
+
 // Returns information about the system that wings is running on.
 func getSystemInformation(c *gin.Context) {
 	i, err := readSystemInformation()
@@ -106,32 +115,32 @@ func postCreateServer(c *gin.Context) {
 	// Begin the installation process in the background to not block the request
 	// cycle. If there are any errors they will be logged and communicated back
 	// to the Panel where a reinstall may take place.
-	go func(i *installer.Installer) {
-		s := i.Server()
+	startServerInstall(install.Server(), func() {
+		s := install.Server()
 		if s.Context().Err() != nil {
 			return
 		}
 
-		if err := s.CreateEnvironment(); err != nil {
+		if err := createInstallEnvironment(s); err != nil {
 			if !errors.Is(err, context.Canceled) && s.Context().Err() == nil {
 				s.Log().WithField("error", err).Error("failed to create server environment during install process")
 			}
 			return
 		}
 
-		if err := s.Install(); err != nil {
+		if err := runServerInstall(s); err != nil {
 			if !errors.Is(err, context.Canceled) && s.Context().Err() == nil {
 				log.WithFields(log.Fields{"server": s.ID(), "error": err}).Error("failed to run install process for server")
 			}
 			return
 		}
 
-		if i.StartOnCompletion {
+		if install.StartOnCompletion {
 			if s.Context().Err() != nil {
 				return
 			}
 			log.WithField("server_id", s.ID()).Debug("starting server after successful installation")
-			if err := s.HandlePowerAction(server.PowerActionStart, 30); err != nil {
+			if err := startServerAfterInstall(s); err != nil {
 				if errors.Is(err, context.DeadlineExceeded) {
 					log.WithFields(log.Fields{"server_id": s.ID(), "action": "start"}).Warn("could not acquire a lock while attempting to perform a power action")
 				} else if !errors.Is(err, context.Canceled) && s.Context().Err() == nil {
@@ -141,7 +150,7 @@ func postCreateServer(c *gin.Context) {
 		} else {
 			log.WithField("server_id", s.ID()).Debug("skipping automatic start after successful server installation")
 		}
-	}(install)
+	})
 
 	c.Status(http.StatusAccepted)
 }

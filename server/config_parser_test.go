@@ -3,6 +3,7 @@ package server
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -11,10 +12,21 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/pterodactyl/wings/config"
+	"github.com/pterodactyl/wings/internal/ufs"
 	"github.com/pterodactyl/wings/parser"
 	"github.com/pterodactyl/wings/remote"
 	"github.com/pterodactyl/wings/server/filesystem"
 )
+
+type closeErrorConfigurationFile struct {
+	ufs.File
+	err error
+}
+
+func (f closeErrorConfigurationFile) Close() error {
+	_ = f.File.Close()
+	return f.err
+}
 
 func newConfigParserServer(t *testing.T, diskLimit int64, raw string) (*Server, string) {
 	t.Helper()
@@ -87,4 +99,30 @@ func TestConfigurationFilesMoreCases(t *testing.T) {
 	s.procConfig = &remote.ProcessConfiguration{ConfigurationFiles: []parser.ConfigurationFile{cfJson}}
 	require.NoError(t, os.WriteFile(filepath.Join(root, "broken.json"), []byte(`{invalid-json`), 0644))
 	s.UpdateConfigurationFiles()
+}
+
+func TestConfigurationFilesReportCloseAndChownErrors(t *testing.T) {
+	raw := `{"file":"server.properties","parser":"file","replace":[{"match":"port=","replace_with":"port=25565"}]}`
+	s, root := newConfigParserServer(t, 0, raw)
+	require.NoError(t, os.WriteFile(filepath.Join(root, "server.properties"), []byte("port=1\n"), 0o644))
+
+	oldTouch, oldChown := configurationFileTouch, configurationFileChown
+	t.Cleanup(func() {
+		configurationFileTouch, configurationFileChown = oldTouch, oldChown
+	})
+	closeErr, chownErr := errors.New("close failed"), errors.New("chown failed")
+	configurationFileTouch = func(fs *filesystem.Filesystem, name string, flag int) (ufs.File, error) {
+		f, err := oldTouch(fs, name, flag)
+		if err != nil {
+			return nil, err
+		}
+		return closeErrorConfigurationFile{File: f, err: closeErr}, nil
+	}
+	configurationFileChown = func(*filesystem.Filesystem, string) error { return chownErr }
+
+	s.UpdateConfigurationFiles()
+
+	b, err := os.ReadFile(filepath.Join(root, "server.properties"))
+	require.NoError(t, err)
+	require.Equal(t, "port=25565\n", string(b))
 }

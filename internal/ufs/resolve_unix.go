@@ -19,6 +19,11 @@ const maxSymlinkHops = 40
 // held to the same tests. It is only ever set by tests.
 var forceUserspaceResolve bool
 
+var (
+	userspaceReadlinkat = unix.Readlinkat
+	userspaceOpenRetry  = openRetry
+)
+
 // userspaceOpenat2 opens name beneath dirfd like openat2 with RESOLVE_BENEATH
 // does, for platforms that do not have it.
 func (fs *UnixFS) userspaceOpenat2(dirfd int, name string, flag, mode uint64) (int, error) {
@@ -75,7 +80,7 @@ func userspaceOpenBeneath(dirfd int, name string, flag int, mode uint32) (int, e
 	// target in front of the rest of the path. It reports whether comp was one.
 	followLink := func(comp string) (bool, error) {
 		buf := make([]byte, 4096)
-		n, err := unix.Readlinkat(current(), comp, buf)
+		n, err := userspaceReadlinkat(current(), comp, buf)
 		if err != nil {
 			// EINVAL means it is not a link, the caller reports its own error.
 			return false, nil //nolint:nilerr
@@ -116,7 +121,7 @@ func userspaceOpenBeneath(dirfd int, name string, flag int, mode uint32) (int, e
 		}
 
 		if !last {
-			fd, err := openRetry(current(), comp, unix.O_RDONLY|unix.O_DIRECTORY|unix.O_NOFOLLOW|unix.O_CLOEXEC, 0)
+			fd, err := userspaceOpenRetry(current(), comp, unix.O_RDONLY|unix.O_DIRECTORY|unix.O_NOFOLLOW|unix.O_CLOEXEC, 0)
 			if err == nil {
 				owned = append(owned, fd)
 				continue
@@ -144,7 +149,7 @@ func userspaceOpenBeneath(dirfd int, name string, flag int, mode uint32) (int, e
 		if mustBeDir {
 			f |= unix.O_DIRECTORY
 		}
-		fd, err := openRetry(current(), comp, f, mode)
+		fd, err := userspaceOpenRetry(current(), comp, f, mode)
 		if err == nil {
 			// A descriptor opened with O_PATH does not fail on a link, it is the
 			// link, so look at what was opened.
@@ -185,7 +190,7 @@ func userspaceOpenBeneath(dirfd int, name string, flag int, mode uint32) (int, e
 
 	// The path was only ".", or went down and back up again, so it names the
 	// directory that is current now.
-	fd, err := openRetry(current(), ".", flag|unix.O_CLOEXEC, mode)
+	fd, err := userspaceOpenRetry(current(), ".", flag|unix.O_CLOEXEC, mode)
 	closeOwned()
 	if err != nil {
 		return -1, err

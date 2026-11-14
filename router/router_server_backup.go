@@ -29,6 +29,7 @@ import (
 type backupDownloadError string
 
 var removeLocalBackup = func(b *backup.LocalBackup) error { return b.Remove() }
+var backupRestoreNewRequest = http.NewRequestWithContext
 
 func (e backupDownloadError) Error() string {
 	return string(e)
@@ -120,10 +121,6 @@ func postServerRestoreBackup(c *gin.Context) {
 			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
-		if !isValidRedirectUrl(data.DownloadUrl) {
-			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "The provided backup link is not a valid URL."})
-			return
-		}
 	}
 
 	s.SetRestoring(true)
@@ -168,11 +165,7 @@ func postServerRestoreBackup(c *gin.Context) {
 	logger.Info("downloading backup from remote location...")
 	// Use the server context so the request is canceled if the server gets deleted.
 	targetURL := data.DownloadUrl
-	if !isValidRedirectUrl(targetURL) {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "The provided backup link is not a valid URL."})
-		return
-	}
-	req, err := http.NewRequestWithContext(s.Context(), http.MethodGet, targetURL, nil)
+	req, err := backupRestoreNewRequest(s.Context(), http.MethodGet, targetURL, nil)
 	if err != nil {
 		middleware.CaptureAndAbort(c, err)
 		return

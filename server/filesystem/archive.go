@@ -30,7 +30,13 @@ var pool = sync.Pool{
 	},
 }
 
-var archiveFileInfoHeader = tar.FileInfoHeader
+var (
+	archiveFileInfoHeader = tar.FileInfoHeader
+	trackIgnoreMatch      = func(b *ignoreMatchBudget, d time.Duration) error { return b.track(d) }
+	archiveWalkDirat      = func(fs *ufs.Quota, dirfd int, name string, fn ufs.WalkDiratFunc) error {
+		return fs.WalkDirat(dirfd, name, fn)
+	}
+)
 
 // TarProgress .
 type TarProgress struct {
@@ -147,7 +153,7 @@ func (a *Archive) Stream(ctx context.Context, w io.Writer) error {
 		callback = a.callback(func(_ int, _, relative string, _ ufs.DirEntry) error {
 			start := time.Now()
 			skip := i.MatchesPath(relative)
-			if err := budget.track(time.Since(start)); err != nil {
+			if err := trackIgnoreMatch(budget, time.Since(start)); err != nil {
 				return err
 			}
 			if skip {
@@ -193,7 +199,7 @@ func (a *Archive) Stream(ctx context.Context, w io.Writer) error {
 	}
 
 	// Recursively walk the base directory.
-	return fs.WalkDirat(dirfd, name, func(dirfd int, name, relative string, d ufs.DirEntry, err error) error {
+	return archiveWalkDirat(fs, dirfd, name, func(dirfd int, name, relative string, d ufs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}

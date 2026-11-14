@@ -1,9 +1,11 @@
 package router
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
+	"mime/multipart"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -448,6 +450,21 @@ func TestRouterRemainingCoverage(t *testing.T) {
 	reqNonMultipart.Header.Set("Authorization", "Bearer "+string(signedValidTr))
 	reqNonMultipart.Header.Set("Content-Type", "application/json")
 	h.router.ServeHTTP(w, reqNonMultipart)
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+
+	checksumTok := validTrTok
+	checksumTok.Subject = uuid.New().String()
+	signedChecksum, err := jwt.Sign(&checksumTok, config.GetJwtAlgorithm())
+	require.NoError(t, err)
+	var checksumBody bytes.Buffer
+	checksumWriter := multipart.NewWriter(&checksumBody)
+	require.NoError(t, checksumWriter.WriteField("checksum", strings.Repeat("0", 64)))
+	require.NoError(t, checksumWriter.Close())
+	w = httptest.NewRecorder()
+	reqChecksumFirst := httptest.NewRequest(http.MethodPost, "/api/transfers", &checksumBody)
+	reqChecksumFirst.Header.Set("Authorization", "Bearer "+string(signedChecksum))
+	reqChecksumFirst.Header.Set("Content-Type", checksumWriter.FormDataContentType())
+	h.router.ServeHTTP(w, reqChecksumFirst)
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
 
 	// 8. validateBackupDownloadUrl & backupRestoreHttpClient

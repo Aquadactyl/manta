@@ -183,11 +183,19 @@ func TestCopyReturnsDestinationCreationErrors(t *testing.T) {
 	t.Cleanup(func() { filesystemOpenFileat = oldOpenFileat })
 
 	want := errors.New("destination create failed")
-	filesystemOpenFileat = func(*ufs.UnixFS, int, string, int, ufs.FileMode) (ufs.File, error) { return nil, want }
+	filesystemOpenFileat = func(unixFS *ufs.UnixFS, dirfd int, name string, flag int, mode ufs.FileMode) (ufs.File, error) {
+		if flag&ufs.O_WRONLY == 0 {
+			return unixFS.OpenFileat(dirfd, name, flag, mode)
+		}
+		return nil, want
+	}
 	require.ErrorIs(t, fs.Copy("source.txt"), want)
 
 	attempts := 0
-	filesystemOpenFileat = func(*ufs.UnixFS, int, string, int, ufs.FileMode) (ufs.File, error) {
+	filesystemOpenFileat = func(unixFS *ufs.UnixFS, dirfd int, name string, flag int, mode ufs.FileMode) (ufs.File, error) {
+		if flag&ufs.O_WRONLY == 0 {
+			return unixFS.OpenFileat(dirfd, name, flag, mode)
+		}
 		attempts++
 		return nil, ufs.ErrExist
 	}

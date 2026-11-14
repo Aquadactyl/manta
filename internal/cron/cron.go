@@ -50,24 +50,24 @@ func Scheduler(ctx context.Context, m *server.Manager) (*gocron.Scheduler, error
 	_, _ = s.Tag("activity").Every(interval).Do(func() {
 		l.WithField("cron", "activity").Debug("sending internal activity events to Panel")
 		if err := activity.Run(ctx); err != nil {
-			if errors.Is(err, ErrCronRunning) {
-				l.WithField("cron", "activity").Warn("activity process is already running, skipping...")
-			} else {
-				l.WithField("cron", "activity").WithField("error", err).Error("activity process failed to execute")
-			}
+			logRunError(l, "activity", "activity process is already running, skipping...", "activity process failed to execute", err)
 		}
 	})
 
 	_, _ = s.Tag("sftp").Every(interval).Do(func() {
 		l.WithField("cron", "sftp").Debug("sending sftp events to Panel")
 		if err := sftp.Run(ctx); err != nil {
-			if errors.Is(err, ErrCronRunning) {
-				l.WithField("cron", "sftp").Warn("sftp events process already running, skipping...")
-			} else {
-				l.WithField("cron", "sftp").WithField("error", err).Error("sftp events process failed to execute")
-			}
+			logRunError(l, "sftp", "sftp events process already running, skipping...", "sftp events process failed to execute", err)
 		}
 	})
 
 	return s, nil
+}
+
+func logRunError(l *log.Entry, subsystem, alreadyRunning, failed string, err error) {
+	if errors.Is(err, ErrCronRunning) {
+		l.WithField("cron", subsystem).Warn(alreadyRunning)
+		return
+	}
+	l.WithField("cron", subsystem).WithField("error", err).Error(failed)
 }

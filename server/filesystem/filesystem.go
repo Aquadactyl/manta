@@ -443,7 +443,7 @@ func (fs *Filesystem) Copy(p string) error {
 	if err != nil {
 		return err
 	}
-	source, err := fs.unixFS.OpenFileat(dirfd, name, ufs.O_RDONLY, 0)
+	source, err := filesystemOpenFileat(fs.unixFS.UnixFS, dirfd, name, ufs.O_RDONLY, 0)
 	if err != nil {
 		return err
 	}
@@ -569,41 +569,7 @@ func (fs *Filesystem) Delete(p string) error {
 func (fs *Filesystem) ListDirectory(p string) ([]Stat, error) {
 	// Read entries from the path on the filesystem, using the mapped reader, so
 	// we can map the DirEntry slice into a Stat slice with mimetype information.
-	out, err := ufs.ReadDirMap(fs.unixFS.UnixFS, p, func(e ufs.DirEntry) (Stat, error) {
-		info, err := e.Info()
-		if err != nil {
-			return Stat{}, err
-		}
-
-		var d string
-		if e.Type().IsDir() {
-			d = "inode/directory"
-		} else {
-			d = "application/octet-stream"
-		}
-		var m *mimetype.MIME
-		if e.Type().IsRegular() {
-			if eO, ok := e.(interface {
-				Open() (ufs.File, error)
-			}); ok {
-				f, err := eO.Open()
-				if err != nil {
-					return Stat{}, err
-				}
-				m, err = detectFileMIME(f)
-				if err != nil {
-					log.Error(err.Error())
-				}
-				_ = f.Close()
-			}
-		}
-
-		st := Stat{FileInfo: info, Mimetype: d}
-		if m != nil {
-			st.Mimetype = m.String()
-		}
-		return st, nil
-	})
+	out, err := ufs.ReadDirMap(fs.unixFS.UnixFS, p, statDirectoryEntry)
 	if err != nil {
 		return nil, err
 	}
@@ -620,6 +586,42 @@ func (fs *Filesystem) ListDirectory(p string) ([]Stat, error) {
 	})
 
 	return out, nil
+}
+
+func statDirectoryEntry(e ufs.DirEntry) (Stat, error) {
+	info, err := e.Info()
+	if err != nil {
+		return Stat{}, err
+	}
+
+	var d string
+	if e.Type().IsDir() {
+		d = "inode/directory"
+	} else {
+		d = "application/octet-stream"
+	}
+	var m *mimetype.MIME
+	if e.Type().IsRegular() {
+		if eO, ok := e.(interface {
+			Open() (ufs.File, error)
+		}); ok {
+			f, err := eO.Open()
+			if err != nil {
+				return Stat{}, err
+			}
+			m, err = detectFileMIME(f)
+			if err != nil {
+				log.Error(err.Error())
+			}
+			_ = f.Close()
+		}
+	}
+
+	st := Stat{FileInfo: info, Mimetype: d}
+	if m != nil {
+		st.Mimetype = m.String()
+	}
+	return st, nil
 }
 
 func (fs *Filesystem) Chtimes(path string, atime, mtime time.Time) error {

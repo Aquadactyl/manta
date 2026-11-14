@@ -157,6 +157,31 @@ func TestSFTPSessionsReleaseTheirWatcherWhenClientCloses(t *testing.T) {
 	require.LessOrEqual(t, after-before, 5, "a session that has ended should not leave a goroutine running")
 }
 
+func TestSFTPSessionWatcherClosesRevokedSession(t *testing.T) {
+	setSessionTestConfig(t)
+
+	srv, err := server.New(nil)
+	require.NoError(t, err)
+	t.Cleanup(func() { srv.Sftp().CancelAll() })
+	manager := server.NewEmptyManager(nil)
+	manager.Add(srv)
+	c := &SFTPServer{manager: manager}
+	client := dialSessionHarness(t, startSessionHarness(t, c, srv.ID()))
+	sftpClient, err := pkgsftp.NewClient(client)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = sftpClient.Close() })
+
+	srv.Sftp().Cancel("3f1c2a4e-5b6d-4e7f-8a9b-0c1d2e3f4a5b")
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		if _, err := sftpClient.Getwd(); err != nil {
+			return
+		}
+		time.Sleep(time.Millisecond)
+	}
+	t.Fatal("revoked SFTP session did not close")
+}
+
 // A channel for a server that is not registered on this node is refused.
 func TestSFTPChannelsForMissingServerAreRefused(t *testing.T) {
 	setSessionTestConfig(t)

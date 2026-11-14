@@ -60,6 +60,8 @@ type harness struct {
 }
 
 var lifecycleDelay = time.Sleep
+var powerWaitTimeout = 120 * time.Second
+var powerPollInterval = 100 * time.Millisecond
 
 var (
 	collectRunnerMetadata = (*harness).metadata
@@ -227,11 +229,11 @@ func (h *harness) power(n node, s server, action string) time.Duration {
 	if action == "stop" {
 		want = "offline"
 	}
-	for time.Since(start) < 120*time.Second {
+	for time.Since(start) < powerWaitTimeout {
 		if h.state(n, s) == want {
 			return time.Since(start)
 		}
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(powerPollInterval)
 	}
 	panic(fmt.Sprintf("%s %s timed out", s.Name, action))
 }

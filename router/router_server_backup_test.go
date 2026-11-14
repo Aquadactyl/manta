@@ -3,6 +3,7 @@ package router
 import (
 	"context"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -404,6 +405,49 @@ func TestPostServerRestoreBackupMore(t *testing.T) {
 	if c.Writer.Status() != http.StatusAccepted {
 		t.Fatalf("expected 202 Accepted for s3 restore, got %d body %s", c.Writer.Status(), w.Body.String())
 	}
+}
+
+func TestBackupHandlersCoverBindingAndRemoteRequestErrors(t *testing.T) {
+	setBackupRestoreAllowlist(t, []string{"127.0.0.1"})
+	client := backupTestRemoteClient{restoreStatus: make(chan string, 1)}
+	backupID := "22222222-2222-2222-2222-222222222222"
+
+	t.Run("backup request binding error", func(t *testing.T) {
+		c, _, s := newBackupRestoreContext(t, client, backupID, "{")
+		defer s.CtxCancel()
+		postServerBackup(c)
+		require.Equal(t, http.StatusBadRequest, c.Writer.Status())
+	})
+
+	t.Run("restore request binding error", func(t *testing.T) {
+		c, _, s := newBackupRestoreContext(t, client, backupID, "{")
+		defer s.CtxCancel()
+		postServerRestoreBackup(c)
+		require.Equal(t, http.StatusBadRequest, c.Writer.Status())
+	})
+
+	t.Run("request construction error", func(t *testing.T) {
+		old := backupRestoreNewRequest
+		backupRestoreNewRequest = func(context.Context, string, string, io.Reader) (*http.Request, error) {
+			return nil, fmt.Errorf("request construction failed")
+		}
+		t.Cleanup(func() { backupRestoreNewRequest = old })
+		c, _, s := newBackupRestoreContext(t, client, backupID, `{"adapter":"s3","download_url":"http://127.0.0.1:12345/backup"}`)
+		defer s.CtxCancel()
+		postServerRestoreBackup(c)
+		require.True(t, c.IsAborted())
+	})
+
+	t.Run("ordinary transport error", func(t *testing.T) {
+		listener, err := net.Listen("tcp", "127.0.0.1:0")
+		require.NoError(t, err)
+		address := listener.Addr().String()
+		require.NoError(t, listener.Close())
+		c, _, s := newBackupRestoreContext(t, client, backupID, fmt.Sprintf(`{"adapter":"s3","download_url":%q}`, "http://"+address+"/backup"))
+		defer s.CtxCancel()
+		postServerRestoreBackup(c)
+		require.True(t, c.IsAborted())
+	})
 }
 
 func TestDeleteServerBackupFlow(t *testing.T) {

@@ -26,6 +26,41 @@ import (
 	"github.com/pterodactyl/wings/system"
 )
 
+var waitForInstallerContainer = func(c *client.Client, ctx context.Context, id string, condition container.WaitCondition) (<-chan container.WaitResponse, <-chan error) {
+	return c.ContainerWait(ctx, id, condition)
+}
+
+var (
+	copyInstallScript         = io.Copy
+	encodeInstallRegistryAuth = (*config.RegistryConfiguration).Base64
+	parseInstallLogTemplate   = func() (*template.Template, error) {
+		return template.New("header").Parse(installLogTemplate)
+	}
+	openInstallLogFile = func(name string, flag int, perm os.FileMode) (io.WriteCloser, error) {
+		return os.OpenFile(name, flag, perm) //nolint:gosec // path is the server's configured installation log
+	}
+)
+
+const installLogTemplate = `Pterodactyl Server Installation Log
+
+|
+| Details
+| ------------------------------
+  Server UUID:          {{.Server.ID}}
+  Container Image:      {{.Script.ContainerImage}}
+  Container Entrypoint: {{.Script.Entrypoint}}
+
+|
+| Environment Variables
+| ------------------------------
+{{ range $key, $value := .Server.GetEnvironmentVariables }}  {{ $value }}
+{{ end }}
+
+|
+| Script Output
+| ------------------------------
+`
+
 // Install executes the installation stack for a server process. Bubbles any
 // errors up to the calling function which should handle contacting the panel to
 // notify it of the server state.
@@ -288,7 +323,7 @@ func (ip *InstallationProcess) writeScriptToDisk() error {
 		return errors.WithMessage(err, "failed to write server installation script to disk before mount")
 	}
 	defer f.Close()
-	if _, err := io.Copy(f, strings.NewReader(strings.ReplaceAll(ip.Script.Script, "\r\n", "\n"))); err != nil {
+	if _, err := copyInstallScript(f, strings.NewReader(strings.ReplaceAll(ip.Script.Script, "\r\n", "\n"))); err != nil {
 		return err
 	}
 	return nil
@@ -347,7 +382,7 @@ func (ip *InstallationProcess) pullInstallationImage() error {
 	// Get the ImagePullOptions.
 	imagePullOptions := image.PullOptions{All: false}
 	if registryAuth != nil {
-		b64, err := registryAuth.Base64()
+		b64, err := encodeInstallRegistryAuth(registryAuth)
 		if err != nil {
 			log.WithError(err).Error("failed to get registry auth credentials")
 		}
@@ -444,7 +479,7 @@ func (ip *InstallationProcess) AfterExecute(containerId string) error {
 		return err
 	}
 
-	f, err := os.OpenFile(ip.GetLogPath(), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
+	f, err := openInstallLogFile(ip.GetLogPath(), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
 	if err != nil {
 		return err
 	}
@@ -455,25 +490,7 @@ func (ip *InstallationProcess) AfterExecute(containerId string) error {
 	// variables passed into the container to make debugging things a little easier.
 	ip.Server.Log().WithField("path", ip.GetLogPath()).Debug("writing most recent installation logs to disk")
 
-	tmpl, err := template.New("header").Parse(`Pterodactyl Server Installation Log
-
-|
-| Details
-| ------------------------------
-  Server UUID:          {{.Server.ID}}
-  Container Image:      {{.Script.ContainerImage}}
-  Container Entrypoint: {{.Script.Entrypoint}}
-
-|
-| Environment Variables
-| ------------------------------
-{{ range $key, $value := .Server.GetEnvironmentVariables }}  {{ $value }}
-{{ end }}
-
-|
-| Script Output
-| ------------------------------
-`)
+	tmpl, err := parseInstallLogTemplate()
 	if err != nil {
 		return err
 	}
@@ -603,7 +620,7 @@ func (ip *InstallationProcess) Execute() (string, error) {
 		}
 	}(r.ID)
 
-	sChan, eChan := ip.client.ContainerWait(ctx, r.ID, container.WaitConditionNotRunning)
+	sChan, eChan := waitForInstallerContainer(ip.client, ctx, r.ID, container.WaitConditionNotRunning)
 	select {
 	case err := <-eChan:
 		// Once the container has stopped running we can mark the install process as being completed.

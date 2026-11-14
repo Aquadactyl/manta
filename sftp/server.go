@@ -34,6 +34,10 @@ import (
 var validUsernameRegexp = regexp.MustCompile(`^(?i)(.+)\.([a-z0-9]{8}|[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}|serv_[a-z2-7]{26})$`)
 
 var generateED25519Key = ed25519.GenerateKey
+var marshalED25519PrivateKey = x509.MarshalPKCS8PrivateKey
+var encodeED25519PrivateKey = func(w io.Writer, der []byte) error {
+	return pem.Encode(w, &pem.Block{Type: "PRIVATE KEY", Bytes: der})
+}
 
 // connectionLimits are the limits applied to connections.
 type connectionLimits struct {
@@ -80,6 +84,7 @@ type SFTPServer struct {
 }
 
 var listenSFTP = net.Listen
+var sleepSFTPBackoff = time.Sleep
 
 // connectionCounter counts open connections in total and by a key, such as the
 // address or the user they belong to.
@@ -266,7 +271,7 @@ func (c *SFTPServer) serve(listener net.Listener, conf *ssh.ServerConfig) error 
 				delay = time.Second
 			}
 			log.WithField("error", err).WithField("retry_in", delay).Error("sftp: failed to accept connection")
-			time.Sleep(delay)
+			sleepSFTPBackoff(delay)
 			continue
 		}
 		delay = 0
@@ -434,11 +439,11 @@ func (c *SFTPServer) generateED25519PrivateKey() error {
 	}
 	defer o.Close()
 
-	b, err := x509.MarshalPKCS8PrivateKey(priv)
+	b, err := marshalED25519PrivateKey(priv)
 	if err != nil {
 		return errors.Wrap(err, "sftp: failed to marshal private key into bytes")
 	}
-	if err := pem.Encode(o, &pem.Block{Type: "PRIVATE KEY", Bytes: b}); err != nil {
+	if err := encodeED25519PrivateKey(o, b); err != nil {
 		return errors.Wrap(err, "sftp: failed to write ED25519 private key to disk")
 	}
 	return nil

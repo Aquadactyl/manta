@@ -140,9 +140,9 @@ func newIgnoreMatchBudgetFor(goos string, patterns int) *ignoreMatchBudget {
 	// the runtime guard proportional to the platform's matching throughput so
 	// ordinary ignore lists do not abort archive creation there.
 	if goos == "darwin" {
-		// macOS CI runners have shown enough variance that a two-times allowance
+		// macOS CI runners have shown enough variance that a four-times allowance
 		// can still reject ordinary lists under moderate host load.
-		perPattern *= 3
+		perPattern *= 5
 	}
 	return &ignoreMatchBudget{
 		base:    ignoreMatchBaseBudget,

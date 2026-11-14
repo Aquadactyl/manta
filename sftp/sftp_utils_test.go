@@ -331,6 +331,26 @@ func TestGenerateED25519PrivateKeyPropagatesEntropyError(t *testing.T) {
 	require.ErrorContains(t, s.generateED25519PrivateKey(), "failed to generate ED25519 private key")
 }
 
+func TestGenerateED25519PrivateKeySerializationErrors(t *testing.T) {
+	t.Run("key marshal errors are returned", func(t *testing.T) {
+		old := marshalED25519PrivateKey
+		want := errors.New("marshal failed")
+		marshalED25519PrivateKey = func(any) ([]byte, error) { return nil, want }
+		t.Cleanup(func() { marshalED25519PrivateKey = old })
+		s := &SFTPServer{BasePath: t.TempDir()}
+		require.ErrorIs(t, s.generateED25519PrivateKey(), want)
+	})
+
+	t.Run("PEM write errors are returned", func(t *testing.T) {
+		old := encodeED25519PrivateKey
+		want := errors.New("PEM write failed")
+		encodeED25519PrivateKey = func(io.Writer, []byte) error { return want }
+		t.Cleanup(func() { encodeED25519PrivateKey = old })
+		s := &SFTPServer{BasePath: t.TempDir()}
+		require.ErrorIs(t, s.generateED25519PrivateKey(), want)
+	})
+}
+
 type mockConnMetadata struct {
 	user       string
 	remoteAddr net.Addr

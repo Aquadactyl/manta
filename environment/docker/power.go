@@ -20,6 +20,8 @@ var waitForContainer = func(cli *client.Client, ctx context.Context, id string) 
 	return cli.ContainerWait(ctx, id, container.WaitConditionNotRunning)
 }
 
+var dockerAttachForStart = func(e *Environment, ctx context.Context) error { return e.Attach(ctx) }
+
 // OnBeforeStart run before the container starts and get the process
 // configuration from the Panel. This is important since we use this to check
 // configuration files as well as ensure we always have the latest version of
@@ -122,7 +124,7 @@ func (e *Environment) Start(ctx context.Context) error {
 	//
 	// By explicitly attaching to the instance before we start it, we can immediately
 	// react to errors/output stopping/etc. when starting.
-	if err := e.Attach(actx); err != nil {
+	if err := dockerAttachForStart(e, actx); err != nil {
 		return errors.WrapIf(err, "environment/docker: failed to attach to container")
 	}
 

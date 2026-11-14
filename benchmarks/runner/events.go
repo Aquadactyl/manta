@@ -2,13 +2,80 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"math"
 	"sync"
 	"time"
 
 	"github.com/pterodactyl/wings/environment"
 )
+
+type streamedStats struct {
+	environment.Stats
+	State string `json:"state"`
+	Disk  int64  `json:"disk_bytes"`
+}
+
+func validateUtilizationSchema(utilization map[string]json.RawMessage) error {
+	if len(utilization) != 7 {
+		return errors.New("unexpected API resource schema")
+	}
+	return nil
+}
+
+func validateSocketAuth(c io.Closer, event string) error {
+	if event != "auth success" {
+		_ = c.Close()
+		return errors.New("event stream authentication failed")
+	}
+	return nil
+}
+
+func parseStreamedStats(args []string, utilization map[string]json.RawMessage) (streamedStats, error) {
+	if len(args) != 1 {
+		return streamedStats{}, errors.New("stats event must carry one string argument")
+	}
+	data := []byte(args[0])
+	var keys map[string]json.RawMessage
+	if err := json.Unmarshal(data, &keys); err != nil {
+		return streamedStats{}, err
+	}
+	if len(keys) != len(utilization) {
+		return streamedStats{}, errors.New("stats event schema differs from API")
+	}
+	for key := range utilization {
+		if _, ok := keys[key]; !ok {
+			return streamedStats{}, fmt.Errorf("stats event is missing resource field %s", key)
+		}
+	}
+	var usage streamedStats
+	if err := json.Unmarshal(data, &usage); err != nil {
+		return streamedStats{}, err
+	}
+	if usage.State != "running" || usage.Memory == 0 || usage.MemoryLimit < usage.Memory || usage.Uptime <= 0 || usage.Disk <= 0 || math.IsNaN(usage.CpuAbsolute) || math.IsInf(usage.CpuAbsolute, 0) || usage.CpuAbsolute < 0 {
+		return streamedStats{}, fmt.Errorf("invalid streamed resource values: state=%s memory=%d limit=%d uptime=%d disk=%d cpu=%v", usage.State, usage.Memory, usage.MemoryLimit, usage.Uptime, usage.Disk, usage.CpuAbsolute)
+	}
+	return usage, nil
+}
+
+func updateStatsSample(sample int, first, last *environment.Stats, current environment.Stats) error {
+	if sample == 0 {
+		*first = current
+	} else if current.Uptime < last.Uptime || current.Network.RxBytes < last.Network.RxBytes || current.Network.TxBytes < last.Network.TxBytes {
+		return errors.New("streamed resource counters regressed")
+	}
+	*last = current
+	return nil
+}
+
+func validateStatsAdvanced(first, last environment.Stats) error {
+	if last.Uptime <= first.Uptime {
+		return errors.New("streamed uptime did not advance")
+	}
+	return nil
+}
 
 // Check unsolicited stats events: "send stats" replies take a different path
 // and would not exercise the optimized bus-to-WebSocket conversion.
@@ -21,16 +88,11 @@ func (h *harness) eventStreams() {
 				Utilization map[string]json.RawMessage `json:"utilization"`
 			}
 			must(json.Unmarshal(h.api(n, "GET", "/api/servers/"+s.UUID, nil), &api))
-			if len(api.Utilization) != 7 {
-				panic("unexpected API resource schema")
-			}
+			must(validateUtilizationSchema(api.Utilization))
 			var wg sync.WaitGroup
 			for viewer := range 16 {
 				c, event := h.socket(n, s, h.token(n, s, "websocket", nil))
-				if event != "auth success" {
-					_ = c.Close()
-					panic("event stream authentication failed")
-				}
+				must(validateSocketAuth(c, event))
 				wg.Add(1)
 				go func() {
 					defer wg.Done()
@@ -48,39 +110,11 @@ func (h *harness) eventStreams() {
 								break
 							}
 						}
-						if len(message.Args) != 1 {
-							panic("stats event must carry one string argument")
-						}
-						data := []byte(message.Args[0])
-						var keys map[string]json.RawMessage
-						must(json.Unmarshal(data, &keys))
-						if len(keys) != len(api.Utilization) {
-							panic("stats event schema differs from API")
-						}
-						for key := range api.Utilization {
-							if _, ok := keys[key]; !ok {
-								panic("stats event is missing resource field " + key)
-							}
-						}
-						var usage struct {
-							environment.Stats
-							State string `json:"state"`
-							Disk  int64  `json:"disk_bytes"`
-						}
-						must(json.Unmarshal(data, &usage))
-						if usage.State != "running" || usage.Memory == 0 || usage.MemoryLimit < usage.Memory || usage.Uptime <= 0 || usage.Disk <= 0 || math.IsNaN(usage.CpuAbsolute) || math.IsInf(usage.CpuAbsolute, 0) || usage.CpuAbsolute < 0 {
-							panic(fmt.Sprintf("invalid streamed resource values for %s %s server %d: state=%s memory=%d limit=%d uptime=%d disk=%d cpu=%v", variant, s.Kind, s.ID, usage.State, usage.Memory, usage.MemoryLimit, usage.Uptime, usage.Disk, usage.CpuAbsolute))
-						}
-						if sample == 0 {
-							first = usage.Stats
-						} else if usage.Uptime < last.Uptime || usage.Network.RxBytes < last.Network.RxBytes || usage.Network.TxBytes < last.Network.TxBytes {
-							panic("streamed resource counters regressed")
-						}
-						last = usage.Stats
+						usage, err := parseStreamedStats(message.Args, api.Utilization)
+						must(err)
+						must(updateStatsSample(sample, &first, &last, usage.Stats))
 					}
-					if last.Uptime <= first.Uptime {
-						panic("streamed uptime did not advance")
-					}
+					must(validateStatsAdvanced(first, last))
 					h.add(map[string]any{"type": "check", "test": "automatic_stats_16_viewers", "variant": variant, "server_id": s.ID, "game": s.Kind, "viewer": viewer, "samples": 3, "first_uptime": first.Uptime, "last_uptime": last.Uptime, "last_stats": last, "pass": true})
 				}()
 			}

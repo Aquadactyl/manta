@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -17,6 +18,26 @@ import (
 	"github.com/pterodactyl/wings/config"
 	"github.com/pterodactyl/wings/environment"
 )
+
+func TestFastInspectClosesResponseWhenRedirectFails(t *testing.T) {
+	previousSettings, previousEnabled := cli, fastEnabled
+	t.Cleanup(func() { o = sync.Once{}; cli, fastEnabled = previousSettings, previousEnabled })
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/redirected", http.StatusFound)
+	}))
+	defer ts.Close()
+	httpClient := &http.Client{CheckRedirect: func(*http.Request, []*http.Request) error {
+		return errors.New("redirect rejected")
+	}}
+	c, err := client.NewClientWithOpts(client.WithHost(ts.URL), client.WithVersion("1.51"), client.WithHTTPClient(httpClient))
+	require.NoError(t, err)
+	defer c.Close()
+	config.Set(&config.Configuration{AuthenticationToken: "test-token", Docker: config.DockerConfiguration{UsePerformantInspect: true}})
+	o = sync.Once{}
+
+	_, err = (&Environment{Id: "inspect-redirect", client: c}).ContainerInspect(context.Background())
+	require.ErrorContains(t, err, "redirect rejected")
+}
 
 func TestFastInspectRejectsMalformedAndTruncatedResponses(t *testing.T) {
 	previousSettings, previousEnabled := cli, fastEnabled

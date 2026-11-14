@@ -340,13 +340,9 @@ func postServerPullRemoteFile(c *gin.Context) {
 
 	u, err := url.Parse(data.URL)
 	if err != nil {
-		if e, ok := err.(*url.Error); ok {
-			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
-				"error": "An error occurred while parsing that URL: " + e.Err.Error(),
-			})
-			return
-		}
-		middleware.CaptureAndAbort(c, err)
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
+			"error": "An error occurred while parsing that URL: " + err.Error(),
+		})
 		return
 	}
 

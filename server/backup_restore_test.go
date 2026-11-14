@@ -244,6 +244,17 @@ func TestServerwideIgnoredFilesMoreCases(t *testing.T) {
 	assert.Contains(t, ignored, "temp/")
 }
 
+func TestServerwideIgnoredFilesReadError(t *testing.T) {
+	s, _, root := newRestoreTestServer(t)
+	require.NoError(t, os.WriteFile(filepath.Join(root, ".pteroignore"), []byte("ignored.txt"), 0o644))
+	oldRead := readServerwideIgnoreFile
+	t.Cleanup(func() { readServerwideIgnoreFile = oldRead })
+	want := errors.New("read ignore file failed")
+	readServerwideIgnoreFile = func(io.Reader) ([]byte, error) { return nil, want }
+	_, err := s.getServerwideIgnoredFiles()
+	require.ErrorIs(t, err, want)
+}
+
 type runningWaitEnv struct {
 	environment.ProcessEnvironment
 	waited bool

@@ -21,6 +21,15 @@ type usageLookupTime struct {
 	value atomic.Pointer[time.Time]
 }
 
+var (
+	walkDirectoryForSize = func(fs *ufs.Quota, dirfd int, name string, fn ufs.WalkDiratFunc) error {
+		return fs.WalkDirat(dirfd, name, fn)
+	}
+	lstatForDirectorySize = func(fs *ufs.Quota, dirfd int, name string) (ufs.FileInfo, error) {
+		return fs.Lstatat(dirfd, name)
+	}
+)
+
 // Set sets the last time that a disk space lookup was performed.
 func (ult *usageLookupTime) Set(t time.Time) {
 	ult.value.Store(&t)
@@ -203,7 +212,7 @@ func (fs *Filesystem) DirectorySize(root string) (int64, error) {
 	var hardLinks []uint64
 
 	var size atomic.Int64
-	err = fs.unixFS.WalkDirat(dirfd, name, func(dirfd int, name, _ string, d ufs.DirEntry, err error) error {
+	err = walkDirectoryForSize(fs.unixFS, dirfd, name, func(dirfd int, name, _ string, d ufs.DirEntry, err error) error {
 		// Files can be removed while the walk is running, which is not an error.
 		if errors.Is(err, ufs.ErrNotExist) {
 			return nil
@@ -217,7 +226,7 @@ func (fs *Filesystem) DirectorySize(root string) (int64, error) {
 			return nil
 		}
 
-		info, err := fs.unixFS.Lstatat(dirfd, name)
+		info, err := lstatForDirectorySize(fs.unixFS, dirfd, name)
 		if errors.Is(err, ufs.ErrNotExist) {
 			return nil
 		}

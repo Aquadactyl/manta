@@ -2,9 +2,11 @@ package sftp
 
 import (
 	"bufio"
+	"context"
 	"crypto/ed25519"
 	"crypto/rand"
 	"errors"
+	"io"
 	"net"
 	"os"
 	"path/filepath"
@@ -14,10 +16,12 @@ import (
 	"time"
 
 	pkgsftp "github.com/pkg/sftp"
+	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/ssh"
 
 	"github.com/pterodactyl/wings/config"
 	"github.com/pterodactyl/wings/internal/models"
+	"github.com/pterodactyl/wings/remote"
 	"github.com/pterodactyl/wings/server"
 )
 
@@ -317,6 +321,116 @@ func TestSFTPServerRunAndHandleBranches(t *testing.T) {
 	}
 }
 
+func TestSFTPServerRunPropagatesHostKeyGenerationError(t *testing.T) {
+	config.Set(&config.Configuration{AuthenticationToken: "test-token"})
+	oldGenerate := generateED25519Key
+	want := errors.New("entropy unavailable")
+	generateED25519Key = func(io.Reader) (ed25519.PublicKey, ed25519.PrivateKey, error) {
+		return nil, nil, want
+	}
+	t.Cleanup(func() { generateED25519Key = oldGenerate })
+	srv := New(server.NewEmptyManager(nil))
+	srv.BasePath = t.TempDir()
+	require.ErrorIs(t, srv.Run(), want)
+}
+
+func TestSFTPServerAcceptBackoffCapsAtOneSecond(t *testing.T) {
+	oldSleep := sleepSFTPBackoff
+	t.Cleanup(func() { sleepSFTPBackoff = oldSleep })
+	var longest time.Duration
+	sleepSFTPBackoff = func(delay time.Duration) {
+		if delay > longest {
+			longest = delay
+		}
+	}
+	srv := &SFTPServer{}
+	require.ErrorIs(t, srv.serve(&flakyListener{fails: 9}, &ssh.ServerConfig{}), net.ErrClosed)
+	require.Equal(t, time.Second, longest)
+}
+
+type sftpRunAuthClient struct {
+	remote.Client
+	requests chan remote.SftpAuthRequest
+}
+
+func (c *sftpRunAuthClient) ValidateSftpCredentials(_ context.Context, request remote.SftpAuthRequest) (remote.SftpAuthResponse, error) {
+	c.requests <- request
+	return remote.SftpAuthResponse{Server: "server-id", User: "user-id", Permissions: []string{"read"}}, nil
+}
+
+func TestSFTPServerRunPasswordAndPublicKeyCallbacks(t *testing.T) {
+	config.Set(&config.Configuration{AuthenticationToken: "test-token"})
+	client := &sftpRunAuthClient{requests: make(chan remote.SftpAuthRequest, 2)}
+	srv := New(server.NewEmptyManager(client))
+	srv.BasePath = t.TempDir()
+	srv.Listen = "127.0.0.1:0"
+	oldListen := listenSFTP
+	listenerCh := make(chan net.Listener, 1)
+	var listener net.Listener
+	listenerClosed := false
+	runResult := make(chan error, 1)
+	listenSFTP = func(network, address string) (net.Listener, error) {
+		listener, err := net.Listen(network, address)
+		if err == nil {
+			listenerCh <- listener
+		}
+		return listener, err
+	}
+	t.Cleanup(func() {
+		listenSFTP = oldListen
+		if !listenerClosed && listener != nil {
+			_ = listener.Close()
+			select {
+			case err := <-runResult:
+				if err != nil {
+					t.Errorf("SFTP server returned after its listener closed: %v", err)
+				}
+			case <-time.After(time.Second):
+				t.Error("SFTP server did not stop after its listener closed")
+			}
+		}
+	})
+
+	go func() { runResult <- srv.Run() }()
+	select {
+	case listener = <-listenerCh:
+	case <-time.After(time.Second):
+		t.Fatal("SFTP server did not bind its listener")
+	}
+	connect := func(auth ssh.AuthMethod) {
+		t.Helper()
+		client, err := ssh.Dial("tcp", listener.Addr().String(), &ssh.ClientConfig{
+			User:            "validuser.12345678",
+			Auth:            []ssh.AuthMethod{auth},
+			HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+			Timeout:         time.Second,
+		})
+		require.NoError(t, err)
+		require.NoError(t, client.Close())
+	}
+
+	connect(ssh.Password("password"))
+	passwordRequest := <-client.requests
+	require.Equal(t, remote.SftpAuthPassword, passwordRequest.Type)
+
+	_, privateKey, err := ed25519.GenerateKey(rand.Reader)
+	require.NoError(t, err)
+	signer, err := ssh.NewSignerFromKey(privateKey)
+	require.NoError(t, err)
+	connect(ssh.PublicKeys(signer))
+	publicKeyRequest := <-client.requests
+	require.Equal(t, remote.SftpAuthPublicKey, publicKeyRequest.Type)
+
+	require.NoError(t, listener.Close())
+	listenerClosed = true
+	select {
+	case err := <-runResult:
+		require.ErrorIs(t, err, net.ErrClosed)
+	case <-time.After(time.Second):
+		t.Fatal("SFTP server did not return after listener close")
+	}
+}
+
 func TestSFTPServerRunStartsListener(t *testing.T) {
 	config.Set(&config.Configuration{AuthenticationToken: "test-token"})
 	oldListen := listenSFTP
@@ -437,4 +551,18 @@ func TestServerHandleChannelBranches(t *testing.T) {
 	if !ch2.rejectCalled {
 		t.Fatal("expected ch2 to be rejected")
 	}
+
+	registered, err := server.New(nil)
+	require.NoError(t, err)
+	registered.Config().Uuid = "registered-server"
+	manager := server.NewEmptyManager(nil)
+	manager.Add(registered)
+	validServer := New(manager)
+	sconn.Permissions.Extensions["uuid"] = "registered-server"
+	acceptChans := make(chan ssh.NewChannel, 1)
+	acceptChans <- &mockNewChannel{chType: "session", acceptErr: errors.New("accept failed")}
+	close(acceptChans)
+	reqs = make(chan *ssh.Request)
+	close(reqs)
+	require.NoError(t, validServer.handle(sconn, acceptChans, reqs))
 }

@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/apex/log"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/pterodactyl/wings/config"
@@ -18,6 +19,12 @@ import (
 	"github.com/pterodactyl/wings/server"
 	"github.com/pterodactyl/wings/system"
 )
+
+func TestLogRunErrorBranches(t *testing.T) {
+	entry := log.WithField("test", t.Name())
+	logRunError(entry, "activity", "already running", "failed", ErrCronRunning)
+	logRunError(entry, "sftp", "already running", "failed", errors.New("request failed"))
+}
 
 func TestScheduler(t *testing.T) {
 	setupDatabase(t)
@@ -237,8 +244,8 @@ func TestCronEdgeCasesAndDeliveryErrors(t *testing.T) {
 	assert.NoError(t, ac50.Run(context.Background()))
 
 	setupDatabase(t)
-	for i := 0; i < 50; i++ {
-		insertActivity(t, "server:sftp.write", validIP, fmt.Sprintf("{\"files\":[\"/file-%d\"]}", i))
+	for i := 0; i < maxBatchesPerRun+1; i++ {
+		insertActivity(t, models.Event(fmt.Sprintf("server:sftp.write-%d", i)), validIP, fmt.Sprintf("{\"files\":[\"/file-%d\"]}", i))
 	}
 	sc50 := &sftpCron{mu: system.NewAtomicBool(false), manager: okMgr, max: 1}
 	assert.NoError(t, sc50.Run(context.Background()))

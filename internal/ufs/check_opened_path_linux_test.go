@@ -3,7 +3,9 @@
 package ufs
 
 import (
+	"errors"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -48,4 +50,37 @@ func TestCheckOpenedPath(t *testing.T) {
 	defer delIn.Close()
 	_ = os.Remove(delIn.Name())
 	assert.ErrorIs(t, fs.checkOpenedPath(int(delIn.Fd()), "del_in"), ErrNotExist)
+}
+
+func TestLinuxResolvedStatErrors(t *testing.T) {
+	root := t.TempDir()
+	fs, err := NewUnixFS(root, false)
+	require.NoError(t, err)
+	defer fs.Close()
+	require.NoError(t, os.WriteFile(filepath.Join(root, "file"), []byte("data"), 0o644))
+	dirfd, _, closeFd, err := fs.SafePath(".")
+	require.NoError(t, err)
+	defer closeFd()
+
+	oldFstat := linuxFstat
+	linuxFstat = func(int, *unix.Stat_t) error { return unix.EIO }
+	t.Cleanup(func() { linuxFstat = oldFstat })
+
+	assert.ErrorIs(t, fchmodNoFollow(dirfd, "file", 0o600), unix.EIO)
+
+	var stat unix.Stat_t
+	assert.ErrorIs(t, fs.statResolved(dirfd, "file", "file", &stat), unix.EIO)
+}
+
+func TestCheckOpenedPathEvalErrors(t *testing.T) {
+	old := linuxEvalSymlinks
+	t.Cleanup(func() { linuxEvalSymlinks = old })
+
+	linuxEvalSymlinks = func(string) (string, error) { return "", errors.New("permission denied") }
+	err := (&UnixFS{}).checkOpenedPath(1, "file")
+	assert.ErrorContains(t, err, "failed to evaluate symlink")
+
+	linuxEvalSymlinks = func(string) (string, error) { return "", ErrNotExist }
+	err = (&UnixFS{}).checkOpenedPath(1, "file")
+	assert.ErrorContains(t, err, "failed to evaluate symlink")
 }

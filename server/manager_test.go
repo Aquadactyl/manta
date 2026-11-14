@@ -2,11 +2,14 @@ package server
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/pterodactyl/wings/config"
+	"github.com/pterodactyl/wings/environment"
+	"github.com/pterodactyl/wings/environment/docker"
 	"github.com/pterodactyl/wings/remote"
 )
 
@@ -77,6 +80,34 @@ func TestInitServerRejectsConfigurationForDifferentServer(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(root, "volumes", returned)); !os.IsNotExist(err) {
 		t.Fatal("expected no data directory to be created for the other server")
 	}
+}
+
+func TestInitServerReturnsConstructionErrors(t *testing.T) {
+	setTestConfig(t)
+	config.Get().System.Data = t.TempDir()
+	const id = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+
+	t.Run("server defaults", func(t *testing.T) {
+		old := setServerDefaults
+		want := errors.New("defaults failed")
+		setServerDefaults = func(any) error { return want }
+		t.Cleanup(func() { setServerDefaults = old })
+		if _, err := NewEmptyManager(nil).InitServer(id, serverConfigurationResponse(t, id)); !errors.Is(err, want) {
+			t.Fatalf("expected defaults error, got %v", err)
+		}
+	})
+
+	t.Run("Docker environment", func(t *testing.T) {
+		old := newServerEnvironment
+		want := errors.New("Docker construction failed")
+		newServerEnvironment = func(string, *docker.Metadata, *environment.Configuration) (*docker.Environment, error) {
+			return nil, want
+		}
+		t.Cleanup(func() { newServerEnvironment = old })
+		if _, err := NewEmptyManager(nil).InitServer(id, serverConfigurationResponse(t, id)); !errors.Is(err, want) {
+			t.Fatalf("expected Docker construction error, got %v", err)
+		}
+	})
 }
 
 func TestManagerAddIfMissing(t *testing.T) {

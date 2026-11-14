@@ -19,7 +19,18 @@ import (
 	"github.com/pterodactyl/wings/internal/ufs"
 )
 
-var identifyTransferArchive = archives.Identify
+var (
+	identifyTransferArchive = archives.Identify
+	openArchiveFile         = func(fs *ufs.Quota, name string, flag int, mode ufs.FileMode) (ufs.File, error) {
+		return fs.OpenFile(name, flag, mode)
+	}
+	streamArchive = func(a *Archive, ctx context.Context, w io.Writer) error {
+		return a.Stream(ctx, w)
+	}
+	setArchiveModTime = func(fs *Filesystem, name string, modTime time.Time) error {
+		return fs.Chtimes(name, modTime, modTime)
+	}
+)
 
 // CompressFiles compresses all the files matching the given paths in the
 // specified directory. This function also supports passing nested paths to only
@@ -46,7 +57,7 @@ func (fs *Filesystem) CompressFiles(dir string, paths []string) (ufs.FileInfo, e
 		if i > 0 {
 			d = path.Join(dir, fmt.Sprintf("%s-%d.tar.gz", name, i))
 		}
-		f, err = fs.unixFS.OpenFile(d, ufs.O_WRONLY|ufs.O_CREATE|ufs.O_EXCL, 0o644)
+		f, err = openArchiveFile(fs.unixFS, d, ufs.O_WRONLY|ufs.O_CREATE|ufs.O_EXCL, 0o644)
 		if err == nil {
 			break
 		}
@@ -59,7 +70,7 @@ func (fs *Filesystem) CompressFiles(dir string, paths []string) (ufs.FileInfo, e
 	// that archives being created at the same time cannot each use all the space
 	// that is left.
 	qf := newQuotaFile(fs, f, 0)
-	if err := a.Stream(context.Background(), qf); err != nil {
+	if err := streamArchive(a, context.Background(), qf); err != nil {
 		_ = qf.Close()
 		_ = fs.unixFS.Remove(d)
 		return nil, err
@@ -79,6 +90,11 @@ func (fs *Filesystem) CompressFiles(dir string, paths []string) (ufs.FileInfo, e
 // which matches the longest path that can be created on Linux.
 const maxArchiveEntryNameLength = 4096
 
+var (
+	identifyForSpaceCheck     = archives.Identify
+	newZipReaderForSpaceCheck = zip.NewReader
+)
+
 // SpaceAvailableForDecompression looks through a given archive and determines
 // if decompressing it would put the server over its allocated disk space limit.
 //
@@ -91,13 +107,13 @@ func (fs *Filesystem) SpaceAvailableForDecompression(ctx context.Context, dir st
 		return nil
 	}
 
-	f, err := fs.unixFS.Open(filepath.Join(dir, file))
+	f, err := filesystemOpen(fs.unixFS, filepath.Join(dir, file))
 	if err != nil {
 		return err
 	}
 	defer f.Close()
 
-	format, _, err := archives.Identify(ctx, filepath.Base(file), f)
+	format, _, err := identifyForSpaceCheck(ctx, filepath.Base(file), f)
 	if err != nil && !errors.Is(err, archives.NoMatch) {
 		return err
 	}
@@ -136,7 +152,7 @@ func (fs *Filesystem) SpaceAvailableForDecompression(ctx context.Context, dir st
 	switch ff := format.(type) {
 	case archives.Zip:
 		// The sizes can be read straight from the central directory of a zip.
-		reader, err := zip.NewReader(f, info.Size())
+		reader, err := newZipReaderForSpaceCheck(f, info.Size())
 		if err != nil {
 			return err
 		}
@@ -300,7 +316,7 @@ func (fs *Filesystem) extractStream(ctx context.Context, opts extractStreamOptio
 			return wrapError(err, opts.FileName)
 		}
 		// Update the file modification time to the one set in the archive.
-		if err := fs.Chtimes(p, f.ModTime(), f.ModTime()); err != nil {
+		if err := setArchiveModTime(fs, p, f.ModTime()); err != nil {
 			return wrapError(err, opts.FileName)
 		}
 		return nil

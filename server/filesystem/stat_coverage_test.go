@@ -89,3 +89,19 @@ func TestFilesystemFileClosesWhenStatFails(t *testing.T) {
 	require.Nil(t, file)
 	require.True(t, closed)
 }
+
+func TestFilesystemStatClosesWhenFileStatFails(t *testing.T) {
+	fs, err := New(t.TempDir(), 0, nil)
+	require.NoError(t, err)
+	want := errors.New("stat failed")
+	closed := false
+	oldOpen := filesystemOpen
+	t.Cleanup(func() { filesystemOpen = oldOpen })
+	filesystemOpen = func(*ufs.Quota, string) (ufs.File, error) {
+		return statTestFile{statErr: want, closed: &closed}, nil
+	}
+
+	_, err = fs.Stat("file")
+	require.ErrorIs(t, err, want)
+	require.True(t, closed)
+}

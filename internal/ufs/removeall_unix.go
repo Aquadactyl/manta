@@ -28,6 +28,8 @@ type unixFS interface {
 
 var removeAllFstatat = unix.Fstatat
 var removeAllContentsFrom func(unixFS, File, string) error
+var openRemoveContentsDir = openFdAt
+var removeContentsFromDirectory = removeContentsFrom
 
 func init() {
 	removeAllContentsFrom = removeContentsFrom
@@ -107,7 +109,7 @@ func removeContents(fs unixFS, path string) error {
 	}
 	defer parent.Close()
 
-	if err := removeContentsFrom(fs, parent, base); err != nil {
+	if err := removeContentsFromDirectory(fs, parent, base); err != nil {
 		if pathErr, ok := err.(*PathError); ok {
 			pathErr.Path = parentDir + string(os.PathSeparator) + pathErr.Path
 			err = convertErrorType(pathErr)
@@ -130,7 +132,7 @@ func removeContentsFrom(fs unixFS, parent File, base string) error {
 		var respSize int
 
 		// Open the directory to recurse into
-		file, err := openFdAt(parentFd, base)
+		file, err := openRemoveContentsDir(parentFd, base)
 		if err != nil {
 			if errors.Is(err, ErrNotExist) {
 				return nil

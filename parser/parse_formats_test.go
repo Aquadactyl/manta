@@ -444,6 +444,13 @@ type mockParserFile struct {
 	pos      int
 }
 
+type parserWriteErrorFile struct {
+	ufs.File
+	err error
+}
+
+func (f *parserWriteErrorFile) Write([]byte) (int, error) { return 0, f.err }
+
 func (m *mockParserFile) Name() string { return "mock.cfg" }
 func (m *mockParserFile) Stat() (ufs.FileInfo, error) {
 	if m.statErr != nil {
@@ -662,6 +669,17 @@ func TestParserRemainingCoverage(t *testing.T) {
 
 	mfWriteErr := &mockParserFile{statInfo: st, writeErr: errors.New("write failed")}
 	assert.Error(t, rewrite(mfWriteErr, []byte("ok")))
+
+	iniWritePath := filepath.Join(tmp, "write-error.ini")
+	require.NoError(t, os.WriteFile(iniWritePath, []byte("[section]\nkey=old\n"), 0o644))
+	iniWriteFile, err := os.OpenFile(iniWritePath, os.O_RDWR, 0)
+	require.NoError(t, err)
+	cfIniWrite := ConfigurationFile{Replace: []ConfigurationFileReplacement{{
+		Match:       "section.key",
+		ReplaceWith: NewReplaceValue([]byte("new"), jsonparser.String),
+	}}}
+	assert.Error(t, cfIniWrite.parseIniFile(&parserWriteErrorFile{File: iniWriteFile, err: errors.New("write failed")}))
+	assert.NoError(t, iniWriteFile.Close())
 }
 
 func TestParsePropertiesScannerError(t *testing.T) {
@@ -675,6 +693,21 @@ func TestParsePropertiesScannerError(t *testing.T) {
 
 	err = (&ConfigurationFile{}).parsePropertiesFile(file)
 	require.ErrorContains(t, err, "token too long")
+}
+
+func TestParseTextRejectsExpandedOutput(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "large-output.txt")
+	require.NoError(t, os.WriteFile(path, []byte("key\n"), 0o644))
+	file, err := os.Open(path)
+	require.NoError(t, err)
+	defer file.Close()
+
+	tooLarge := strings.Repeat("x", maxConfigFileSize)
+	cf := ConfigurationFile{Replace: []ConfigurationFileReplacement{{
+		Match:       "key",
+		ReplaceWith: ReplaceValue{value: []byte(tooLarge), valueType: jsonparser.Number},
+	}}}
+	require.ErrorContains(t, cf.parseTextFile(file), "result exceeds limit")
 }
 
 func TestParsePropertiesRejectsCircularReplacement(t *testing.T) {

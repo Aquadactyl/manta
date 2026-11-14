@@ -39,6 +39,15 @@ var dockerContainerAttach = func(ctx context.Context, cli *client.Client, id str
 	return cli.ContainerAttach(ctx, id, opts)
 }
 
+var (
+	pollContainerResources = func(e *Environment, ctx context.Context) error { return e.pollResources(ctx) }
+	reattachAfterStreamEnd func(*Environment) bool
+)
+
+func init() {
+	reattachAfterStreamEnd = func(e *Environment) bool { return e.reattach() }
+}
+
 // A custom console writer that allows us to keep a function blocked until the
 // given stream is properly closed. This does nothing special, only exists to
 // make a noop io.Writer.
@@ -89,19 +98,15 @@ func (e *Environment) Attach(ctx context.Context) error {
 			e.SetStream(nil)
 			// The stream can end without the container stopping, in which case it is
 			// attached to again rather than treating the server as stopped.
-			if e.reattach() {
+			if reattachAfterStreamEnd(e) {
 				return
 			}
 			e.SetState(environment.ProcessOfflineState)
 		}()
 
 		go func() {
-			if err := e.pollResources(pollCtx); err != nil {
-				if !errors.Is(err, context.Canceled) {
-					e.log().WithField("error", err).Error("error during environment resource polling")
-				} else {
-					e.log().Warn("stopping server resource polling: context canceled")
-				}
+			if err := pollContainerResources(e, pollCtx); err != nil {
+				reportAttachPollError(e, err)
 			}
 		}()
 
@@ -118,6 +123,14 @@ func (e *Environment) Attach(ctx context.Context) error {
 	}()
 
 	return nil
+}
+
+func reportAttachPollError(e *Environment, err error) {
+	if !errors.Is(err, context.Canceled) {
+		e.log().WithField("error", err).Error("error during environment resource polling")
+	} else {
+		e.log().Warn("stopping server resource polling: context canceled")
+	}
 }
 
 // reattach is called when the attached stream ends, and attaches to the

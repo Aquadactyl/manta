@@ -28,6 +28,7 @@ import (
 	"github.com/pterodactyl/wings/internal/database"
 	"github.com/pterodactyl/wings/router/downloader"
 	"github.com/pterodactyl/wings/router/tokens"
+	wserver "github.com/pterodactyl/wings/server"
 	"github.com/pterodactyl/wings/server/backup"
 	"github.com/pterodactyl/wings/server/transfer"
 	"github.com/pterodactyl/wings/system"
@@ -1168,6 +1169,129 @@ func TestPostCreateServerEnvironmentSetupFailure(t *testing.T) {
 	h.router.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusAccepted, w.Code)
 	time.Sleep(20 * time.Millisecond)
+}
+
+func TestPostCreateServerBackgroundInstallFailure(t *testing.T) {
+	h := newTransferHarness(t, &transferTestPanel{})
+	const serverUUID = "00000000-0000-4000-8000-000000000094"
+	settings, err := json.Marshal(map[string]any{"uuid": serverUUID, "skip_egg_scripts": false})
+	require.NoError(t, err)
+	h.panel.config.Settings = settings
+
+	oldCreate, oldInstall := createInstallEnvironment, runServerInstall
+	done := make(chan struct{})
+	createInstallEnvironment = func(*wserver.Server) error { return nil }
+	runServerInstall = func(*wserver.Server) error {
+		close(done)
+		return errors.New("install failed")
+	}
+	t.Cleanup(func() {
+		select {
+		case <-done:
+		case <-time.After(time.Second):
+		}
+		createInstallEnvironment, runServerInstall = oldCreate, oldInstall
+	})
+
+	req := httptest.NewRequest(http.MethodPost, "/api/servers", strings.NewReader(`{"uuid":"`+serverUUID+`"}`))
+	req.Header.Set("Authorization", "Bearer test-token")
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	require.Equal(t, http.StatusAccepted, w.Code)
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("background install did not run")
+	}
+}
+
+func TestPostCreateServerAutomaticStartDeadline(t *testing.T) {
+	h := newTransferHarness(t, &transferTestPanel{})
+	const serverUUID = "00000000-0000-4000-8000-000000000093"
+	settings, err := json.Marshal(map[string]any{"uuid": serverUUID, "skip_egg_scripts": true})
+	require.NoError(t, err)
+	h.panel.config.Settings = settings
+
+	oldCreate, oldInstall, oldStart := createInstallEnvironment, runServerInstall, startServerAfterInstall
+	done := make(chan struct{})
+	createInstallEnvironment = func(*wserver.Server) error { return nil }
+	runServerInstall = func(*wserver.Server) error { return nil }
+	startServerAfterInstall = func(*wserver.Server) error {
+		close(done)
+		return context.DeadlineExceeded
+	}
+	t.Cleanup(func() {
+		select {
+		case <-done:
+		case <-time.After(time.Second):
+		}
+		createInstallEnvironment, runServerInstall, startServerAfterInstall = oldCreate, oldInstall, oldStart
+	})
+
+	req := httptest.NewRequest(http.MethodPost, "/api/servers", strings.NewReader(`{"uuid":"`+serverUUID+`","start_on_completion":true}`))
+	req.Header.Set("Authorization", "Bearer test-token")
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	require.Equal(t, http.StatusAccepted, w.Code)
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("automatic start was not attempted")
+	}
+}
+
+func postCreateServerForInstallCoverage(t *testing.T, h *transferHarness, id string, start bool) *httptest.ResponseRecorder {
+	t.Helper()
+	settings, err := json.Marshal(map[string]any{"uuid": id, "skip_egg_scripts": true})
+	require.NoError(t, err)
+	h.panel.config.Settings = settings
+	body, err := json.Marshal(map[string]any{"uuid": id, "start_on_completion": start})
+	require.NoError(t, err)
+	req := httptest.NewRequest(http.MethodPost, "/api/servers", bytes.NewReader(body))
+	req.Header.Set("Authorization", "Bearer test-token")
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	return w
+}
+
+func TestPostCreateServerInstallWorkerStartsWithCanceledServer(t *testing.T) {
+	h := newTransferHarness(t, &transferTestPanel{})
+	oldCreate, oldInstall, oldWorker := createInstallEnvironment, runServerInstall, startServerInstall
+	t.Cleanup(func() {
+		createInstallEnvironment, runServerInstall, startServerInstall = oldCreate, oldInstall, oldWorker
+	})
+	called := false
+	createInstallEnvironment = func(*wserver.Server) error { called = true; return nil }
+	runServerInstall = func(*wserver.Server) error { called = true; return nil }
+	startServerInstall = func(s *wserver.Server, run func()) {
+		s.CleanupForDestroy()
+		run()
+	}
+	w := postCreateServerForInstallCoverage(t, h, "00000000-0000-4000-8000-000000000092", false)
+	require.Equal(t, http.StatusAccepted, w.Code)
+	require.False(t, called)
+}
+
+func TestPostCreateServerInstallCancellationSkipsAutomaticStart(t *testing.T) {
+	h := newTransferHarness(t, &transferTestPanel{})
+	oldCreate, oldInstall, oldWorker, oldStart := createInstallEnvironment, runServerInstall, startServerInstall, startServerAfterInstall
+	t.Cleanup(func() {
+		createInstallEnvironment, runServerInstall, startServerInstall, startServerAfterInstall = oldCreate, oldInstall, oldWorker, oldStart
+	})
+	createInstallEnvironment = func(*wserver.Server) error { return nil }
+	runServerInstall = func(s *wserver.Server) error {
+		s.CleanupForDestroy()
+		return nil
+	}
+	startServerInstall = func(_ *wserver.Server, run func()) { run() }
+	startCalled := false
+	startServerAfterInstall = func(*wserver.Server) error { startCalled = true; return nil }
+	w := postCreateServerForInstallCoverage(t, h, "00000000-0000-4000-8000-000000000091", true)
+	require.Equal(t, http.StatusAccepted, w.Code)
+	require.False(t, startCalled)
 }
 
 func TestPostServerCopyFileAndFileContents(t *testing.T) {

@@ -4,6 +4,8 @@ import (
 	"archive/tar"
 	"bytes"
 	"context"
+	"crypto/ed25519"
+	"crypto/rand"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -23,6 +25,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/crypto/ssh"
 )
 
 func TestMust(t *testing.T) {
@@ -689,6 +692,30 @@ func TestHarnessWebsocketLoad(t *testing.T) {
 	mu.Unlock()
 }
 
+func TestHarnessPowerTimesOutWhenStateNeverChanges(t *testing.T) {
+	oldTimeout, oldInterval := powerWaitTimeout, powerPollInterval
+	powerWaitTimeout = 50 * time.Millisecond
+	powerPollInterval = 0
+	t.Cleanup(func() { powerWaitTimeout, powerPollInterval = oldTimeout, oldInterval })
+
+	stateChecks := 0
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			stateChecks++
+			_ = json.NewEncoder(w).Encode(map[string]string{"state": "offline"})
+			return
+		}
+		w.WriteHeader(http.StatusAccepted)
+	}))
+	defer ts.Close()
+
+	h := &harness{http: ts.Client()}
+	n := node{Base: ts.URL, Token: "token"}
+	s := server{UUID: "stuck-server", Name: "stuck server"}
+	assert.PanicsWithValue(t, "stuck server start timed out", func() { h.power(n, s, "start") })
+	assert.Greater(t, stateChecks, 0)
+}
+
 func TestHarnessSftpMethods(t *testing.T) {
 	h := &harness{}
 	n := node{Base: "http://127.0.0.1", SFTPPort: 1}
@@ -704,6 +731,49 @@ func TestHarnessSftpMethods(t *testing.T) {
 	assert.Panics(t, func() {
 		h.sftp(n, s)
 	})
+}
+
+func TestSFTPSuffixClosesSSHClientWhenSubsystemIsRejected(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	defer listener.Close()
+
+	_, privateKey, err := ed25519.GenerateKey(rand.Reader)
+	require.NoError(t, err)
+	signer, err := ssh.NewSignerFromKey(privateKey)
+	require.NoError(t, err)
+	serverConfig := &ssh.ServerConfig{PasswordCallback: func(ssh.ConnMetadata, []byte) (*ssh.Permissions, error) {
+		return &ssh.Permissions{}, nil
+	}}
+	serverConfig.AddHostKey(signer)
+	go func() {
+		conn, err := listener.Accept()
+		if err != nil {
+			return
+		}
+		serverConn, channels, requests, err := ssh.NewServerConn(conn, serverConfig)
+		if err != nil {
+			_ = conn.Close()
+			return
+		}
+		go ssh.DiscardRequests(requests)
+		for channel := range channels {
+			_ = channel.Reject(ssh.UnknownChannelType, "SFTP unavailable")
+		}
+		_ = serverConn.Close()
+	}()
+
+	_, portString, err := net.SplitHostPort(listener.Addr().String())
+	require.NoError(t, err)
+	var port int
+	_, err = fmt.Sscanf(portString, "%d", &port)
+	require.NoError(t, err)
+	h := &harness{}
+	h.SFTP.Username = "benchmark"
+	h.SFTP.Password = "secret"
+	_, clientConn, err := h.sftpSuffix(node{Base: "http://127.0.0.1", SFTPPort: port}, "12345678")
+	require.Error(t, err)
+	require.Nil(t, clientConn)
 }
 
 func TestBenchmarkHostKeyCallback(t *testing.T) {
@@ -744,6 +814,18 @@ func TestMainScenarios(t *testing.T) {
 		main()
 	})
 
+	// 2b. Exactly two nodes with an unexpected key also violate topology.
+	badKeyManifestPath := filepath.Join(t.TempDir(), "bad_node_key.json")
+	require.NoError(t, os.WriteFile(badKeyManifestPath, []byte(`{
+		"nodes": {
+			"manta": {"servers": [{"name": "Benchmark Paper"}, {"name": "Benchmark Bedrock"}]},
+			"unexpected": {"servers": [{"name": "Benchmark Paper"}, {"name": "Benchmark Bedrock"}]}
+		}
+	}`), 0644))
+	os.Args = []string{"runner", "-manifest", badKeyManifestPath, "-output", t.TempDir()}
+	resetFlags()
+	assert.Panics(t, func() { main() })
+
 	// 2. Manifest with invalid node topology panics
 	badManifestPath := filepath.Join(t.TempDir(), "bad_manifest.json")
 	require.NoError(t, os.WriteFile(badManifestPath, []byte(`{"nodes":{"only_one":{}}}`), 0644))
@@ -782,6 +864,50 @@ func TestMainScenarios(t *testing.T) {
 		main()
 	})
 	assert.FileExists(t, filepath.Join(outDir, "unknown.json"))
+}
+
+func TestMainDispatchesEveryPhase(t *testing.T) {
+	origArgs, origCommandLine := os.Args, flag.CommandLine
+	oldMetadata := collectRunnerMetadata
+	oldPhases := []func(*harness){runLifecyclePhase, runPerformancePhase, runSecurityPhase, runResourcesPhase, runEventsPhase}
+	t.Cleanup(func() {
+		os.Args, flag.CommandLine = origArgs, origCommandLine
+		collectRunnerMetadata = oldMetadata
+		runLifecyclePhase, runPerformancePhase, runSecurityPhase, runResourcesPhase, runEventsPhase = oldPhases[0], oldPhases[1], oldPhases[2], oldPhases[3], oldPhases[4]
+	})
+	collectRunnerMetadata = func(*harness) {}
+
+	manifestPath := filepath.Join(t.TempDir(), "manifest.json")
+	manifestJSON := `{"nodes":{"manta":{"servers":[{"name":"Benchmark Paper"},{"name":"Benchmark Bedrock"}]},"wings":{"servers":[{"name":"Benchmark Paper"},{"name":"Benchmark Bedrock"}]}}}`
+	require.NoError(t, os.WriteFile(manifestPath, []byte(manifestJSON), 0o600))
+	phases := []struct {
+		name string
+		set  func(func(*harness))
+	}{
+		{name: "lifecycle", set: func(fn func(*harness)) { runLifecyclePhase = fn }},
+		{name: "performance", set: func(fn func(*harness)) { runPerformancePhase = fn }},
+		{name: "security", set: func(fn func(*harness)) { runSecurityPhase = fn }},
+		{name: "resources", set: func(fn func(*harness)) { runResourcesPhase = fn }},
+		{name: "events", set: func(fn func(*harness)) { runEventsPhase = fn }},
+	}
+	for _, phase := range phases {
+		t.Run(phase.name, func(t *testing.T) {
+			called := false
+			phase.set(func(*harness) { called = true })
+			os.Args = []string{"runner", "-manifest", manifestPath, "-output", t.TempDir(), "-phase", phase.name}
+			flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
+			main()
+			require.True(t, called)
+		})
+	}
+
+	t.Run("unknown phase records a fatal result", func(t *testing.T) {
+		out := t.TempDir()
+		os.Args = []string{"runner", "-manifest", manifestPath, "-output", out, "-phase", "unknown"}
+		flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
+		assert.PanicsWithValue(t, "unknown phase", main)
+		assert.FileExists(t, filepath.Join(out, "unknown.json"))
+	})
 }
 
 func TestHarnessMoreBranches(t *testing.T) {
@@ -858,6 +984,134 @@ func TestJavaPingBadPacketLength(t *testing.T) {
 	_, err = javaPing(host, port)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "bad packet length")
+}
+
+func TestJavaPingReadErrorsAndLongStringLength(t *testing.T) {
+	serve := func(t *testing.T, response []byte) (string, int) {
+		t.Helper()
+		l, err := net.Listen("tcp", "127.0.0.1:0")
+		require.NoError(t, err)
+		t.Cleanup(func() { _ = l.Close() })
+		host, portText, err := net.SplitHostPort(l.Addr().String())
+		require.NoError(t, err)
+		var port int
+		_, err = fmt.Sscanf(portText, "%d", &port)
+		require.NoError(t, err)
+		go func() {
+			conn, err := l.Accept()
+			if err != nil {
+				return
+			}
+			defer conn.Close()
+			buf := make([]byte, 1024)
+			_, _ = conn.Read(buf)
+			if response != nil {
+				_, _ = conn.Write(response)
+			}
+		}()
+		return host, port
+	}
+
+	t.Run("missing frame is a read error", func(t *testing.T) {
+		host, port := serve(t, nil)
+		_, err := javaPing(host, port)
+		require.Error(t, err)
+	})
+
+	t.Run("truncated frame body is a read error", func(t *testing.T) {
+		host, port := serve(t, []byte{4, 0})
+		_, err := javaPing(host, port)
+		require.Error(t, err)
+	})
+
+	t.Run("long JSON length uses continuation varint", func(t *testing.T) {
+		jsonText, err := json.Marshal(map[string]any{"version": map[string]string{"name": strings.Repeat("v", 140)}})
+		require.NoError(t, err)
+		body := append([]byte{0}, varint(int32(len(jsonText)))...)
+		body = append(body, jsonText...)
+		response := append(varint(int32(len(body))), body...)
+		host, port := serve(t, response)
+		version, err := javaPing(host, port)
+		require.NoError(t, err)
+		require.Equal(t, strings.Repeat("v", 140), version)
+	})
+}
+
+func TestBedrockPingRejectsInvalidPacketID(t *testing.T) {
+	pc, err := net.ListenPacket("udp", "127.0.0.1:0")
+	require.NoError(t, err)
+	defer pc.Close()
+	port := pc.LocalAddr().(*net.UDPAddr).Port
+	go func() {
+		buf := make([]byte, 2048)
+		_, addr, err := pc.ReadFrom(buf)
+		if err != nil {
+			return
+		}
+		response := make([]byte, 35)
+		response[0] = 0x01
+		_, _ = pc.WriteTo(response, addr)
+	}()
+	_, err = bedrockPing("127.0.0.1", port)
+	require.EqualError(t, err, "bad RakNet pong")
+}
+
+type pingTestConn struct {
+	readErr  error
+	writeErr error
+}
+
+func (c *pingTestConn) Read([]byte) (int, error)         { return 0, c.readErr }
+func (c *pingTestConn) Write([]byte) (int, error)        { return 0, c.writeErr }
+func (c *pingTestConn) Close() error                     { return nil }
+func (c *pingTestConn) LocalAddr() net.Addr              { return &net.IPAddr{} }
+func (c *pingTestConn) RemoteAddr() net.Addr             { return &net.IPAddr{} }
+func (c *pingTestConn) SetDeadline(time.Time) error      { return nil }
+func (c *pingTestConn) SetReadDeadline(time.Time) error  { return nil }
+func (c *pingTestConn) SetWriteDeadline(time.Time) error { return nil }
+
+func TestPingDialAndSocketErrors(t *testing.T) {
+	t.Run("Java write error", func(t *testing.T) {
+		old := dialJavaPing
+		t.Cleanup(func() { dialJavaPing = old })
+		want := errors.New("write failed")
+		dialJavaPing = func(string, string, time.Duration) (net.Conn, error) {
+			return &pingTestConn{writeErr: want}, nil
+		}
+		_, err := javaPing("example.invalid", 25565)
+		require.ErrorIs(t, err, want)
+	})
+
+	t.Run("Bedrock dial error", func(t *testing.T) {
+		old := dialBedrockPing
+		t.Cleanup(func() { dialBedrockPing = old })
+		want := errors.New("dial failed")
+		dialBedrockPing = func(string, string, time.Duration) (net.Conn, error) { return nil, want }
+		_, err := bedrockPing("example.invalid", 19132)
+		require.ErrorIs(t, err, want)
+	})
+
+	t.Run("Bedrock write error", func(t *testing.T) {
+		old := dialBedrockPing
+		t.Cleanup(func() { dialBedrockPing = old })
+		want := errors.New("write failed")
+		dialBedrockPing = func(string, string, time.Duration) (net.Conn, error) {
+			return &pingTestConn{writeErr: want}, nil
+		}
+		_, err := bedrockPing("example.invalid", 19132)
+		require.ErrorIs(t, err, want)
+	})
+
+	t.Run("Bedrock read error", func(t *testing.T) {
+		old := dialBedrockPing
+		t.Cleanup(func() { dialBedrockPing = old })
+		want := errors.New("read failed")
+		dialBedrockPing = func(string, string, time.Duration) (net.Conn, error) {
+			return &pingTestConn{readErr: want}, nil
+		}
+		_, err := bedrockPing("example.invalid", 19132)
+		require.ErrorIs(t, err, want)
+	})
 }
 
 func TestReadVarRejectsOverlongValues(t *testing.T) {

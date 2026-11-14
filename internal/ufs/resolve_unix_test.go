@@ -180,6 +180,75 @@ func TestUserspaceOpenBeneathOPathFollowsFinalSymlink(t *testing.T) {
 	assert.Equal(t, uint32(unix.S_IFREG), st.Mode&unix.S_IFMT)
 }
 
+func TestUserspaceOpenBeneathSymlinkEdgeCases(t *testing.T) {
+	base, dirfd := layout(t)
+	require.NoError(t, os.Symlink("target", filepath.Join(base, "link")))
+	original := userspaceReadlinkat
+	t.Cleanup(func() { userspaceReadlinkat = original })
+
+	for _, tc := range []struct {
+		name   string
+		result string
+		want   error
+	}{
+		{name: "overlong target", result: strings.Repeat("x", 4096), want: unix.ENAMETOOLONG},
+		{name: "empty target", result: "", want: unix.ENOENT},
+		{name: "absolute target", result: "/outside", want: unix.EXDEV},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			userspaceReadlinkat = func(_ int, _ string, buf []byte) (int, error) {
+				return copy(buf, tc.result), nil
+			}
+			_, err := userspaceOpenBeneath(dirfd, "link/child", unix.O_RDONLY, 0)
+			assert.ErrorIs(t, err, tc.want)
+		})
+	}
+
+	userspaceReadlinkat = original
+	if oPath != 0 {
+		t.Run("O_PATH symlink target error closes the link descriptor", func(t *testing.T) {
+			userspaceReadlinkat = func(_ int, _ string, buf []byte) (int, error) {
+				return copy(buf, "/outside"), nil
+			}
+			_, err := userspaceOpenBeneath(dirfd, "link", oPath, 0)
+			assert.ErrorIs(t, err, unix.EXDEV)
+		})
+		userspaceReadlinkat = original
+		t.Run("readlink race after O_PATH opens the symlink", func(t *testing.T) {
+			userspaceReadlinkat = func(_ int, _ string, _ []byte) (int, error) {
+				return 0, unix.EINVAL
+			}
+			_, err := userspaceOpenBeneath(dirfd, "link", oPath, 0)
+			assert.ErrorIs(t, err, unix.ENOENT)
+		})
+	}
+
+	_, err := userspaceOpenBeneath(-1, ".", unix.O_RDONLY, 0)
+	assert.ErrorIs(t, err, unix.EBADF)
+	openOriginal := userspaceOpenRetry
+	userspaceOpenRetry = func(fd int, name string, flag int, mode uint32) (int, error) {
+		if name == "link" && flag&unix.O_EXCL != 0 {
+			return -1, unix.ELOOP
+		}
+		return openOriginal(fd, name, flag, mode)
+	}
+	defer func() { userspaceOpenRetry = openOriginal }()
+	_, err = userspaceOpenBeneath(dirfd, "link", unix.O_CREAT|unix.O_EXCL|unix.O_WRONLY, 0o600)
+	assert.ErrorIs(t, err, unix.EEXIST)
+}
+
+func TestUserspaceOpenBeneathFollowsTrailingSlashSymlinkTarget(t *testing.T) {
+	base, dirfd := layout(t)
+	require.NoError(t, os.Symlink("a/b/", filepath.Join(base, "directory-link")))
+
+	fd, err := userspaceOpenBeneath(dirfd, "directory-link", unix.O_RDONLY, 0)
+	require.NoError(t, err)
+	defer unix.Close(fd)
+	var st unix.Stat_t
+	require.NoError(t, unix.Fstat(fd, &st))
+	assert.NotZero(t, st.Mode&unix.S_IFDIR)
+}
+
 // Creating a file through a link that points at nothing creates it where the
 // link points, as long as that is inside the base.
 func TestUserspaceOpenBeneathCreatesThroughLinks(t *testing.T) {

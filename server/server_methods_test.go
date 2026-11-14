@@ -1422,6 +1422,11 @@ func TestServerRemainingCoverage(t *testing.T) {
 	cfg.System.CheckPermissionsOnBoot = true
 	config.Set(cfg)
 	assert.NoError(t, s.onBeforeStart())
+	oldChownRoot := chownServerRootForBoot
+	t.Cleanup(func() { chownServerRootForBoot = oldChownRoot })
+	chownServerRootForBoot = func(*filesystem.Filesystem, string) error { return errors.New("chown failed") }
+	assert.ErrorContains(t, s.onBeforeStart(), "failed to chown root server directory")
+	chownServerRootForBoot = oldChownRoot
 	cfg.System.CheckPermissionsOnBoot = false
 	config.Set(cfg)
 

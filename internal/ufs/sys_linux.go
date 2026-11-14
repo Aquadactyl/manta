@@ -15,6 +15,11 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+var (
+	linuxFstat        = unix.Fstat
+	linuxEvalSymlinks = filepath.EvalSymlinks
+)
+
 var ufsOpenat2 = unix.Openat2
 
 const (
@@ -80,7 +85,7 @@ func fchmodNoFollow(dirfd int, name string, mode uint32) error {
 	defer unix.Close(fd)
 
 	var st unix.Stat_t
-	if err := unix.Fstat(fd, &st); err != nil {
+	if err := linuxFstat(fd, &st); err != nil {
 		return err
 	}
 	// Linux does not support changing the mode of a symbolic link.
@@ -106,7 +111,7 @@ func (fs *UnixFS) statResolved(rootfd int, rel, name string, st *unix.Stat_t) er
 	defer unix.Close(fd)
 
 	if err := ignoringEINTR(func() error {
-		return unix.Fstat(fd, st)
+		return linuxFstat(fd, st)
 	}); err != nil {
 		return ensurePathError(err, "stat", name)
 	}
@@ -117,7 +122,7 @@ func (fs *UnixFS) statResolved(rootfd int, rel, name string, st *unix.Stat_t) er
 // protection of openat2, resolved to a path outside of the filesystem.
 func (fs *UnixFS) checkOpenedPath(fd int, name string) error {
 	var finalPath string
-	finalPath, err := filepath.EvalSymlinks(filepath.Join("/proc/self/fd/", strconv.Itoa(fd)))
+	finalPath, err := linuxEvalSymlinks(filepath.Join("/proc/self/fd/", strconv.Itoa(fd)))
 	if err != nil {
 		if !errors.Is(err, ErrNotExist) {
 			return fmt.Errorf("failed to evaluate symlink: %w", convertErrorType(err))

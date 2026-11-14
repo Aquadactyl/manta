@@ -8,6 +8,12 @@ import (
 
 	"github.com/pterodactyl/wings/internal/ufs"
 	"github.com/pterodactyl/wings/parser"
+	"github.com/pterodactyl/wings/server/filesystem"
+)
+
+var (
+	configurationFileTouch = (*filesystem.Filesystem).Touch
+	configurationFileChown = (*filesystem.Filesystem).Chown
 )
 
 // UpdateConfigurationFiles updates all the defined configuration files for
@@ -37,7 +43,7 @@ func (s *Server) UpdateConfigurationFiles() {
 			}
 
 			// Writes to the file count against the server's disk limit.
-			file, err := s.Filesystem().Touch(f.FileName, ufs.O_RDWR|ufs.O_CREATE)
+			file, err := configurationFileTouch(s.Filesystem(), f.FileName, ufs.O_RDWR|ufs.O_CREATE)
 			if err != nil {
 				s.Log().WithField("file_name", f.FileName).WithField("error", err).Error("failed to open file for configuration")
 				return
@@ -49,7 +55,7 @@ func (s *Server) UpdateConfigurationFiles() {
 			if err := file.Close(); err != nil {
 				s.Log().WithField("file_name", f.FileName).WithField("error", err).Error("failed to close configuration file")
 			}
-			if err := s.Filesystem().Chown(f.FileName); err != nil {
+			if err := configurationFileChown(s.Filesystem(), f.FileName); err != nil {
 				s.Log().WithField("file_name", f.FileName).WithField("error", err).Warn("failed to set the owner of configuration file")
 			}
 
