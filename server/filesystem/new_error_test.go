@@ -7,8 +7,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-
-	"github.com/Aquadactyl/manta/internal/ufs"
 )
 
 func TestNewReturnsSetupErrors(t *testing.T) {
@@ -19,11 +17,11 @@ func TestNewReturnsSetupErrors(t *testing.T) {
 		require.Error(t, err)
 	})
 
-	t.Run("UnixFS initialization fails", func(t *testing.T) {
-		oldNewUnixFS := filesystemNewUnixFS
-		t.Cleanup(func() { filesystemNewUnixFS = oldNewUnixFS })
-		want := errors.New("initialize UnixFS")
-		filesystemNewUnixFS = func(string, bool) (*ufs.UnixFS, error) {
+	t.Run("root initialization fails", func(t *testing.T) {
+		oldOpenRoot := filesystemOpenRoot
+		t.Cleanup(func() { filesystemOpenRoot = oldOpenRoot })
+		want := errors.New("initialize root")
+		filesystemOpenRoot = func(string) (*os.Root, error) {
 			return nil, want
 		}
 		_, err := New(t.TempDir(), 0, nil)

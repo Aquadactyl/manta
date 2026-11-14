@@ -7,6 +7,7 @@ import (
 	"io"
 	iofs "io/fs"
 	"math"
+	"os"
 	"path"
 	"path/filepath"
 	"strings"
@@ -15,13 +16,11 @@ import (
 	"emperror.dev/errors"
 	"github.com/klauspost/compress/zip"
 	"github.com/mholt/archives"
-
-	"github.com/Aquadactyl/manta/internal/ufs"
 )
 
 var (
 	identifyTransferArchive = archives.Identify
-	openArchiveFile         = func(fs *ufs.Quota, name string, flag int, mode ufs.FileMode) (ufs.File, error) {
+	openArchiveFile         = func(fs *Filesystem, name string, flag int, mode os.FileMode) (*os.File, error) {
 		return fs.OpenFile(name, flag, mode)
 	}
 	streamArchive = func(a *Archive, ctx context.Context, w io.Writer) error {
@@ -41,7 +40,7 @@ var (
 // All paths are relative to the dir that is passed in as the first argument,
 // and the compressed file will be placed at that location named
 // `archive-{date}.tar.gz`.
-func (fs *Filesystem) CompressFiles(dir string, paths []string) (ufs.FileInfo, error) {
+func (fs *Filesystem) CompressFiles(dir string, paths []string) (os.FileInfo, error) {
 	a := &Archive{Filesystem: fs, BaseDirectory: dir, Files: paths}
 	name := fmt.Sprintf("archive-%s", strings.ReplaceAll(time.Now().Format(time.RFC3339), ":", ""))
 
@@ -49,7 +48,7 @@ func (fs *Filesystem) CompressFiles(dir string, paths []string) (ufs.FileInfo, e
 	// request within the same second.
 	var (
 		d   string
-		f   ufs.File
+		f   *os.File
 		err error
 	)
 	for i := 0; ; i++ {
@@ -57,11 +56,11 @@ func (fs *Filesystem) CompressFiles(dir string, paths []string) (ufs.FileInfo, e
 		if i > 0 {
 			d = path.Join(dir, fmt.Sprintf("%s-%d.tar.gz", name, i))
 		}
-		f, err = openArchiveFile(fs.unixFS, d, ufs.O_WRONLY|ufs.O_CREATE|ufs.O_EXCL, 0o644)
+		f, err = openArchiveFile(fs, d, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
 		if err == nil {
 			break
 		}
-		if !errors.Is(err, ufs.ErrExist) || i >= 100 {
+		if !errors.Is(err, os.ErrExist) || i >= 100 {
 			return nil, err
 		}
 	}
@@ -72,7 +71,7 @@ func (fs *Filesystem) CompressFiles(dir string, paths []string) (ufs.FileInfo, e
 	qf := newQuotaFile(fs, f, 0)
 	if err := streamArchive(a, context.Background(), qf); err != nil {
 		_ = qf.Close()
-		_ = fs.unixFS.Remove(d)
+		_ = fs.Remove(d)
 		return nil, err
 	}
 	st, err := qf.Stat()
@@ -107,7 +106,7 @@ func (fs *Filesystem) SpaceAvailableForDecompression(ctx context.Context, dir st
 		return nil
 	}
 
-	f, err := filesystemOpen(fs.unixFS, filepath.Join(dir, file))
+	f, err := filesystemOpen(fs, filepath.Join(dir, file))
 	if err != nil {
 		return err
 	}
@@ -143,7 +142,7 @@ func (fs *Filesystem) SpaceAvailableForDecompression(ctx context.Context, dir st
 			return newFilesystemError(ErrCodeDiskSpace, nil)
 		}
 		size += n
-		if !fs.unixFS.CanFit(size) {
+		if err := fs.HasSpaceFor(size); err != nil {
 			return newFilesystemError(ErrCodeDiskSpace, nil)
 		}
 		return nil
@@ -183,7 +182,7 @@ func (fs *Filesystem) SpaceAvailableForDecompression(ctx context.Context, dir st
 // zip-slip attack being attempted by validating that the final path is within
 // the server data directory.
 func (fs *Filesystem) DecompressFile(ctx context.Context, dir string, file string) error {
-	f, err := fs.unixFS.Open(filepath.Join(dir, file))
+	f, err := fs.Open(filepath.Join(dir, file))
 	if err != nil {
 		return err
 	}
@@ -295,7 +294,7 @@ func (fs *Filesystem) extractStream(ctx context.Context, opts extractStreamOptio
 			if err := fs.mkdirAll(filepath.Dir(p), 0o755); err != nil {
 				return wrapError(err, opts.FileName)
 			}
-			if err := fs.Symlink(f.LinkTarget, p); err != nil && !errors.Is(err, ufs.ErrExist) {
+			if err := fs.Symlink(f.LinkTarget, p); err != nil && !errors.Is(err, os.ErrExist) {
 				return wrapError(err, opts.FileName)
 			}
 			return nil

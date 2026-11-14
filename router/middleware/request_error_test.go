@@ -13,7 +13,6 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/Aquadactyl/manta/config"
-	"github.com/Aquadactyl/manta/internal/ufs"
 	"github.com/Aquadactyl/manta/remote"
 	"github.com/Aquadactyl/manta/server"
 	"github.com/Aquadactyl/manta/server/filesystem"
@@ -60,11 +59,6 @@ func TestRequestErrorMethodsAndFilesystemErrors(t *testing.T) {
 			err:          errors.New("filesystem: is a directory"),
 			expectedCode: http.StatusBadRequest,
 			expectedMsg:  "Cannot perform that action: file is a directory.",
-		},
-		{
-			err:          ufs.ErrNotRegular,
-			expectedCode: http.StatusBadRequest,
-			expectedMsg:  "Cannot perform that action: not a regular file.",
 		},
 		{
 			err:          errors.New("filesystem: not enough disk space"),

@@ -231,19 +231,20 @@ func TestBackupGenerateFailure(t *testing.T) {
 func TestServerwideIgnoredFilesMoreCases(t *testing.T) {
 	s, _, root := newRestoreTestServer(t)
 
-	// 1. Symlinked .pteroignore fails path resolution
+	// 1. A symlinked .pteroignore is ignored.
 	realIgnore := filepath.Join(root, "target.txt")
 	require.NoError(t, os.WriteFile(realIgnore, []byte("ignored.txt"), 0644))
 	require.NoError(t, os.Symlink("target.txt", filepath.Join(root, ".pteroignore")))
 
-	_, err := s.getServerwideIgnoredFiles()
-	assert.Error(t, err)
+	ignored, err := s.getServerwideIgnoredFiles()
+	require.NoError(t, err)
+	assert.Empty(t, ignored)
 	_ = os.Remove(filepath.Join(root, ".pteroignore"))
 
 	// 2. Too large .pteroignore (> MaxIgnoreLength)
 	largeData := make([]byte, filesystem.MaxIgnoreLength+10)
 	require.NoError(t, os.WriteFile(filepath.Join(root, ".pteroignore"), largeData, 0644))
-	ignored, err := s.getServerwideIgnoredFiles()
+	ignored, err = s.getServerwideIgnoredFiles()
 	require.NoError(t, err)
 	assert.Empty(t, ignored)
 	_ = os.Remove(filepath.Join(root, ".pteroignore"))

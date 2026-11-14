@@ -16,7 +16,7 @@ func TestFailedDiskUsageWalkDoesNotLowerUsage(t *testing.T) {
 	fs, rfs := NewFs()
 	t.Cleanup(func() { _ = os.RemoveAll(rfs.root) })
 
-	fs.unixFS.SetUsage(12345)
+	fs.diskUsed.Store(12345)
 	require.NoError(t, os.RemoveAll(filepath.Join(rfs.root, "server")))
 
 	_, err := fs.DiskUsage(false)
@@ -43,7 +43,7 @@ func TestQueuedDiskUsageLookupUsesRefreshedCache(t *testing.T) {
 
 	// While the caller waits, another walk finishes and refreshes the cache.
 	fs.lastLookupTime.Set(time.Now())
-	fs.unixFS.SetUsage(12345)
+	fs.diskUsed.Store(12345)
 	fs.lookupMu.Unlock()
 
 	require.NoError(t, <-done)

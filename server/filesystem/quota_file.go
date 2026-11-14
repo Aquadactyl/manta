@@ -3,20 +3,19 @@ package filesystem
 import (
 	"io"
 	"math"
+	"os"
 	"sync"
-
-	"github.com/Aquadactyl/manta/internal/ufs"
 )
 
 type quotaFile struct {
-	ufs.File
+	*os.File
 
 	fs   *Filesystem
 	mu   sync.Mutex
 	size int64
 }
 
-func newQuotaFile(fs *Filesystem, file ufs.File, size int64) ufs.File {
+func newQuotaFile(fs *Filesystem, file *os.File, size int64) *quotaFile {
 	return &quotaFile{File: file, fs: fs, size: size}
 }
 

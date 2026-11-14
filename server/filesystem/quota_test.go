@@ -10,8 +10,6 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
-
-	"github.com/Aquadactyl/manta/internal/ufs"
 )
 
 // diskUsage returns the actual size of the files in the server's directory.
@@ -267,7 +265,7 @@ func TestWritesFinishedDuringDiskUsageWalkAreCountedOnce(t *testing.T) {
 	for !fs.lookupInProgress.Load() {
 	}
 	// Write through Touch as SFTP does, which reserves space for every chunk.
-	f, err := fs.Touch(target, ufs.O_RDWR|ufs.O_TRUNC)
+	f, err := fs.Touch(target, os.O_RDWR|os.O_TRUNC)
 	if err != nil {
 		t.Fatal(err)
 	}

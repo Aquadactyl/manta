@@ -121,7 +121,6 @@ func TestDarwinOtherPlatformHelpers(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "macos-test", name)
 
-	assert.ErrorContains(t, probeOpenat2(), "only available on Linux")
 }
 
 func TestDarwinUserCommandHook(t *testing.T) {

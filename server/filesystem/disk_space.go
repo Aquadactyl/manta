@@ -1,16 +1,15 @@
 package filesystem
 
 import (
+	fsys "io/fs"
+	"os"
 	"slices"
 	"sync/atomic"
+	"syscall"
 	"time"
-
-	"golang.org/x/sys/unix"
 
 	"emperror.dev/errors"
 	"github.com/apex/log"
-
-	"github.com/Aquadactyl/manta/internal/ufs"
 )
 
 type SpaceCheckingOpts struct {
@@ -22,11 +21,11 @@ type usageLookupTime struct {
 }
 
 var (
-	walkDirectoryForSize = func(fs *ufs.Quota, dirfd int, name string, fn ufs.WalkDiratFunc) error {
-		return fs.WalkDirat(dirfd, name, fn)
+	walkDirectoryForSize = func(root fsys.FS, name string, fn fsys.WalkDirFunc) error {
+		return fsys.WalkDir(root, name, fn)
 	}
-	lstatForDirectorySize = func(fs *ufs.Quota, dirfd int, name string) (ufs.FileInfo, error) {
-		return fs.Lstatat(dirfd, name)
+	lstatForDirectorySize = func(root *os.Root, name string) (os.FileInfo, error) {
+		return root.Lstat(name)
 	}
 )
 
@@ -46,12 +45,12 @@ func (ult *usageLookupTime) Get() time.Time {
 // MaxDisk returns the maximum amount of disk space that this Filesystem
 // instance is allowed to use.
 func (fs *Filesystem) MaxDisk() int64 {
-	return fs.unixFS.Limit()
+	return fs.diskLimit.Load()
 }
 
 // SetDiskLimit sets the disk space limit for this Filesystem instance.
 func (fs *Filesystem) SetDiskLimit(i int64) {
-	fs.unixFS.SetLimit(i)
+	fs.diskLimit.Store(i)
 }
 
 // HasSpaceErr returns an error when the filesystem has no space available.
@@ -93,7 +92,7 @@ func (fs *Filesystem) HasSpaceAvailable(allowStaleValue bool) bool {
 // function for critical logical checks. It should only be used in areas where the actual disk usage
 // does not need to be perfect, e.g. API responses for server resource usage.
 func (fs *Filesystem) CachedUsage() int64 {
-	return fs.unixFS.Usage()
+	return fs.diskUsed.Load()
 }
 
 // DiskUsage reports total filesystem usage while preferring the cached value to avoid
@@ -131,7 +130,7 @@ func (fs *Filesystem) DiskUsage(allowStaleValue bool) (int64, error) {
 	}
 
 	// Return the currently cached value back to the calling function.
-	return fs.unixFS.Usage(), nil
+	return fs.diskUsed.Load(), nil
 }
 
 // refreshDiskUsage updates the currently used disk space for a server, unless
@@ -141,7 +140,7 @@ func (fs *Filesystem) refreshDiskUsage() (int64, error) {
 	defer fs.lookupMu.Unlock()
 
 	if fs.lastLookupTime.Get().After(time.Now().Add(time.Second * fs.diskCheckInterval * -1)) {
-		return fs.unixFS.Usage(), nil
+		return fs.diskUsed.Load(), nil
 	}
 	return fs.walkDiskUsage()
 }
@@ -192,9 +191,9 @@ func (fs *Filesystem) walkDiskUsage() (int64, error) {
 	if err != nil {
 		// A walk that failed part of the way through has only counted some of the files, so
 		// never lower the usage because of one.
-		usage = max(usage, fs.unixFS.Usage())
+		usage = max(usage, fs.diskUsed.Load())
 	}
-	fs.unixFS.SetUsage(usage)
+	fs.diskUsed.Store(usage)
 	fs.walking = false
 	fs.mu.Unlock()
 
@@ -203,22 +202,18 @@ func (fs *Filesystem) walkDiskUsage() (int64, error) {
 
 // DirectorySize calculates the size of a directory and its descendants.
 func (fs *Filesystem) DirectorySize(root string) (int64, error) {
-	dirfd, name, closeFd, err := fs.unixFS.SafePath(root)
-	defer closeFd()
-	if err != nil {
-		return 0, err
-	}
+	name := normalize(root)
 
 	var hardLinks []uint64
 
 	var size atomic.Int64
-	err = walkDirectoryForSize(fs.unixFS, dirfd, name, func(dirfd int, name, _ string, d ufs.DirEntry, err error) error {
+	err := walkDirectoryForSize(fs.root.FS(), name, func(path string, d fsys.DirEntry, err error) error {
 		// Files can be removed while the walk is running, which is not an error.
-		if errors.Is(err, ufs.ErrNotExist) {
+		if errors.Is(err, os.ErrNotExist) {
 			return nil
 		}
 		if err != nil {
-			return errors.Wrap(err, "walkdirat err")
+			return errors.Wrap(err, "walkdir err")
 		}
 
 		// Only calculate the size of regular files.
@@ -226,15 +221,21 @@ func (fs *Filesystem) DirectorySize(root string) (int64, error) {
 			return nil
 		}
 
-		info, err := lstatForDirectorySize(fs.unixFS, dirfd, name)
-		if errors.Is(err, ufs.ErrNotExist) {
+		info, err := lstatForDirectorySize(fs.root, path)
+		if errors.Is(err, os.ErrNotExist) {
 			return nil
 		}
 		if err != nil {
-			return errors.Wrap(err, "lstatat err")
+			return errors.Wrap(err, "lstat err")
 		}
 
-		var sysFileInfo = info.Sys().(*unix.Stat_t)
+		sysFileInfo, ok := info.Sys().(*syscall.Stat_t)
+		if !ok {
+			// Some filesystems do not expose Unix inode metadata. Count the file
+			// normally when hard-link information is unavailable.
+			size.Add(info.Size())
+			return nil
+		}
 		if sysFileInfo.Nlink > 1 {
 			// Hard links have the same inode number
 			if slices.Contains(hardLinks, sysFileInfo.Ino) {
@@ -251,8 +252,37 @@ func (fs *Filesystem) DirectorySize(root string) (int64, error) {
 	return size.Load(), errors.WrapIf(err, "server/filesystem: directorysize: failed to walk directory")
 }
 
+// containsHardLinks reports whether a path contains a regular file with a
+// second directory entry elsewhere. Deleting one name must not release quota
+// while another name still refers to the same inode.
+func (fs *Filesystem) containsHardLinks(root string) bool {
+	name := normalize(root)
+	if info, err := fs.root.Lstat(name); err == nil && info.Mode().IsRegular() {
+		stat, ok := info.Sys().(*syscall.Stat_t)
+		return ok && stat.Nlink > 1
+	}
+	found := false
+	_ = walkDirectoryForSize(fs.root.FS(), name, func(path string, entry fsys.DirEntry, err error) error {
+		if err != nil || !entry.Type().IsRegular() {
+			return nil
+		}
+		info, err := fs.root.Lstat(path)
+		if err != nil {
+			return nil
+		}
+		if stat, ok := info.Sys().(*syscall.Stat_t); ok && stat.Nlink > 1 {
+			found = true
+			return fsys.SkipAll
+		}
+		return nil
+	})
+	return found
+}
+
 func (fs *Filesystem) HasSpaceFor(size int64) error {
-	if !fs.unixFS.CanFit(size) {
+	limit := fs.diskLimit.Load()
+	usage := fs.diskUsed.Load()
+	if limit == -1 || (limit > 0 && size > limit-usage) {
 		return newFilesystemError(ErrCodeDiskSpace, nil)
 	}
 	return nil
@@ -273,7 +303,7 @@ func (fs *Filesystem) reserveDisk(size int64) error {
 	if err := fs.HasSpaceFor(size); err != nil {
 		return err
 	}
-	fs.unixFS.Add(size)
+	fs.addDisk(size)
 	fs.reserved += size
 	if fs.walking {
 		fs.walkReserved += size
@@ -296,7 +326,7 @@ func (fs *Filesystem) releaseDisk(reserved int64, used int64) {
 	if fs.walking {
 		fs.walkReserved = max(fs.walkReserved-reserved, 0)
 	}
-	fs.unixFS.Add(used - reserved)
+	fs.addDisk(used - reserved)
 }
 
 func (fs *Filesystem) adjustDisk(size int64) int64 {
@@ -307,5 +337,20 @@ func (fs *Filesystem) adjustDisk(size int64) int64 {
 	fs.mu.Lock()
 	defer fs.mu.Unlock()
 
-	return fs.unixFS.Add(size)
+	return fs.addDisk(size)
+}
+
+func (fs *Filesystem) addDisk(delta int64) int64 {
+	for {
+		old := fs.diskUsed.Load()
+		var next int64
+		if delta < 0 && old <= -delta {
+			next = 0
+		} else {
+			next = old + delta
+		}
+		if fs.diskUsed.CompareAndSwap(old, next) {
+			return next
+		}
+	}
 }

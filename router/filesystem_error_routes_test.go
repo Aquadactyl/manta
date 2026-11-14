@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -15,7 +16,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/Aquadactyl/manta/internal/ufs"
 	"github.com/Aquadactyl/manta/router/downloader"
 	"github.com/Aquadactyl/manta/server"
 	"github.com/Aquadactyl/manta/server/filesystem"
@@ -168,7 +168,7 @@ func (i routeFileInfo) IsDir() bool        { return i.mode.IsDir() }
 func (i routeFileInfo) Sys() any           { return nil }
 
 type routeReadFile struct {
-	ufs.File
+	io.ReadCloser
 	err    error
 	closed bool
 }
@@ -186,7 +186,7 @@ func TestGetServerFileContentsSpecialFileAndReadError(t *testing.T) {
 	t.Cleanup(func() { openServerFile = oldOpen })
 
 	pipe := &routeReadFile{}
-	openServerFile = func(*server.Server, string) (ufs.File, filesystem.Stat, error) {
+	openServerFile = func(*server.Server, string) (io.ReadCloser, filesystem.Stat, error) {
 		return pipe, filesystem.Stat{FileInfo: routeFileInfo{mode: os.ModeNamedPipe}}, nil
 	}
 	request := httptest.NewRequest(http.MethodGet, "/api/servers/"+s.ID()+"/files/contents?file=pipe", nil)
@@ -197,7 +197,7 @@ func TestGetServerFileContentsSpecialFileAndReadError(t *testing.T) {
 	assert.True(t, pipe.closed)
 
 	readFailure := &routeReadFile{err: errors.New("read failed")}
-	openServerFile = func(*server.Server, string) (ufs.File, filesystem.Stat, error) {
+	openServerFile = func(*server.Server, string) (io.ReadCloser, filesystem.Stat, error) {
 		return readFailure, filesystem.Stat{
 			FileInfo: routeFileInfo{mode: 0o600},
 			Mimetype: "text/plain",

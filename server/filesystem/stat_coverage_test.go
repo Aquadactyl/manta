@@ -8,20 +8,18 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-
-	"github.com/Aquadactyl/manta/internal/ufs"
 )
 
 type statTestFile struct {
-	ufs.File
-	info    ufs.FileInfo
+	filesystemFile
+	info    os.FileInfo
 	statErr error
 	readErr error
 	seekErr error
 	closed  *bool
 }
 
-func (f statTestFile) Stat() (ufs.FileInfo, error) { return f.info, f.statErr }
+func (f statTestFile) Stat() (os.FileInfo, error) { return f.info, f.statErr }
 func (f statTestFile) Read([]byte) (int, error) {
 	if f.readErr != nil {
 		return 0, f.readErr
@@ -80,7 +78,7 @@ func TestFilesystemFileClosesWhenStatFails(t *testing.T) {
 	closed := false
 	oldOpen := filesystemOpen
 	t.Cleanup(func() { filesystemOpen = oldOpen })
-	filesystemOpen = func(*ufs.Quota, string) (ufs.File, error) {
+	filesystemOpen = func(*Filesystem, string) (filesystemFile, error) {
 		return statTestFile{statErr: want, closed: &closed}, nil
 	}
 
@@ -97,7 +95,7 @@ func TestFilesystemStatClosesWhenFileStatFails(t *testing.T) {
 	closed := false
 	oldOpen := filesystemOpen
 	t.Cleanup(func() { filesystemOpen = oldOpen })
-	filesystemOpen = func(*ufs.Quota, string) (ufs.File, error) {
+	filesystemOpen = func(*Filesystem, string) (filesystemFile, error) {
 		return statTestFile{statErr: want, closed: &closed}, nil
 	}
 

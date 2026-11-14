@@ -8,21 +8,20 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/Aquadactyl/manta/internal/ufs"
 	"github.com/klauspost/compress/zip"
 	"github.com/mholt/archives"
 	"github.com/stretchr/testify/require"
 )
 
 type spaceCheckFile struct {
-	ufs.File
-	info    ufs.FileInfo
+	filesystemFile
+	info    os.FileInfo
 	statErr error
 	seekErr error
 	closed  bool
 }
 
-func (f *spaceCheckFile) Stat() (ufs.FileInfo, error)    { return f.info, f.statErr }
+func (f *spaceCheckFile) Stat() (os.FileInfo, error)     { return f.info, f.statErr }
 func (f *spaceCheckFile) Seek(int64, int) (int64, error) { return 0, f.seekErr }
 func (f *spaceCheckFile) Close() error                   { f.closed = true; return nil }
 func (f *spaceCheckFile) Read([]byte) (int, error)       { return 0, io.EOF }
@@ -53,7 +52,7 @@ func (i archiveSizeInfo) Size() int64 { return i.size }
 func TestSpaceAvailableForDecompressionFileAndIdentifyErrors(t *testing.T) {
 	fs, err := New(t.TempDir(), 1024, nil)
 	require.NoError(t, err)
-	defer fs.UnixFS().Close()
+	defer fs.Close()
 
 	oldOpen, oldIdentify, oldZipReader := filesystemOpen, identifyForSpaceCheck, newZipReaderForSpaceCheck
 	t.Cleanup(func() {
@@ -62,14 +61,14 @@ func TestSpaceAvailableForDecompressionFileAndIdentifyErrors(t *testing.T) {
 
 	t.Run("open error", func(t *testing.T) {
 		want := errors.New("open failed")
-		filesystemOpen = func(*ufs.Quota, string) (ufs.File, error) { return nil, want }
+		filesystemOpen = func(*Filesystem, string) (filesystemFile, error) { return nil, want }
 		require.ErrorIs(t, fs.SpaceAvailableForDecompression(context.Background(), "/", "archive.bin"), want)
 	})
 
 	t.Run("identify error", func(t *testing.T) {
 		want := errors.New("identify failed")
 		f := &spaceCheckFile{}
-		filesystemOpen = func(*ufs.Quota, string) (ufs.File, error) { return f, nil }
+		filesystemOpen = func(*Filesystem, string) (filesystemFile, error) { return f, nil }
 		identifyForSpaceCheck = func(context.Context, string, io.Reader) (archives.Format, io.Reader, error) {
 			return nil, nil, want
 		}
@@ -80,7 +79,7 @@ func TestSpaceAvailableForDecompressionFileAndIdentifyErrors(t *testing.T) {
 	t.Run("seek error", func(t *testing.T) {
 		want := errors.New("seek failed")
 		f := &spaceCheckFile{seekErr: want}
-		filesystemOpen = func(*ufs.Quota, string) (ufs.File, error) { return f, nil }
+		filesystemOpen = func(*Filesystem, string) (filesystemFile, error) { return f, nil }
 		identifyForSpaceCheck = func(context.Context, string, io.Reader) (archives.Format, io.Reader, error) {
 			return nil, nil, archives.NoMatch
 		}
@@ -91,7 +90,7 @@ func TestSpaceAvailableForDecompressionFileAndIdentifyErrors(t *testing.T) {
 	t.Run("stat error", func(t *testing.T) {
 		want := errors.New("stat failed")
 		f := &spaceCheckFile{statErr: want}
-		filesystemOpen = func(*ufs.Quota, string) (ufs.File, error) { return f, nil }
+		filesystemOpen = func(*Filesystem, string) (filesystemFile, error) { return f, nil }
 		identifyForSpaceCheck = func(context.Context, string, io.Reader) (archives.Format, io.Reader, error) {
 			return nil, nil, archives.NoMatch
 		}
@@ -117,12 +116,12 @@ func TestSpaceAvailableForDecompressionFileAndIdentifyErrors(t *testing.T) {
 		maxInt64 := int64(^uint64(0) >> 1)
 		largeFS, err := New(t.TempDir(), maxInt64, nil)
 		require.NoError(t, err)
-		defer largeFS.UnixFS().Close()
+		defer largeFS.Close()
 		archivePath := filepath.Join(largeFS.Path(), "overflow.spacecheck")
 		require.NoError(t, os.WriteFile(archivePath, []byte("archive"), 0o600))
 		info, err := os.Stat(archivePath)
 		require.NoError(t, err)
-		filesystemOpen = func(q *ufs.Quota, name string) (ufs.File, error) { return oldOpen(q, name) }
+		filesystemOpen = func(q *Filesystem, name string) (filesystemFile, error) { return oldOpen(q, name) }
 		identifyForSpaceCheck = func(context.Context, string, io.Reader) (archives.Format, io.Reader, error) {
 			return spaceCheckArchive{entries: []archives.FileInfo{
 				{FileInfo: archiveSizeInfo{FileInfo: info, size: maxInt64}, NameInArchive: "large"},
@@ -140,7 +139,7 @@ func TestSpaceAvailableForDecompressionFileAndIdentifyErrors(t *testing.T) {
 		info, err := os.Stat(path)
 		require.NoError(t, err)
 		f := &spaceCheckFile{info: info}
-		filesystemOpen = func(*ufs.Quota, string) (ufs.File, error) { return f, nil }
+		filesystemOpen = func(*Filesystem, string) (filesystemFile, error) { return f, nil }
 		identifyForSpaceCheck = func(context.Context, string, io.Reader) (archives.Format, io.Reader, error) {
 			return archives.Zip{}, nil, nil
 		}

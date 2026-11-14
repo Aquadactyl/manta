@@ -126,6 +126,9 @@ func (s *Server) CleanupForDestroy() {
 	s.DestroyAllSinks()
 	s.Websockets().CancelAll()
 	s.powerLock.Destroy()
+	if s.fs != nil {
+		_ = s.fs.Close()
+	}
 }
 
 // ID returns the UUID for the server instance.

@@ -2,18 +2,19 @@ package filesystem
 
 import (
 	"errors"
+	fsys "io/fs"
+	"os"
 	"testing"
 
-	"github.com/Aquadactyl/manta/internal/ufs"
 	"github.com/stretchr/testify/require"
 )
 
 type regularSizeDirEntry struct{}
 
-func (regularSizeDirEntry) Name() string                { return "file" }
-func (regularSizeDirEntry) IsDir() bool                 { return false }
-func (regularSizeDirEntry) Type() ufs.FileMode          { return 0 }
-func (regularSizeDirEntry) Info() (ufs.FileInfo, error) { return nil, nil }
+func (regularSizeDirEntry) Name() string               { return "file" }
+func (regularSizeDirEntry) IsDir() bool                { return false }
+func (regularSizeDirEntry) Type() fsys.FileMode        { return 0 }
+func (regularSizeDirEntry) Info() (os.FileInfo, error) { return nil, nil }
 
 func TestDirectorySizeHandlesEntriesRemovedDuringWalk(t *testing.T) {
 	oldWalk, oldLstat := walkDirectoryForSize, lstatForDirectorySize
@@ -30,22 +31,22 @@ func TestDirectorySizeHandlesEntriesRemovedDuringWalk(t *testing.T) {
 		walkFile bool
 		wantErr  error
 	}{
-		{name: "removed while walking", walkErr: ufs.ErrNotExist},
+		{name: "removed while walking", walkErr: os.ErrNotExist},
 		{name: "walk failure", walkErr: walkFailure, wantErr: walkFailure},
-		{name: "removed before stat", walkFile: true, statErr: ufs.ErrNotExist},
+		{name: "removed before stat", walkFile: true, statErr: os.ErrNotExist},
 		{name: "stat failure", walkFile: true, statErr: statFailure, wantErr: statFailure},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			walkDirectoryForSize = func(_ *ufs.Quota, dirfd int, name string, fn ufs.WalkDiratFunc) error {
+			walkDirectoryForSize = func(_ fsys.FS, name string, fn fsys.WalkDirFunc) error {
 				if tc.walkErr != nil {
-					return fn(dirfd, name, ".", regularSizeDirEntry{}, tc.walkErr)
+					return fn(name, nil, tc.walkErr)
 				}
 				if tc.walkFile {
-					return fn(dirfd, "file", "file", regularSizeDirEntry{}, nil)
+					return fn("file", regularSizeDirEntry{}, nil)
 				}
 				return nil
 			}
-			lstatForDirectorySize = func(*ufs.Quota, int, string) (ufs.FileInfo, error) {
+			lstatForDirectorySize = func(*os.Root, string) (os.FileInfo, error) {
 				return nil, tc.statErr
 			}
 			size, err := fs.DirectorySize("/")

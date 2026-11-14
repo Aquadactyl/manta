@@ -9,8 +9,6 @@ import (
 	"time"
 
 	"golang.org/x/sys/unix"
-
-	"github.com/Aquadactyl/manta/internal/ufs"
 )
 
 // File operations return an error for named pipes rather than opening them.
@@ -31,7 +29,7 @@ func TestNamedPipesAreNeverOpened(t *testing.T) {
 			return err
 		}},
 		{"Touch", func(p string) error {
-			f, err := fs.Touch(p, ufs.O_RDWR)
+			f, err := fs.Touch(p, os.O_RDWR)
 			if err == nil {
 				_ = f.Close()
 			}

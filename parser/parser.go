@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
+	"os"
 	"strconv"
 	"strings"
 
@@ -18,8 +19,16 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/Aquadactyl/manta/config"
-	"github.com/Aquadactyl/manta/internal/ufs"
 )
+
+type configFile interface {
+	Name() string
+	Stat() (os.FileInfo, error)
+	Read([]byte) (int, error)
+	Seek(int64, int) (int64, error)
+	Truncate(int64) error
+	Write([]byte) (int, error)
+}
 
 // The file parsing options that are available for a server configuration file.
 const (
@@ -275,7 +284,7 @@ func newTemplatableConfig(c *config.Configuration) templatableConfig {
 
 // Parse parses a given configuration file and updates all the values within
 // as defined in the API response from the Panel.
-func (f *ConfigurationFile) Parse(file ufs.File) error {
+func (f *ConfigurationFile) Parse(file configFile) error {
 	// log.WithField("path", path).WithField("parser", f.Parser.String()).Debug("parsing server configuration file")
 
 	// Refuse to parse files larger than the cap. Every parser below buffers the
@@ -313,7 +322,7 @@ func (f *ConfigurationFile) Parse(file ufs.File) error {
 }
 
 // Parses an xml file.
-func (f *ConfigurationFile) parseXMLFile(file ufs.File) error {
+func (f *ConfigurationFile) parseXMLFile(file configFile) error {
 	doc := etree.NewDocument()
 	if _, err := doc.ReadFrom(io.LimitReader(file, maxConfigFileSize)); err != nil {
 		return err
@@ -388,7 +397,7 @@ func (f *ConfigurationFile) parseXMLFile(file ufs.File) error {
 }
 
 // Parses an ini file.
-func (f *ConfigurationFile) parseIniFile(file ufs.File) error {
+func (f *ConfigurationFile) parseIniFile(file configFile) error {
 	// Wrap the file in a NopCloser so the ini package doesn't close the file.
 	cfg, err := ini.Load(io.NopCloser(io.LimitReader(file, maxConfigFileSize)))
 	if err != nil {
@@ -452,7 +461,7 @@ func (f *ConfigurationFile) parseIniFile(file ufs.File) error {
 // Parses a json file updating any matching key/value pairs. If a match is not found, the
 // value is set regardless in the file. See the commentary in parseYamlFile for more details
 // about what is happening during this process.
-func (f *ConfigurationFile) parseJSONFile(file ufs.File) error {
+func (f *ConfigurationFile) parseJSONFile(file configFile) error {
 	b, err := io.ReadAll(io.LimitReader(file, maxConfigFileSize))
 	if err != nil {
 		return err
@@ -468,7 +477,7 @@ func (f *ConfigurationFile) parseJSONFile(file ufs.File) error {
 
 // Parses a yaml file and updates any matching key/value pairs before persisting
 // it back to the disk.
-func (f *ConfigurationFile) parseYamlFile(file ufs.File) error {
+func (f *ConfigurationFile) parseYamlFile(file configFile) error {
 	b, err := io.ReadAll(io.LimitReader(file, maxConfigFileSize))
 	if err != nil {
 		return err
@@ -506,7 +515,7 @@ func (f *ConfigurationFile) parseYamlFile(file ufs.File) error {
 // Parses a text file using basic find and replace. This is a highly inefficient method of
 // scanning a file and performing a replacement. You should attempt to use anything other
 // than this function where possible.
-func (f *ConfigurationFile) parseTextFile(file ufs.File) error {
+func (f *ConfigurationFile) parseTextFile(file configFile) error {
 	b := bytes.NewBuffer(nil)
 	s := bufio.NewScanner(io.LimitReader(file, maxConfigFileSize))
 	s.Buffer(make([]byte, 0, 64*1024), maxTextScanTokenSize)
@@ -565,7 +574,7 @@ func (f *ConfigurationFile) parseTextFile(file ufs.File) error {
 //
 // @see https://github.com/Aquadactyl/aquadactyl/issues/2308 (original)
 // @see https://github.com/Aquadactyl/aquadactyl/issues/3009 ("bug" introduced as result)
-func (f *ConfigurationFile) parsePropertiesFile(file ufs.File) error {
+func (f *ConfigurationFile) parsePropertiesFile(file configFile) error {
 	b, err := io.ReadAll(io.LimitReader(file, maxConfigFileSize))
 	if err != nil {
 		return err
@@ -636,7 +645,7 @@ type sizeChecker interface {
 
 // rewrite replaces the contents of file with data. The file is left unchanged if
 // data is too large, or would not fit in the disk space the file may use.
-func rewrite(file ufs.File, data []byte) error {
+func rewrite(file configFile, data []byte) error {
 	if len(data) > maxConfigFileSize {
 		return errors.Errorf("parser: refusing to write configuration file %q: result exceeds limit of %d bytes", file.Name(), maxConfigFileSize)
 	}

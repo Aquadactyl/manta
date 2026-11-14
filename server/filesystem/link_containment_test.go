@@ -7,8 +7,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-
-	"github.com/Aquadactyl/manta/internal/ufs"
 )
 
 // Writing through a link to a file outside the root fails and leaves that file
@@ -22,7 +20,7 @@ func TestWriteThroughLinkOutsideRootFails(t *testing.T) {
 	require.NoError(t, os.Symlink(target, filepath.Join(rfs.root, "server", "link")))
 
 	err := fs.Write("link", bytes.NewReader(make([]byte, 200)), 200, 0o644)
-	require.ErrorIs(t, err, ufs.ErrBadPathResolution)
+	require.ErrorContains(t, err, "path escapes from parent")
 
 	content, err := os.ReadFile(target)
 	require.NoError(t, err)

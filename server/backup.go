@@ -41,6 +41,17 @@ func (s *Server) notifyPanelOfBackup(uuid string, ad *backup.ArchiveDetails, suc
 
 // Get all of the ignored files for a server based on its .pteroignore file in the root.
 func (s *Server) getServerwideIgnoredFiles() (string, error) {
+	linkInfo, err := s.Filesystem().Lstat(".pteroignore")
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return "", nil
+		}
+		return "", err
+	}
+	if linkInfo.Mode()&os.ModeSymlink != 0 || linkInfo.Size() > filesystem.MaxIgnoreLength {
+		return "", nil
+	}
+
 	f, st, err := s.Filesystem().File(".pteroignore")
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
@@ -49,8 +60,8 @@ func (s *Server) getServerwideIgnoredFiles() (string, error) {
 		return "", err
 	}
 	defer f.Close()
-	if st.Mode()&os.ModeSymlink != 0 || st.Size() > filesystem.MaxIgnoreLength {
-		// Don't read a symlinked ignore file, or a file larger than the maximum list size.
+	if st.Size() > filesystem.MaxIgnoreLength {
+		// Don't read a file that grew past the maximum list size after the initial stat.
 		return "", nil
 	}
 	b, err := readServerwideIgnoreFile(f)

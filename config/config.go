@@ -13,7 +13,6 @@ import (
 	"regexp"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"text/template"
 	"time"
 
@@ -263,8 +262,6 @@ type SystemConfiguration struct {
 	Backups Backups `yaml:"backups"`
 
 	Transfers Transfers `yaml:"transfers"`
-
-	OpenatMode string `default:"auto" yaml:"openat_mode"`
 }
 
 type CrashDetection struct {
@@ -956,45 +953,6 @@ var (
 		return exec.CommandContext(ctx, name, args...).Output() //nolint:gosec // name is the fixed timedatectl command; no shell is involved
 	}
 )
-
-var (
-	openat2    atomic.Bool
-	openat2Set atomic.Bool
-)
-
-func UseOpenat2() bool {
-	if openat2Set.Load() {
-		return openat2.Load()
-	}
-	defer openat2Set.Store(true)
-
-	c := Get()
-	supported := useOpenat2(c.System.OpenatMode, openat2Supported, probeOpenat2)
-	openat2.Store(supported)
-	return supported
-}
-
-func useOpenat2(mode string, supported bool, probe func() error) bool {
-	switch mode {
-	case "openat2":
-		if !supported {
-			log.Warn("system.openat_mode is set to openat2, but openat2 is not available on this platform, falling back to openat")
-			return false
-		}
-		return true
-	case "openat":
-		return false
-	default:
-		if !supported {
-			return false
-		}
-		if err := probe(); err != nil {
-			log.WithError(err).Warn("error occurred while checking for openat2 support, falling back to openat")
-			return false
-		}
-		return true
-	}
-}
 
 // Expand expands an input string by calling [os.ExpandEnv] to expand all
 // environment variables, then checks if the value is prefixed with `file://`

@@ -11,28 +11,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Aquadactyl/manta/internal/ufs"
 	"github.com/mholt/archives"
 	"github.com/stretchr/testify/require"
 )
-
-type archiveFileErrors struct {
-	ufs.File
-	statErr  error
-	closeErr error
-}
-
-func (f *archiveFileErrors) Stat() (ufs.FileInfo, error) {
-	if f.statErr != nil {
-		return nil, f.statErr
-	}
-	return f.File.Stat()
-}
-
-func (f *archiveFileErrors) Close() error {
-	_ = f.File.Close()
-	return f.closeErr
-}
 
 func TestCompressFilesStreamAndFileErrors(t *testing.T) {
 	t.Run("stream error removes the partial archive", func(t *testing.T) {
@@ -51,23 +32,6 @@ func TestCompressFilesStreamAndFileErrors(t *testing.T) {
 		}
 	})
 
-	t.Run("archive stat error is returned", func(t *testing.T) {
-		fs := newCompressTestFilesystem(t)
-		want := errors.New("stat failed")
-		withArchiveFileErrors(t, want, nil)
-
-		_, err := fs.CompressFiles("/", []string{"source.txt"})
-		require.ErrorIs(t, err, want)
-	})
-
-	t.Run("archive close error is returned", func(t *testing.T) {
-		fs := newCompressTestFilesystem(t)
-		want := errors.New("close failed")
-		withArchiveFileErrors(t, nil, want)
-
-		_, err := fs.CompressFiles("/", []string{"source.txt"})
-		require.ErrorIs(t, err, want)
-	})
 }
 
 type failingTestDecompressor struct{ err error }
@@ -118,8 +82,8 @@ func TestExtractStreamReturnsDecompressorAndEntryErrors(t *testing.T) {
 		limited, err := New(t.TempDir(), 1, nil)
 		require.NoError(t, err)
 		limited.SetTest(true)
-		limited.unixFS.SetUsage(0)
-		t.Cleanup(func() { _ = limited.unixFS.Close() })
+		limited.diskUsed.Store(0)
+		t.Cleanup(func() { _ = limited.Close() })
 		format := callbackTestExtractor{entry: archives.FileInfo{
 			FileInfo: info, NameInArchive: "too-large", Open: func() (iofs.File, error) { return os.Open(source) },
 		}}
@@ -144,19 +108,6 @@ func newCompressTestFilesystem(t *testing.T) *Filesystem {
 	fs, err := New(t.TempDir(), 0, nil)
 	require.NoError(t, err)
 	require.NoError(t, fs.Writefile("source.txt", strings.NewReader("source")))
-	t.Cleanup(func() { _ = fs.unixFS.Close() })
+	t.Cleanup(func() { _ = fs.Close() })
 	return fs
-}
-
-func withArchiveFileErrors(t *testing.T, statErr, closeErr error) {
-	t.Helper()
-	previous := openArchiveFile
-	openArchiveFile = func(fs *ufs.Quota, name string, flag int, mode ufs.FileMode) (ufs.File, error) {
-		file, err := fs.OpenFile(name, flag, mode)
-		if err != nil {
-			return nil, err
-		}
-		return &archiveFileErrors{File: file, statErr: statErr, closeErr: closeErr}, nil
-	}
-	t.Cleanup(func() { openArchiveFile = previous })
 }

@@ -249,7 +249,6 @@ func deleteServer(c *gin.Context) {
 	go func(s *server.Server) {
 		fs := s.Filesystem()
 		p := fs.Path()
-		_ = fs.UnixFS().Close()
 		if err := removeServerFiles(p); err != nil {
 			log.WithFields(log.Fields{"path": p, "error": err}).Warn("failed to remove server files during deletion process")
 		}

@@ -15,7 +15,6 @@ import (
 
 	"github.com/Aquadactyl/manta/config"
 	"github.com/Aquadactyl/manta/internal/database"
-	"github.com/Aquadactyl/manta/internal/ufs"
 	"github.com/Aquadactyl/manta/server"
 	"github.com/Aquadactyl/manta/server/filesystem"
 )
@@ -477,7 +476,7 @@ func TestSftpRemainingCoverage(t *testing.T) {
 
 	oldTouch := handlerTouchFile
 	t.Cleanup(func() { handlerTouchFile = oldTouch })
-	handlerTouchFile = func(*filesystem.Filesystem, string, int) (ufs.File, error) {
+	handlerTouchFile = func(*filesystem.Filesystem, string, int) (io.WriterAt, error) {
 		return nil, os.ErrExist
 	}
 	race := pkgsftp.NewRequest("Write", "/exclusive-race.txt")

@@ -18,7 +18,6 @@ import (
 
 	"github.com/Aquadactyl/manta/config"
 	"github.com/Aquadactyl/manta/internal/progress"
-	"github.com/Aquadactyl/manta/internal/ufs"
 )
 
 const memory = 32 * 1024
@@ -33,9 +32,6 @@ var pool = sync.Pool{
 var (
 	archiveFileInfoHeader = tar.FileInfoHeader
 	trackIgnoreMatch      = func(b *ignoreMatchBudget, d time.Duration) error { return b.track(d) }
-	archiveWalkDirat      = func(fs *ufs.Quota, dirfd int, name string, fn ufs.WalkDiratFunc) error {
-		return fs.WalkDirat(dirfd, name, fn)
-	}
 )
 
 // TarProgress .
@@ -113,7 +109,7 @@ func (a *Archive) Create(ctx context.Context, dst string) error {
 	return a.Stream(ctx, writer)
 }
 
-type walkFunc func(dirfd int, name, relative string, d ufs.DirEntry) error
+type walkFunc func(name, relative string, d os.DirEntry) error
 
 // Stream streams the creation of the archive to the given writer.
 func (a *Archive) Stream(ctx context.Context, w io.Writer) error {
@@ -150,7 +146,7 @@ func (a *Archive) Stream(ctx context.Context, w io.Writer) error {
 		// Time each evaluation and abort if the patterns prove disproportionately
 		// expensive for this server's file tree.
 		budget := newIgnoreMatchBudget(ignorePatternCount(a.Ignore))
-		callback = a.callback(func(_ int, _, relative string, _ ufs.DirEntry) error {
+		callback = a.callback(func(_, relative string, _ os.DirEntry) error {
 			start := time.Now()
 			skip := i.MatchesPath(relative)
 			if err := trackIgnoreMatch(budget, time.Since(start)); err != nil {
@@ -189,17 +185,8 @@ func (a *Archive) Stream(ctx context.Context, w io.Writer) error {
 
 	a.w = NewTarProgress(tw, a.Progress)
 
-	fs := a.Filesystem.unixFS
-
-	// Open the base directory we were provided.
-	dirfd, name, closeFd, err := fs.SafePath(a.BaseDirectory)
-	defer closeFd()
-	if err != nil {
-		return err
-	}
-
-	// Recursively walk the base directory.
-	return archiveWalkDirat(fs, dirfd, name, func(dirfd int, name, relative string, d ufs.DirEntry, err error) error {
+	root := normalize(a.BaseDirectory)
+	return a.Filesystem.WalkDir(root, func(name string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -207,7 +194,11 @@ func (a *Archive) Stream(ctx context.Context, w io.Writer) error {
 		case <-ctx.Done():
 			return ctx.Err()
 		default:
-			return callback(dirfd, name, relative, d)
+			relative := name
+			if root != "." {
+				relative = strings.TrimPrefix(strings.TrimPrefix(name, root), "/")
+			}
+			return callback(name, relative, d)
 		}
 	})
 }
@@ -223,7 +214,7 @@ func (a *Archive) callback(opts ...walkFunc) walkFunc {
 	if a.BaseDirectory != "" {
 		base = filepath.Base(a.BaseDirectory) + "/"
 	}
-	return func(dirfd int, name, relative string, d ufs.DirEntry) error {
+	return func(name, relative string, d fs.DirEntry) error {
 		// Skip directories because we are walking them recursively.
 		if d.IsDir() {
 			return nil
@@ -240,7 +231,7 @@ func (a *Archive) callback(opts ...walkFunc) walkFunc {
 		// Call the additional options passed to this callback function. If any of them return
 		// a non-nil error we will exit immediately.
 		for _, opt := range opts {
-			if err := opt(dirfd, name, relative, d); err != nil {
+			if err := opt(name, relative, d); err != nil {
 				if err == SkipThis {
 					return nil
 				}
@@ -250,7 +241,7 @@ func (a *Archive) callback(opts ...walkFunc) walkFunc {
 
 		// Add the file to the archive, if it is nested in a directory,
 		// the directory will be automatically "created" in the archive.
-		return a.addToArchive(dirfd, name, relative, d)
+		return a.addToArchive(name, relative)
 	}
 }
 
@@ -258,7 +249,7 @@ var SkipThis = errors.New("skip this")
 
 // Pushes only files defined in the Files key to the final archive.
 func (a *Archive) withFilesCallback() walkFunc {
-	return a.callback(func(_ int, _, relative string, _ ufs.DirEntry) error {
+	return a.callback(func(_, relative string, _ fs.DirEntry) error {
 		for _, f := range a.Files {
 			// Allow exact file matches, otherwise check if file is within a parent directory.
 			//
@@ -271,7 +262,7 @@ func (a *Archive) withFilesCallback() walkFunc {
 			// Once we have a match return a nil value here so that the loop stops and the
 			// call to this function will correctly include the file in the archive. If there
 			// are no matches we'll never make it to this line, and the final error returned
-			// will be the ufs.SkipDir error.
+			// will be skipped by the callback.
 			return nil
 		}
 
@@ -280,10 +271,10 @@ func (a *Archive) withFilesCallback() walkFunc {
 }
 
 // Adds a given file path to the final archive being created.
-func (a *Archive) addToArchive(dirfd int, name, relative string, entry ufs.DirEntry) error {
-	s, err := entry.Info()
+func (a *Archive) addToArchive(name, relative string) error {
+	s, err := a.Filesystem.root.Lstat(normalize(name))
 	if err != nil {
-		if errors.Is(err, ufs.ErrNotExist) {
+		if errors.Is(err, os.ErrNotExist) {
 			return nil
 		}
 		return errors.WrapIff(err, "failed executing os.Lstat on '%s'", name)
@@ -302,10 +293,10 @@ func (a *Archive) addToArchive(dirfd int, name, relative string, entry ufs.DirEn
 		// the logs, but we're not going to stop the backup. There are far too many cases of
 		// symlinks causing all sorts of unnecessary pain in this process. Sucks to suck if
 		// it doesn't work.
-		target, err = filesystemReadlinkat(a.Filesystem.unixFS.UnixFS, dirfd, name)
+		target, err = a.Filesystem.root.Readlink(normalize(name))
 		if err != nil {
 			// Ignore the not exist errors specifically, since there is nothing important about that.
-			if !errors.Is(err, ufs.ErrNotExist) {
+			if !errors.Is(err, os.ErrNotExist) {
 				log.WithField("name", name).WithField("readlink_err", err.Error()).Warn("failed reading symlink for target path; skipping...")
 			}
 			return nil
@@ -335,7 +326,7 @@ func (a *Archive) addToArchive(dirfd int, name, relative string, entry ufs.DirEn
 	buf := *bp
 
 	// Open the file.
-	f, err := filesystemOpenFileat(a.Filesystem.unixFS.UnixFS, dirfd, name, ufs.O_RDONLY, 0)
+	f, err := a.Filesystem.root.Open(normalize(name))
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil

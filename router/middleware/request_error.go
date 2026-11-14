@@ -10,7 +10,6 @@ import (
 	"github.com/apex/log"
 	"github.com/gin-gonic/gin"
 
-	"github.com/Aquadactyl/manta/internal/ufs"
 	"github.com/Aquadactyl/manta/server"
 	"github.com/Aquadactyl/manta/server/filesystem"
 	"github.com/Aquadactyl/manta/system"
@@ -121,7 +120,8 @@ func (re *RequestError) asFilesystemError() (int, string) {
 	}
 	if filesystem.IsErrorCode(err, filesystem.ErrNotExist) ||
 		filesystem.IsErrorCode(err, filesystem.ErrCodePathResolution) ||
-		strings.Contains(err.Error(), "resolves to a location outside the server root") {
+		strings.Contains(err.Error(), "resolves to a location outside the server root") ||
+		strings.Contains(err.Error(), "path escapes from parent") {
 		return http.StatusNotFound, "The requested resources was not found on the system."
 	}
 	if filesystem.IsErrorCode(err, filesystem.ErrCodeDenylistFile) || strings.Contains(err.Error(), "filesystem: file access prohibited") {
@@ -129,9 +129,6 @@ func (re *RequestError) asFilesystemError() (int, string) {
 	}
 	if filesystem.IsErrorCode(err, filesystem.ErrCodeIsDirectory) || strings.Contains(err.Error(), "filesystem: is a directory") {
 		return http.StatusBadRequest, "Cannot perform that action: file is a directory."
-	}
-	if errors.Is(err, ufs.ErrNotRegular) {
-		return http.StatusBadRequest, "Cannot perform that action: not a regular file."
 	}
 	if filesystem.IsErrorCode(err, filesystem.ErrCodeDiskSpace) || strings.Contains(err.Error(), "filesystem: not enough disk space") {
 		return http.StatusBadRequest, "There is not enough disk space available to perform that action."

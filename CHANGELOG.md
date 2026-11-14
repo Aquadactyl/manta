@@ -27,7 +27,7 @@ This project follows [Semantic Versioning](http://semver.org) guidelines.
 
 ### Changed
 
-- Split the Linux specific parts of `internal/ufs` into platform files. macOS resolves every path beneath its directory in userspace (`userspaceOpenBeneath`), one component at a time with every directory held open and every link read and checked instead of followed by the kernel, in place of `/proc/self/fd`. It enforces the same rules as `RESOLVE_BENEATH` (no `..`, absolute path or absolute link target leaving the directory, at most 40 links) and has no limit on the length or the case of a path. `openat2` stays Linux only, and `system.openat_mode` has no effect on macOS. The existing filesystem tests also run on this resolver on Linux (`UFS_TEST_USERSPACE_RESOLVE=1`).
+- Replace the custom `internal/ufs` filesystem and Linux `openat2` path resolver with Go's `os.Root`, which keeps operations beneath each server directory and removes the `system.openat_mode` setting. Filesystem operations now use the standard library's rooted APIs on Linux and macOS.
 - Use macOS locations for the default configuration, data, archive, backup, temporary, log and generated passwd directories. Defaults on Linux are unchanged and values set in the configuration file still take priority.
 - Report the macOS version, build number and Darwin kernel version (for example `macOS 15.1 (24B83)`) from `GET /api/system` using `sysctl`, without `/etc/os-release` or `system_profiler`, so the panel can reach the node. The Darwin version from `uname` is used if the product version is unavailable.
 - Detect the system timezone on macOS from `/etc/localtime`.

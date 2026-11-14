@@ -23,7 +23,6 @@ import (
 
 	"github.com/Aquadactyl/manta/config"
 	"github.com/Aquadactyl/manta/internal/progress"
-	"github.com/Aquadactyl/manta/internal/ufs"
 	"github.com/mholt/archives"
 )
 
@@ -74,10 +73,6 @@ func TestFindCopySuffixUsesTimestampAfterExhaustingNames(t *testing.T) {
 	dir := t.TempDir()
 	fs, err := New(dir, 1024*1024, nil)
 	require.NoError(t, err)
-	dirfd, _, closeFd, err := fs.unixFS.SafePath(".")
-	require.NoError(t, err)
-	defer closeFd()
-
 	for i := 0; i <= 50; i++ {
 		name := "file copy.txt"
 		if i > 0 {
@@ -86,11 +81,9 @@ func TestFindCopySuffixUsesTimestampAfterExhaustingNames(t *testing.T) {
 		require.NoError(t, os.WriteFile(filepath.Join(dir, name), nil, 0644))
 	}
 
-	got, err := fs.findCopySuffix(dirfd, "file", ".txt")
+	got, err := fs.findCopySuffix(".", "file", ".txt")
 	require.NoError(t, err)
 	assert.True(t, strings.HasPrefix(got, "filecopy."), got)
-	_, err = fs.findCopySuffix(-1, "file", ".txt")
-	assert.Error(t, err)
 }
 
 func TestFilesystemDiskSpaceChecks(t *testing.T) {
@@ -137,9 +130,6 @@ func TestFilesystemDirectoryOperations(t *testing.T) {
 	require.NoError(t, err)
 	assert.Len(t, stats, 2)
 
-	// UnixFS
-	assert.NotNil(t, fs.UnixFS())
-
 	// Stat & MarshalJSON
 	st, err := fs.Stat("subdir/file1.txt")
 	require.NoError(t, err)
@@ -166,10 +156,8 @@ func TestQuotaFileMethods(t *testing.T) {
 	require.NoError(t, err)
 
 	// Touch returns a quotaFile wrapper
-	w, err := fs.Touch("quota_test.txt", os.O_CREATE|os.O_RDWR)
+	qf, err := fs.Touch("quota_test.txt", os.O_CREATE|os.O_RDWR)
 	require.NoError(t, err)
-	qf, ok := w.(*quotaFile)
-	require.True(t, ok)
 
 	// CheckSize
 	assert.NoError(t, qf.CheckSize(500))
@@ -523,16 +511,12 @@ func TestFilesystemWriteAndCopyEdgeCases(t *testing.T) {
 	fs.SetDiskLimit(1024 * 1024)
 
 	require.NoError(t, fs.Writefile("file.txt", strings.NewReader("content")))
-	dirfd, _, closeFd, err := fs.unixFS.SafePath("file.txt")
-	require.NoError(t, err)
-	defer closeFd()
-
-	name1, err := fs.findCopySuffix(dirfd, "file", ".txt")
+	name1, err := fs.findCopySuffix(".", "file", ".txt")
 	require.NoError(t, err)
 	assert.Equal(t, "file copy.txt", name1)
 
 	require.NoError(t, fs.Writefile("file copy.txt", strings.NewReader("content")))
-	name2, err := fs.findCopySuffix(dirfd, "file", ".txt")
+	name2, err := fs.findCopySuffix(".", "file", ".txt")
 	require.NoError(t, err)
 	assert.Equal(t, "file copy 1.txt", name2)
 
@@ -590,7 +574,7 @@ func TestQuotaFileMoreWriteMethods(t *testing.T) {
 	fs, err := New(dir, 100, []string{})
 	require.NoError(t, err)
 
-	f, err := fs.unixFS.OpenFile("quota_test.txt", ufs.O_RDWR|ufs.O_CREATE, 0644)
+	f, err := fs.root.OpenFile("quota_test.txt", os.O_RDWR|os.O_CREATE, 0644)
 	require.NoError(t, err)
 
 	qf := newQuotaFile(fs, f, 100)
@@ -616,8 +600,8 @@ func TestQuotaFileMoreWriteMethods(t *testing.T) {
 	_, err = qf.WriteAt([]byte("a"), -1)
 	assert.Error(t, err)
 
-	assert.NoError(t, qf.(*quotaFile).CheckSize(50))
-	assert.NoError(t, qf.(*quotaFile).CheckSize(100))
+	assert.NoError(t, qf.CheckSize(50))
+	assert.NoError(t, qf.CheckSize(100))
 
 	require.NoError(t, qf.Close())
 }
@@ -744,7 +728,7 @@ func TestFilesystemChownChtimesAndFile(t *testing.T) {
 }
 
 type mockDirEntry struct {
-	ufs.DirEntry
+	os.DirEntry
 	infoErr error
 	isDir   bool
 }
@@ -764,17 +748,14 @@ func TestArchiveAddToArchiveAndCallbackEdges(t *testing.T) {
 
 	arch := &Archive{Filesystem: fs}
 	// Option returns custom error (line 239)
-	cb := arch.callback(func(int, string, string, ufs.DirEntry) error {
+	cb := arch.callback(func(string, string, os.DirEntry) error {
 		return errors.New("custom error")
 	})
-	assert.NoError(t, cb(0, "dir", "dir", &mockDirEntry{isDir: true}))
-	assert.Error(t, cb(0, "test", "test", &mockDirEntry{isDir: false}))
+	assert.NoError(t, cb("dir", "dir", &mockDirEntry{isDir: true}))
+	assert.Error(t, cb("test", "test", &mockDirEntry{isDir: false}))
 
-	// addToArchive with entry.Info() returning ErrNotExist
-	assert.NoError(t, arch.addToArchive(0, "nonexistent", "nonexistent", &mockDirEntry{infoErr: ufs.ErrNotExist}))
-
-	// addToArchive with entry.Info() returning generic error
-	assert.Error(t, arch.addToArchive(0, "nonexistent", "nonexistent", &mockDirEntry{infoErr: errors.New("lstat error")}))
+	// A file removed since the archive walk began is skipped.
+	assert.NoError(t, arch.addToArchive("nonexistent", "nonexistent"))
 }
 
 type dummyArchiveFormat struct{}
@@ -897,7 +878,7 @@ func TestMoreCompressAndQuotaFileEdges(t *testing.T) {
 	assert.Error(t, fs.SpaceAvailableForDecompression(context.Background(), "/", "corrupted.zip"))
 
 	// qf.Write on closed file fails Seek (quota_file.go:32-34)
-	f, err := fs.unixFS.OpenFile("seek_err.txt", ufs.O_RDWR|ufs.O_CREATE, 0644)
+	f, err := fs.root.OpenFile("seek_err.txt", os.O_RDWR|os.O_CREATE, 0644)
 	require.NoError(t, err)
 	qf := newQuotaFile(fs, f, 0)
 	_ = f.Close()
@@ -911,7 +892,7 @@ func TestMoreCompressAndQuotaFileEdges(t *testing.T) {
 	assert.False(t, fs.isTest)
 
 	// Stat on directory
-	require.NoError(t, fs.unixFS.Mkdir("testdir", 0755))
+	require.NoError(t, fs.root.Mkdir("testdir", 0755))
 	st, err := fs.Stat("testdir")
 	require.NoError(t, err)
 	assert.Equal(t, "inode/directory", st.Mimetype)
@@ -961,7 +942,7 @@ func TestTruncateRootDirectoryReturnsRemoveError(t *testing.T) {
 	fs, _ := NewFs()
 	old := removeFilesystemContents
 	want := errors.New("remove contents failed")
-	removeFilesystemContents = func(*ufs.Quota) error { return want }
+	removeFilesystemContents = func(*Filesystem) error { return want }
 	t.Cleanup(func() { removeFilesystemContents = old })
 	require.ErrorIs(t, fs.TruncateRootDirectory(), want)
 }

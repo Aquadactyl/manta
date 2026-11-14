@@ -19,7 +19,9 @@ import (
 )
 
 var (
-	handlerTouchFile  = (*filesystem.Filesystem).Touch
+	handlerTouchFile = func(fs *filesystem.Filesystem, path string, flags int) (io.WriterAt, error) {
+		return fs.Touch(path, flags)
+	}
 	handlerChownFile  = (*filesystem.Filesystem).Chown
 	handlerDeleteFile = (*filesystem.Filesystem).Delete
 )

@@ -12,19 +12,18 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/Aquadactyl/manta/config"
-	"github.com/Aquadactyl/manta/internal/ufs"
 	"github.com/Aquadactyl/manta/parser"
 	"github.com/Aquadactyl/manta/remote"
 	"github.com/Aquadactyl/manta/server/filesystem"
 )
 
 type closeErrorConfigurationFile struct {
-	ufs.File
+	configurationFile
 	err error
 }
 
 func (f closeErrorConfigurationFile) Close() error {
-	_ = f.File.Close()
+	_ = f.configurationFile.Close()
 	return f.err
 }
 
@@ -111,12 +110,12 @@ func TestConfigurationFilesReportCloseAndChownErrors(t *testing.T) {
 		configurationFileTouch, configurationFileChown = oldTouch, oldChown
 	})
 	closeErr, chownErr := errors.New("close failed"), errors.New("chown failed")
-	configurationFileTouch = func(fs *filesystem.Filesystem, name string, flag int) (ufs.File, error) {
+	configurationFileTouch = func(fs *filesystem.Filesystem, name string, flag int) (configurationFile, error) {
 		f, err := oldTouch(fs, name, flag)
 		if err != nil {
 			return nil, err
 		}
-		return closeErrorConfigurationFile{File: f, err: closeErr}, nil
+		return closeErrorConfigurationFile{configurationFile: f, err: closeErr}, nil
 	}
 	configurationFileChown = func(*filesystem.Filesystem, string) error { return chownErr }
 

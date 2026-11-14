@@ -13,7 +13,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/Aquadactyl/manta/config"
-	"github.com/Aquadactyl/manta/internal/ufs"
 )
 
 func TestReplaceValueTypes(t *testing.T) {
@@ -267,7 +266,7 @@ func TestParserUnmarshalAndWildcard(t *testing.T) {
 }
 
 type mockSizeCheckerFile struct {
-	ufs.File
+	configFile
 	failCheck bool
 }
 
@@ -315,7 +314,7 @@ func TestParserMoreCases(t *testing.T) {
 	assert.Error(t, rewrite(f, tooBig))
 
 	// Mock sizeChecker failure
-	mockFile := &mockSizeCheckerFile{File: f, failCheck: true}
+	mockFile := &mockSizeCheckerFile{configFile: f, failCheck: true}
 	assert.Error(t, rewrite(mockFile, []byte("data")))
 
 	// 4. XML Parsing with attributes and empty doc
@@ -433,7 +432,7 @@ func TestParserErrorPaths(t *testing.T) {
 }
 
 type mockParserFile struct {
-	ufs.File
+	configFile
 	statInfo os.FileInfo
 	statErr  error
 	readErr  error
@@ -445,14 +444,14 @@ type mockParserFile struct {
 }
 
 type parserWriteErrorFile struct {
-	ufs.File
+	configFile
 	err error
 }
 
 func (f *parserWriteErrorFile) Write([]byte) (int, error) { return 0, f.err }
 
 func (m *mockParserFile) Name() string { return "mock.cfg" }
-func (m *mockParserFile) Stat() (ufs.FileInfo, error) {
+func (m *mockParserFile) Stat() (os.FileInfo, error) {
 	if m.statErr != nil {
 		return nil, m.statErr
 	}
@@ -678,7 +677,7 @@ func TestParserRemainingCoverage(t *testing.T) {
 		Match:       "section.key",
 		ReplaceWith: NewReplaceValue([]byte("new"), jsonparser.String),
 	}}}
-	assert.Error(t, cfIniWrite.parseIniFile(&parserWriteErrorFile{File: iniWriteFile, err: errors.New("write failed")}))
+	assert.Error(t, cfIniWrite.parseIniFile(&parserWriteErrorFile{configFile: iniWriteFile, err: errors.New("write failed")}))
 	assert.NoError(t, iniWriteFile.Close())
 }
 

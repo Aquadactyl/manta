@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	fsys "io/fs"
 	"os"
 	"path/filepath"
 	"slices"
@@ -11,6 +12,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"syscall"
 	"time"
 
 	"emperror.dev/errors"
@@ -19,11 +21,13 @@ import (
 	ignore "github.com/sabhiram/go-gitignore"
 
 	"github.com/Aquadactyl/manta/config"
-	"github.com/Aquadactyl/manta/internal/ufs"
 )
 
 type Filesystem struct {
-	unixFS *ufs.Quota
+	root      *os.Root
+	rootPath  string
+	diskLimit atomic.Int64
+	diskUsed  atomic.Int64
 
 	// mu guards changes to the disk usage that must be checked against the
 	// limit, along with the fields tracking reservations below.
@@ -46,31 +50,43 @@ type Filesystem struct {
 	isTest bool
 }
 
-var removeFilesystemContents = func(fs *ufs.Quota) error { return fs.RemoveContents(".") }
+type filesystemFile interface {
+	io.Reader
+	io.ReaderAt
+	io.Seeker
+	io.Closer
+	Stat() (os.FileInfo, error)
+}
+
+var removeFilesystemContents = func(fs *Filesystem) error {
+	entries, err := fs.root.Open(".")
+	if err != nil {
+		return err
+	}
+	defer entries.Close()
+	dirs, err := entries.ReadDir(-1)
+	if err != nil {
+		return err
+	}
+	for _, entry := range dirs {
+		if err := fs.root.RemoveAll(entry.Name()); err != nil {
+			return err
+		}
+	}
+	return nil
+}
 
 var (
-	filesystemNewUnixFS = ufs.NewUnixFS
-	filesystemIsRoot    = func() bool { return os.Geteuid() == 0 }
-	filesystemLchown    = func(fs *ufs.UnixFS, p string, uid, gid int) error {
-		return fs.Lchown(p, uid, gid)
+	filesystemOpenRoot = os.OpenRoot
+	filesystemIsRoot   = func() bool { return os.Geteuid() == 0 }
+	filesystemLchown   = func(root *os.Root, p string, uid, gid int) error {
+		return root.Lchown(normalize(p), uid, gid)
 	}
-	filesystemTouch = func(fs *ufs.Quota, p string, flag int, mode ufs.FileMode) (ufs.File, error) {
-		return fs.Touch(p, flag, mode)
+	filesystemTouch = func(fs *Filesystem, p string, flag int, mode os.FileMode) (*os.File, error) {
+		return fs.root.OpenFile(normalize(p), flag, mode)
 	}
-	filesystemOpen = func(fs *ufs.Quota, p string) (ufs.File, error) {
-		return fs.Open(p)
-	}
-	filesystemLchownat = func(fs *ufs.UnixFS, dirfd int, p string, uid, gid int) error {
-		return fs.Lchownat(dirfd, p, uid, gid)
-	}
-	filesystemReadlinkat = func(fs *ufs.UnixFS, dirfd int, p string) (string, error) {
-		return fs.Readlinkat(dirfd, p)
-	}
-	filesystemOpenFileat = func(fs *ufs.UnixFS, dirfd int, p string, flag int, mode ufs.FileMode) (ufs.File, error) {
-		return fs.OpenFileat(dirfd, p, flag, mode)
-	}
-	filesystemWalkDirat = func(fs *ufs.UnixFS, dirfd int, p string, walk func(int, string, string, ufs.DirEntry, error) error) error {
-		return fs.WalkDirat(dirfd, p, walk)
+	filesystemOpen = func(fs *Filesystem, p string) (filesystemFile, error) {
+		return fs.root.Open(normalize(p))
 	}
 )
 
@@ -79,20 +95,21 @@ func New(root string, size int64, denylist []string) (*Filesystem, error) {
 	if err := os.MkdirAll(root, 0o755); err != nil { //nolint:gosec // mounted as the container's home directory; the parent data directory is 0700
 		return nil, err
 	}
-	unixFS, err := filesystemNewUnixFS(root, config.UseOpenat2())
+	openedRoot, err := filesystemOpenRoot(root)
 	if err != nil {
 		return nil, err
 	}
-	quota := ufs.NewQuota(unixFS, size)
-
-	return &Filesystem{
-		unixFS: quota,
+	fs := &Filesystem{
+		root:     openedRoot,
+		rootPath: root,
 
 		diskCheckInterval: time.Duration(config.Get().System.DiskCheckInterval),
 		lastLookupTime:    &usageLookupTime{},
 		denylist:          ignore.CompileIgnoreLines(denylist...),
 		isTest:            flag.Lookup("test.v") != nil,
-	}, nil
+	}
+	fs.diskLimit.Store(size)
+	return fs, nil
 }
 
 // SetTest sets the test mode flag for this Filesystem instance.
@@ -102,25 +119,83 @@ func (fs *Filesystem) SetTest(b bool) {
 
 // Path returns the root path for the Filesystem instance.
 func (fs *Filesystem) Path() string {
-	return fs.unixFS.BasePath()
+	return fs.rootPath
+}
+
+// Close releases the root directory handle.
+func (fs *Filesystem) Close() error { return fs.root.Close() }
+
+func normalize(p string) string {
+	// Treat an absolute-looking user path as relative to the root, but strip
+	// its separator before cleaning so leading `..` components remain visible
+	// to os.Root and are rejected instead of being clamped to the root.
+	clean := filepath.Clean(strings.TrimLeft(p, string(filepath.Separator)))
+	if clean == "" {
+		return "."
+	}
+	return clean
+}
+
+func (fs *Filesystem) Open(p string) (*os.File, error) {
+	return fs.root.Open(normalize(p))
+}
+
+func (fs *Filesystem) OpenFile(p string, flag int, mode os.FileMode) (*os.File, error) {
+	return fs.root.OpenFile(normalize(p), flag, mode)
+}
+
+func (fs *Filesystem) Lstat(p string) (os.FileInfo, error) {
+	return fs.root.Lstat(normalize(p))
+}
+
+func (fs *Filesystem) Readlink(p string) (string, error) {
+	return fs.root.Readlink(normalize(p))
+}
+
+func (fs *Filesystem) Remove(p string) error { return fs.root.Remove(normalize(p)) }
+
+func (fs *Filesystem) RemoveAll(p string) error {
+	return fs.root.RemoveAll(normalize(p))
+}
+
+func (fs *Filesystem) MkdirAll(p string, mode os.FileMode) error {
+	return fs.root.MkdirAll(normalize(p), mode)
+}
+
+func (fs *Filesystem) ReadDir(p string) ([]os.DirEntry, error) {
+	f, err := fs.root.Open(normalize(p))
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	return f.ReadDir(-1)
 }
 
 // ReadDir reads directory entries.
-func (fs *Filesystem) ReadDir(path string) ([]ufs.DirEntry, error) {
-	return fs.unixFS.ReadDir(path)
-}
-
 // ReadDirStat is like ReadDir except that it returns FileInfo for each entry
 // instead of just a DirEntry.
-func (fs *Filesystem) ReadDirStat(path string) ([]ufs.FileInfo, error) {
-	return ufs.ReadDirMap(fs.unixFS.UnixFS, path, func(e ufs.DirEntry) (ufs.FileInfo, error) {
-		return e.Info()
-	})
+func (fs *Filesystem) ReadDirStat(path string) ([]os.FileInfo, error) {
+	entries, err := fs.ReadDir(path)
+	if err != nil {
+		return nil, err
+	}
+	infos := make([]os.FileInfo, 0, len(entries))
+	for _, entry := range entries {
+		info, err := fs.root.Lstat(filepath.Join(normalize(path), entry.Name()))
+		if err != nil {
+			return nil, err
+		}
+		infos = append(infos, info)
+	}
+	return infos, nil
 }
 
 // File returns a reader for a file instance as well as the stat information.
-func (fs *Filesystem) File(p string) (ufs.File, Stat, error) {
-	f, err := filesystemOpen(fs.unixFS, p)
+func (fs *Filesystem) File(p string) (interface {
+	io.ReadCloser
+	io.ReaderAt
+}, Stat, error) {
+	f, err := filesystemOpen(fs, p)
 	if err != nil {
 		return nil, Stat{}, err
 	}
@@ -132,14 +207,10 @@ func (fs *Filesystem) File(p string) (ufs.File, Stat, error) {
 	return f, st, nil
 }
 
-func (fs *Filesystem) UnixFS() *ufs.UnixFS {
-	return fs.unixFS.UnixFS
-}
-
 // Touch acts by creating the given file and path on the disk if it is not present
 // already. If  it is present, the file is opened using the defaults which will truncate
 // the contents. The opened file is then returned to the caller.
-func (fs *Filesystem) Touch(p string, flag int) (ufs.File, error) {
+func (fs *Filesystem) Touch(p string, flag int) (*quotaFile, error) {
 	file, currentSize, err := fs.openForWrite(p, flag, 0o644)
 	if err != nil {
 		return nil, err
@@ -152,8 +223,11 @@ func (fs *Filesystem) Touch(p string, flag int) (ufs.File, error) {
 // from the opened file rather than from the path, since the path can be changed,
 // for example to a symlink, between being checked and being opened. If flag
 // includes O_TRUNC the file is truncated after its size is read.
-func (fs *Filesystem) openForWrite(p string, flag int, mode ufs.FileMode) (ufs.File, int64, error) {
-	file, err := filesystemTouch(fs.unixFS, p, flag&^ufs.O_TRUNC, mode)
+func (fs *Filesystem) openForWrite(p string, flag int, mode os.FileMode) (*os.File, int64, error) {
+	if err := fs.mkdirAll(filepath.Dir(normalize(p)), 0o755); err != nil {
+		return nil, 0, err
+	}
+	file, err := filesystemTouch(fs, p, flag&^os.O_TRUNC|os.O_CREATE, mode)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -166,7 +240,7 @@ func (fs *Filesystem) openForWrite(p string, flag int, mode ufs.FileMode) (ufs.F
 	if st.Mode().IsRegular() {
 		size = st.Size()
 	}
-	if flag&ufs.O_TRUNC != 0 {
+	if flag&os.O_TRUNC != 0 {
 		if err := file.Truncate(0); err != nil {
 			_ = file.Close()
 			return nil, 0, err
@@ -177,7 +251,7 @@ func (fs *Filesystem) openForWrite(p string, flag int, mode ufs.FileMode) (ufs.F
 
 // checkNotDirectory returns an error if p is a directory.
 func (fs *Filesystem) checkNotDirectory(p string) error {
-	if st, err := fs.unixFS.Lstat(p); err == nil && st.IsDir() {
+	if st, err := fs.Lstat(p); err == nil && st.IsDir() {
 		return errors.WithStack(&Error{code: ErrCodeIsDirectory, path: p, resolved: p})
 	}
 	return nil
@@ -196,7 +270,7 @@ func (fs *Filesystem) Writefile(p string, r io.Reader) error {
 	// Touch the file and return the handle to it at this point. This will
 	// create or truncate the file, and create any necessary parent directories
 	// if they are missing.
-	file, currentSize, err := fs.openForWrite(p, ufs.O_RDWR|ufs.O_TRUNC, 0o644)
+	file, currentSize, err := fs.openForWrite(p, os.O_RDWR|os.O_TRUNC, 0o644)
 	if err != nil {
 		return fmt.Errorf("error touching file: %w", err)
 	}
@@ -207,7 +281,7 @@ func (fs *Filesystem) Writefile(p string, r io.Reader) error {
 	n, err := io.Copy(file, r)
 
 	// Adjust the disk usage to account for the old size and the new size of the file.
-	fs.unixFS.Add(n - currentSize)
+	fs.addDisk(n - currentSize)
 
 	if err := fs.chownFile(p); err != nil {
 		return fmt.Errorf("error chowning file: %w", err)
@@ -216,7 +290,7 @@ func (fs *Filesystem) Writefile(p string, r io.Reader) error {
 	return err
 }
 
-func (fs *Filesystem) Write(p string, r io.Reader, newSize int64, mode ufs.FileMode) error {
+func (fs *Filesystem) Write(p string, r io.Reader, newSize int64, mode os.FileMode) error {
 	if err := fs.checkNotDirectory(p); err != nil {
 		return err
 	}
@@ -229,12 +303,12 @@ func (fs *Filesystem) Write(p string, r io.Reader, newSize int64, mode ufs.FileM
 		return err
 	}
 
-	_, statErr := fs.unixFS.Lstat(p)
+	_, statErr := fs.Lstat(p)
 	existed := statErr == nil
 
 	// Open the file before reserving space, so that the size being replaced is the
 	// size of the file that is written to.
-	file, currentSize, err := fs.openForWrite(p, ufs.O_RDWR, mode)
+	file, currentSize, err := fs.openForWrite(p, os.O_RDWR, mode)
 	if err != nil {
 		return err
 	}
@@ -246,7 +320,7 @@ func (fs *Filesystem) Write(p string, r io.Reader, newSize int64, mode ufs.FileM
 	// to determine the amount of new data we're writing (or amount we're removing if smaller).
 	if err := fs.reserveDisk(newSize - currentSize); err != nil {
 		if !existed {
-			_ = fs.unixFS.Remove(p)
+			_ = fs.Remove(p)
 		}
 		return err
 	}
@@ -292,7 +366,7 @@ func (fs *Filesystem) WriteFrom(p string, r io.Reader) (int64, error) {
 		return 0, err
 	}
 
-	file, err := fs.Touch(p, ufs.O_RDWR|ufs.O_TRUNC)
+	file, err := fs.Touch(p, os.O_RDWR|os.O_TRUNC)
 	if err != nil {
 		return 0, err
 	}
@@ -304,7 +378,7 @@ func (fs *Filesystem) WriteFrom(p string, r io.Reader) (int64, error) {
 		err = fs.chownFile(p)
 	}
 	if err != nil {
-		_ = fs.unixFS.Remove(p)
+		_ = fs.Remove(p)
 		return n, err
 	}
 	return n, nil
@@ -317,11 +391,20 @@ func (fs *Filesystem) CreateDirectory(name string, p string) error {
 }
 
 func (fs *Filesystem) Rename(oldpath, newpath string) error {
-	return fs.unixFS.Rename(oldpath, newpath)
+	oldpath, newpath = normalize(oldpath), normalize(newpath)
+	if _, err := fs.root.Lstat(newpath); err == nil {
+		return os.ErrExist
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	if err := fs.root.MkdirAll(filepath.Dir(newpath), 0o755); err != nil {
+		return err
+	}
+	return fs.root.Rename(oldpath, newpath)
 }
 
 func (fs *Filesystem) Symlink(oldpath, newpath string) error {
-	return fs.unixFS.Symlink(oldpath, newpath)
+	return fs.root.Symlink(oldpath, normalize(newpath))
 }
 
 func (fs *Filesystem) chownFile(name string) error {
@@ -331,15 +414,19 @@ func (fs *Filesystem) chownFile(name string) error {
 
 	uid := config.Get().System.User.UID
 	gid := config.Get().System.User.GID
-	return filesystemLchown(fs.unixFS.UnixFS, name, uid, gid)
+	return filesystemLchown(fs.root, name, uid, gid)
 }
 
 // mkdirAll creates the directory p along with any missing parents, chowning
 // every directory it creates to the server user so they are not left owned by
 // the user Wings runs as.
-func (fs *Filesystem) mkdirAll(p string, mode ufs.FileMode) error {
-	created, err := fs.unixFS.MkdirAll(p, mode)
+func (fs *Filesystem) mkdirAll(p string, mode os.FileMode) error {
+	p = normalize(p)
+	created, err := fs.missingDirectories(p)
 	if err != nil {
+		return err
+	}
+	if err := fs.root.MkdirAll(p, mode); err != nil {
 		return err
 	}
 	for _, dir := range created {
@@ -348,6 +435,25 @@ func (fs *Filesystem) mkdirAll(p string, mode ufs.FileMode) error {
 		}
 	}
 	return nil
+}
+
+func (fs *Filesystem) missingDirectories(p string) ([]string, error) {
+	var missing []string
+	for current := p; current != "." && current != string(filepath.Separator); current = filepath.Dir(current) {
+		info, err := fs.root.Stat(current)
+		if err == nil {
+			if !info.IsDir() {
+				return nil, syscall.ENOTDIR
+			}
+			break
+		}
+		if !errors.Is(err, os.ErrNotExist) {
+			return nil, err
+		}
+		missing = append(missing, current)
+	}
+	slices.Reverse(missing)
+	return missing, nil
 }
 
 // Chown recursively iterates over a file or directory and sets the permissions on all of the
@@ -362,33 +468,24 @@ func (fs *Filesystem) Chown(p string) error {
 	uid := config.Get().System.User.UID
 	gid := config.Get().System.User.GID
 
-	dirfd, name, closeFd, err := fs.unixFS.SafePath(p)
-	defer closeFd()
-	if err != nil {
-		return err
-	}
-
-	// Start by just chowning the initial path that we received.
-	if err := filesystemLchownat(fs.unixFS.UnixFS, dirfd, name, uid, gid); err != nil {
+	p = normalize(p)
+	if err := filesystemLchown(fs.root, p, uid, gid); err != nil {
 		return errors.Wrap(err, "server/filesystem: chown: failed to chown path")
 	}
 
 	// If this is not a directory we can now return from the function, there is nothing
 	// left that we need to do.
-	if st, err := fs.unixFS.Lstatat(dirfd, name); err != nil || !st.IsDir() {
+	if st, err := fs.root.Lstat(p); err != nil || !st.IsDir() {
 		return nil
 	}
-
-	// This walker is probably some of the most efficient code in Wings. It has
-	// an internally re-used buffer for listing directory entries and doesn't
-	// need to check if every individual path it touches is safe as the code
-	// doesn't traverse symlinks, is immune to symlink timing attacks, and
-	// gives us a dirfd and file name to make a direct syscall with.
-	if err := filesystemWalkDirat(fs.unixFS.UnixFS, dirfd, name, func(dirfd int, name, _ string, info ufs.DirEntry, err error) error {
+	if err := fs.WalkDir(p, func(name string, info os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
-		if err := filesystemLchownat(fs.unixFS.UnixFS, dirfd, name, uid, gid); err != nil {
+		if name == p {
+			return nil
+		}
+		if err := filesystemLchown(fs.root, name, uid, gid); err != nil {
 			return err
 		}
 		return nil
@@ -398,8 +495,8 @@ func (fs *Filesystem) Chown(p string) error {
 	return nil
 }
 
-func (fs *Filesystem) Chmod(path string, mode ufs.FileMode) error {
-	return fs.unixFS.Chmod(path, mode)
+func (fs *Filesystem) Chmod(path string, mode os.FileMode) error {
+	return fs.root.Chmod(normalize(path), mode)
 }
 
 // Begin looping up to 50 times to try and create a unique copy file name. This will take
@@ -410,7 +507,7 @@ func (fs *Filesystem) Chmod(path string, mode ufs.FileMode) error {
 // Could probably make this more efficient by checking if there are any files matching the copy
 // pattern, and trying to find the highest number and then incrementing it by one rather than
 // looping endlessly.
-func (fs *Filesystem) findCopySuffix(dirfd int, name, extension string) (string, error) {
+func (fs *Filesystem) findCopySuffix(dir, name, extension string) (string, error) {
 	var i int
 	suffix := " copy"
 
@@ -422,8 +519,8 @@ func (fs *Filesystem) findCopySuffix(dirfd int, name, extension string) (string,
 		n := name + suffix + extension
 		// If we stat the file and it does not exist that means we're good to create the copy. If it
 		// does exist, we'll just continue to the next loop and try again.
-		if _, err := fs.unixFS.Lstatat(dirfd, n); err != nil {
-			if !errors.Is(err, ufs.ErrNotExist) {
+		if _, err := fs.root.Lstat(filepath.Join(dir, n)); err != nil {
+			if !errors.Is(err, os.ErrNotExist) {
 				return "", err
 			}
 			break
@@ -440,12 +537,8 @@ func (fs *Filesystem) findCopySuffix(dirfd int, name, extension string) (string,
 // Copy copies a given file to the same location and appends a suffix to the
 // file to indicate that it has been copied.
 func (fs *Filesystem) Copy(p string) error {
-	dirfd, name, closeFd, err := fs.unixFS.SafePath(p)
-	defer closeFd()
-	if err != nil {
-		return err
-	}
-	source, err := filesystemOpenFileat(fs.unixFS.UnixFS, dirfd, name, ufs.O_RDONLY, 0)
+	p = normalize(p)
+	source, err := filesystemOpen(fs, p)
 	if err != nil {
 		return err
 	}
@@ -457,7 +550,7 @@ func (fs *Filesystem) Copy(p string) error {
 	if info.IsDir() || !info.Mode().IsRegular() {
 		// If this is a directory or not a regular file, just throw a not-exist error
 		// since anything calling this function should understand what that means.
-		return ufs.ErrNotExist
+		return os.ErrNotExist
 	}
 	currentSize := info.Size()
 
@@ -470,7 +563,8 @@ func (fs *Filesystem) Copy(p string) error {
 	var used int64
 	defer func() { fs.releaseDisk(currentSize, used) }()
 
-	base := info.Name()
+	dir := filepath.Dir(p)
+	base := filepath.Base(p)
 	extension := filepath.Ext(base)
 	baseName := strings.TrimSuffix(base, extension)
 
@@ -486,17 +580,17 @@ func (fs *Filesystem) Copy(p string) error {
 	// at the same time.
 	var (
 		newName string
-		dst     ufs.File
+		dst     *os.File
 	)
 	for i := 0; ; i++ {
-		newName, err = fs.findCopySuffix(dirfd, baseName, extension)
+		newName, err = fs.findCopySuffix(dir, baseName, extension)
 		if err == nil {
-			dst, err = filesystemOpenFileat(fs.unixFS.UnixFS, dirfd, newName, ufs.O_WRONLY|ufs.O_CREATE|ufs.O_EXCL, info.Mode())
+			dst, err = fs.root.OpenFile(filepath.Join(dir, newName), os.O_WRONLY|os.O_CREATE|os.O_EXCL, info.Mode())
 		}
 		if err == nil {
 			break
 		}
-		if !errors.Is(err, ufs.ErrExist) || i >= 10 {
+		if !errors.Is(err, os.ErrExist) || i >= 10 {
 			return err
 		}
 	}
@@ -508,7 +602,7 @@ func (fs *Filesystem) Copy(p string) error {
 	used = n
 
 	if !fs.isTest && filesystemIsRoot() {
-		if err := filesystemLchownat(fs.unixFS.UnixFS, dirfd, newName, config.Get().System.User.UID, config.Get().System.User.GID); err != nil {
+		if err := filesystemLchown(fs.root, filepath.Join(dir, newName), config.Get().System.User.UID, config.Get().System.User.GID); err != nil {
 			return err
 		}
 	}
@@ -520,15 +614,15 @@ func (fs *Filesystem) Copy(p string) error {
 // data directory and resets the used disk space to zero. The directory itself
 // is kept, since it is mounted into the server's container.
 func (fs *Filesystem) TruncateRootDirectory() error {
-	if err := removeFilesystemContents(fs.unixFS); err != nil {
+	if err := removeFilesystemContents(fs); err != nil {
 		return err
 	}
 	fs.mu.Lock()
 	defer fs.mu.Unlock()
 	// Space reserved by writes that are still in progress remains in use.
-	fs.unixFS.SetUsage(fs.reserved)
+	fs.diskUsed.Store(fs.reserved)
 	if fs.isTest {
-		fs.unixFS.SetLimit(0)
+		fs.diskLimit.Store(0)
 	}
 	return nil
 }
@@ -536,44 +630,42 @@ func (fs *Filesystem) TruncateRootDirectory() error {
 // Delete removes a file or folder from the system. Prevents the user from
 // accidentally (or maliciously) removing their root server data directory.
 func (fs *Filesystem) Delete(p string) error {
-	return fs.unixFS.RemoveAll(p)
+	p = normalize(p)
+	hasHardLinks := fs.containsHardLinks(p)
+	size, _ := fs.DirectorySize(p)
+	if err := fs.root.RemoveAll(p); err != nil {
+		return err
+	}
+	if hasHardLinks {
+		_, err := fs.updateCachedDiskUsage()
+		return err
+	}
+	fs.addDisk(-size)
+	return nil
 }
 
-//type fileOpener struct {
-//	fs   *Filesystem
-//	busy uint
-//}
-//
-//// Attempts to open a given file up to "attempts" number of times, using a backoff. If the file
-//// cannot be opened because of a "text file busy" error, we will attempt until the number of attempts
-//// has been exhaused, at which point we will abort with an error.
-//func (fo *fileOpener) open(path string, flags int, perm ufs.FileMode) (ufs.File, error) {
-//	for {
-//		f, err := fo.fs.unixFS.OpenFile(path, flags, perm)
-//
-//		// If there is an error because the text file is busy, go ahead and sleep for a few
-//		// hundred milliseconds and then try again up to three times before just returning the
-//		// error back to the caller.
-//		//
-//		// Based on code from: https://github.com/golang/go/issues/22220#issuecomment-336458122
-//		if err != nil && fo.busy < 3 && strings.Contains(err.Error(), "text file busy") {
-//			time.Sleep(100 * time.Millisecond << fo.busy)
-//			fo.busy++
-//			continue
-//		}
-//
-//		return f, err
+//	type fileOpener struct {
+//		fs   *Filesystem
+//		busy uint
 //	}
-//}
-
+//
+// // Attempts to open a given file up to "attempts" number of times, using a backoff. If the file
+// // cannot be opened because of a "text file busy" error, we will attempt until the number of attempts
+// // has been exhaused, at which point we will abort with an error.
 // ListDirectory lists the contents of a given directory and returns stat
 // information about each file and folder within it.
 func (fs *Filesystem) ListDirectory(p string) ([]Stat, error) {
-	// Read entries from the path on the filesystem, using the mapped reader, so
-	// we can map the DirEntry slice into a Stat slice with mimetype information.
-	out, err := ufs.ReadDirMap(fs.unixFS.UnixFS, p, statDirectoryEntry)
+	entries, err := fs.ReadDir(p)
 	if err != nil {
 		return nil, err
+	}
+	out := make([]Stat, 0, len(entries))
+	for _, entry := range entries {
+		st, err := statDirectoryEntry(rootedDirEntry{fs: fs, parent: normalize(p), entry: entry})
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, st)
 	}
 
 	// Put folders first and sort each group alphabetically in one pass.
@@ -600,29 +692,24 @@ func (fs *Filesystem) SearchFiles(directory, query string, limit int) ([]string,
 		return nil, nil
 	}
 
-	dirfd, name, closeFd, err := fs.unixFS.SafePath(directory)
-	defer closeFd()
-	if err != nil {
-		return nil, err
-	}
-
+	root := normalize(directory)
 	paths := make([]string, 0, limit)
-	err = filesystemWalkDirat(fs.unixFS.UnixFS, dirfd, name, func(_ int, _ string, relative string, entry ufs.DirEntry, walkErr error) error {
+	err := fsys.WalkDir(fs.root.FS(), root, func(walked string, entry fsys.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
 		}
-		if entry == nil || !entry.Type().IsRegular() || relative == "." {
+		if entry == nil || !entry.Type().IsRegular() || walked == root {
 			return nil
 		}
+		relative := strings.TrimPrefix(strings.TrimPrefix(walked, root), "/")
 		match := relative
-		if directory != "." && directory != "/" {
-			base := strings.Trim(directory, "/")
-			match = filepath.ToSlash(filepath.Join(base, relative))
+		if root != "." {
+			match = filepath.ToSlash(filepath.Join(root, relative))
 		}
 		if strings.Contains(strings.ToLower(match), query) {
 			paths = append(paths, match)
 			if len(paths) >= limit {
-				return ufs.SkipAll
+				return fsys.SkipAll
 			}
 		}
 		return nil
@@ -633,7 +720,27 @@ func (fs *Filesystem) SearchFiles(directory, query string, limit int) ([]string,
 	return paths, nil
 }
 
-func statDirectoryEntry(e ufs.DirEntry) (Stat, error) {
+type rootedDirEntry struct {
+	fs     *Filesystem
+	parent string
+	entry  os.DirEntry
+}
+
+func (e rootedDirEntry) Name() string      { return e.entry.Name() }
+func (e rootedDirEntry) IsDir() bool       { return e.entry.IsDir() }
+func (e rootedDirEntry) Type() os.FileMode { return e.entry.Type() }
+func (e rootedDirEntry) Info() (os.FileInfo, error) {
+	return e.fs.root.Lstat(filepath.Join(e.parent, e.entry.Name()))
+}
+func (e rootedDirEntry) Open() (*os.File, error) {
+	return e.fs.root.Open(filepath.Join(e.parent, e.entry.Name()))
+}
+
+func (fs *Filesystem) WalkDir(root string, fn func(string, fsys.DirEntry, error) error) error {
+	return fsys.WalkDir(fs.root.FS(), normalize(root), fn)
+}
+
+func statDirectoryEntry(e rootedDirEntry) (Stat, error) {
 	info, err := e.Info()
 	if err != nil {
 		return Stat{}, err
@@ -647,18 +754,13 @@ func statDirectoryEntry(e ufs.DirEntry) (Stat, error) {
 	}
 	var m *mimetype.MIME
 	if e.Type().IsRegular() {
-		if eO, ok := e.(interface {
-			Open() (ufs.File, error)
-		}); ok {
-			f, err := eO.Open()
-			if err != nil {
-				return Stat{}, err
-			}
+		f, err := e.Open()
+		if err == nil {
 			m, err = detectFileMIME(f)
-			if err != nil {
-				log.Error(err.Error())
-			}
 			_ = f.Close()
+		}
+		if err != nil {
+			log.Error(err.Error())
 		}
 	}
 
@@ -673,5 +775,5 @@ func (fs *Filesystem) Chtimes(path string, atime, mtime time.Time) error {
 	if fs.isTest {
 		return nil
 	}
-	return fs.unixFS.Chtimes(path, atime, mtime)
+	return fs.root.Chtimes(normalize(path), atime, mtime)
 }

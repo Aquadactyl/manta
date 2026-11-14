@@ -5,8 +5,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-
-	"github.com/Aquadactyl/manta/internal/ufs"
 )
 
 // openForWrite returns the size the opened file had, and only truncates it when
@@ -18,7 +16,7 @@ func TestOpenForWriteReturnsOpenedFileSize(t *testing.T) {
 	const size = 4096
 	require.NoError(t, rfs.CreateServerFile("a.bin", randomData(t, size)))
 
-	f, got, err := fs.openForWrite("a.bin", ufs.O_RDWR, 0o644)
+	f, got, err := fs.openForWrite("a.bin", os.O_RDWR, 0o644)
 	require.NoError(t, err)
 	require.Equal(t, int64(size), got)
 	st, err := f.Stat()
@@ -26,7 +24,7 @@ func TestOpenForWriteReturnsOpenedFileSize(t *testing.T) {
 	require.Equal(t, int64(size), st.Size())
 	require.NoError(t, f.Close())
 
-	f, got, err = fs.openForWrite("a.bin", ufs.O_RDWR|ufs.O_TRUNC, 0o644)
+	f, got, err = fs.openForWrite("a.bin", os.O_RDWR|os.O_TRUNC, 0o644)
 	require.NoError(t, err)
 	require.Equal(t, int64(size), got)
 	st, err = f.Stat()
@@ -34,7 +32,7 @@ func TestOpenForWriteReturnsOpenedFileSize(t *testing.T) {
 	require.Zero(t, st.Size())
 	require.NoError(t, f.Close())
 
-	f, got, err = fs.openForWrite("new.bin", ufs.O_RDWR, 0o644)
+	f, got, err = fs.openForWrite("new.bin", os.O_RDWR, 0o644)
 	require.NoError(t, err)
 	require.Zero(t, got)
 	require.NoError(t, f.Close())

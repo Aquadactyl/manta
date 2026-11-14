@@ -1,20 +1,32 @@
 package server
 
 import (
+	"os"
 	"runtime"
 
 	"emperror.dev/errors"
 	"github.com/gammazero/workerpool"
 
-	"github.com/Aquadactyl/manta/internal/ufs"
 	"github.com/Aquadactyl/manta/parser"
 	"github.com/Aquadactyl/manta/server/filesystem"
 )
 
 var (
-	configurationFileTouch = (*filesystem.Filesystem).Touch
+	configurationFileTouch = func(fs *filesystem.Filesystem, name string, flags int) (configurationFile, error) {
+		return fs.Touch(name, flags)
+	}
 	configurationFileChown = (*filesystem.Filesystem).Chown
 )
+
+type configurationFile interface {
+	Name() string
+	Stat() (os.FileInfo, error)
+	Read([]byte) (int, error)
+	Seek(int64, int) (int64, error)
+	Truncate(int64) error
+	Write([]byte) (int, error)
+	Close() error
+}
 
 // UpdateConfigurationFiles updates all the defined configuration files for
 // a server automatically to ensure that they always use the specified values.
@@ -36,14 +48,14 @@ func (s *Server) UpdateConfigurationFiles() {
 			}()
 
 			if f.Parser == parser.File {
-				if _, err := s.Filesystem().UnixFS().Stat(f.FileName); errors.Is(err, ufs.ErrNotExist) {
+				if _, err := s.Filesystem().Stat(f.FileName); errors.Is(err, os.ErrNotExist) {
 					s.Log().WithField("file_name", f.FileName).Debug("skipping text configuration file that does not exist yet")
 					return
 				}
 			}
 
 			// Writes to the file count against the server's disk limit.
-			file, err := configurationFileTouch(s.Filesystem(), f.FileName, ufs.O_RDWR|ufs.O_CREATE)
+			file, err := configurationFileTouch(s.Filesystem(), f.FileName, os.O_RDWR|os.O_CREATE)
 			if err != nil {
 				s.Log().WithField("file_name", f.FileName).WithField("error", err).Error("failed to open file for configuration")
 				return

@@ -60,7 +60,7 @@ func TestTransferClosesResponseOnEveryExit(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			fsys, err := filesystem.New(t.TempDir(), 0, nil)
 			require.NoError(t, err)
-			t.Cleanup(func() { require.NoError(t, fsys.UnixFS().Close()) })
+			t.Cleanup(func() { require.NoError(t, fsys.Close()) })
 			tr := newManagerTestTransfer(t, "response-lifetime")
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()

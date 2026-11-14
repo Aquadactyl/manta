@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 
 	"emperror.dev/errors"
 	"github.com/apex/log"
@@ -19,7 +20,6 @@ import (
 
 	"github.com/Aquadactyl/manta/config"
 	"github.com/Aquadactyl/manta/internal/models"
-	"github.com/Aquadactyl/manta/internal/ufs"
 	"github.com/Aquadactyl/manta/router/downloader"
 	"github.com/Aquadactyl/manta/router/middleware"
 	"github.com/Aquadactyl/manta/router/tokens"
@@ -32,7 +32,7 @@ import (
 // behavior. A reusable buffer avoids 4 KiB read/write cycles for large files.
 var fileReadBuffers = sync.Pool{New: func() any { return new([64 << 10]byte) }}
 
-var openServerFile = func(s *server.Server, p string) (ufs.File, filesystem.Stat, error) {
+var openServerFile = func(s *server.Server, p string) (io.ReadCloser, filesystem.Stat, error) {
 	return s.Filesystem().File(p)
 }
 
@@ -472,7 +472,7 @@ func postServerCreateDirectory(c *gin.Context) {
 	}
 
 	if err := s.Filesystem().CreateDirectory(data.Name, data.Path); err != nil {
-		if errors.Is(err, ufs.ErrNotDirectory) {
+		if errors.Is(err, syscall.ENOTDIR) {
 			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
 				"error": "Part of the path being created is not a directory (ENOTDIR).",
 			})

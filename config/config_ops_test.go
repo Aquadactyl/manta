@@ -1,7 +1,6 @@
 package config
 
 import (
-	"errors"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -210,9 +209,6 @@ func TestConfigureSystemDirectoriesAndTimezone(t *testing.T) {
 	_, err = Expand("file:///nonexistent/path/file.txt")
 	assert.Error(t, err)
 
-	// UseOpenat2
-	openat2Set.Store(false)
-	_ = UseOpenat2()
 }
 
 func TestConfigMoreOperations(t *testing.T) {
@@ -313,14 +309,13 @@ func TestConfigMoreOperations(t *testing.T) {
 	Set(cfg)
 	assert.Error(t, ConfigureTimezone())
 
-	// 10. getSystemName and UseOpenat2
+	// 10. getSystemName
 	name, _ := getSystemName()
 	if runtime.GOOS != "darwin" {
 		// macOS has no /etc/os-release, and does not need the name, as it never
 		// creates a user.
 		assert.NotEmpty(t, name)
 	}
-	_ = UseOpenat2()
 
 	// 11. StatesPath and LogRotation
 	assert.Equal(t, filepath.Join(cfg.System.RootDirectory, "states.json"), cfg.System.GetStatesPath())
@@ -334,26 +329,6 @@ func TestConfigMoreOperations(t *testing.T) {
 	assert.FileExists(t, filepath.Join(logrotateDir, "wings"))
 	// Second run returns nil when file already exists
 	assert.NoError(t, EnableLogRotation())
-
-	// 12. UseOpenat2 modes
-	openat2Set.Store(false)
-	cfg.System.OpenatMode = "openat2"
-	Set(cfg)
-	if openat2Supported {
-		assert.True(t, UseOpenat2())
-	} else {
-		assert.False(t, UseOpenat2())
-	}
-
-	openat2Set.Store(false)
-	cfg.System.OpenatMode = "openat"
-	Set(cfg)
-	assert.False(t, UseOpenat2())
-
-	openat2Set.Store(false)
-	cfg.System.OpenatMode = ""
-	Set(cfg)
-	_ = UseOpenat2()
 
 	// 13. parseDockerRegistryReference edge cases
 	dom, _, ok := parseDockerRegistryReference("")
@@ -718,77 +693,4 @@ func TestConfigRemainingBranches(t *testing.T) {
 	assert.True(t, ok)
 	assert.Equal(t, "docker.io", dom)
 	assert.Equal(t, "library/v2", pth)
-}
-
-func TestUseOpenat2Modes(t *testing.T) {
-	// Work on a copy, and do not rely on another test having set the global
-	// configuration, which it has not when this one is run on its own.
-	mu.RLock()
-	orig := _config
-	mu.RUnlock()
-	c := &Configuration{}
-	if orig != nil {
-		cp := *orig
-		c = &cp
-	}
-	defer func() {
-		if orig != nil {
-			Set(orig)
-		}
-		openat2Set.Store(false)
-	}()
-
-	// mode: openat2, which only platforms that have it can honor
-	c.System.OpenatMode = "openat2"
-	Set(c)
-	openat2Set.Store(false)
-	assert.Equal(t, openat2Supported, UseOpenat2())
-	assert.Equal(t, openat2Supported, UseOpenat2()) // cached
-
-	// mode: openat
-	c.System.OpenatMode = "openat"
-	Set(c)
-	openat2Set.Store(false)
-	assert.False(t, UseOpenat2())
-	assert.False(t, UseOpenat2()) // cached
-
-	// mode: default
-	c.System.OpenatMode = ""
-	Set(c)
-	openat2Set.Store(false)
-	got := UseOpenat2()
-	if !openat2Supported {
-		// The kernel is only probed on Linux, which may be too old for it.
-		assert.False(t, got)
-	}
-}
-
-func TestUseOpenat2DecisionsForAllPlatformOutcomes(t *testing.T) {
-	probeErr := errors.New("openat2 probe failed")
-	tests := []struct {
-		name       string
-		mode       string
-		supported  bool
-		probeErr   error
-		want       bool
-		wantProbes int
-	}{
-		{name: "explicit openat2 supported", mode: "openat2", supported: true, want: true},
-		{name: "explicit openat2 unsupported", mode: "openat2", supported: false, want: false},
-		{name: "explicit openat", mode: "openat", supported: true, want: false},
-		{name: "default unsupported", supported: false, want: false},
-		{name: "default probe fails", supported: true, probeErr: probeErr, want: false, wantProbes: 1},
-		{name: "default probe succeeds", supported: true, want: true, wantProbes: 1},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			probes := 0
-			got := useOpenat2(tt.mode, tt.supported, func() error {
-				probes++
-				return tt.probeErr
-			})
-			assert.Equal(t, tt.want, got)
-			assert.Equal(t, tt.wantProbes, probes)
-		})
-	}
 }

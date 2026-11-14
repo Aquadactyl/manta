@@ -3,16 +3,15 @@ package filesystem
 import (
 	"encoding/json"
 	"io"
+	"os"
 	"strconv"
 	"time"
 
 	"github.com/gabriel-vasile/mimetype"
-
-	"github.com/Aquadactyl/manta/internal/ufs"
 )
 
 type Stat struct {
-	ufs.FileInfo
+	os.FileInfo
 	Mimetype string
 }
 
@@ -40,11 +39,11 @@ func (s *Stat) ToAPIResponse() StatResponse {
 		Modified: s.ModTime().Format(time.RFC3339),
 		Mode:     s.Mode().String(),
 		// Using `&ModePerm` on the file's mode will cause the mode to only have the permission values, and nothing else.
-		ModeBits:  strconv.FormatUint(uint64(s.Mode()&ufs.ModePerm), 8),
+		ModeBits:  strconv.FormatUint(uint64(s.Mode()&os.ModePerm), 8),
 		Size:      s.Size(),
 		Directory: s.IsDir(),
 		File:      !s.IsDir(),
-		Symlink:   s.Mode().Type()&ufs.ModeSymlink != 0,
+		Symlink:   s.Mode()&os.ModeSymlink != 0,
 		Mime:      s.Mimetype,
 	}
 }
@@ -53,7 +52,7 @@ func (s *Stat) MarshalJSON() ([]byte, error) {
 	return json.Marshal(s.ToAPIResponse())
 }
 
-func statFromFile(f ufs.File) (Stat, error) {
+func statFromFile(f filesystemFile) (Stat, error) {
 	s, err := f.Stat()
 	if err != nil {
 		return Stat{}, err
@@ -81,7 +80,7 @@ func statFromFile(f ufs.File) (Stat, error) {
 // Stat stats a file or folder and returns the base stat object from go along
 // with the MIME data that can be used for editing files.
 func (fs *Filesystem) Stat(p string) (Stat, error) {
-	f, err := filesystemOpen(fs.unixFS, p)
+	f, err := filesystemOpen(fs, p)
 	if err != nil {
 		return Stat{}, err
 	}

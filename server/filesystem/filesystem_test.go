@@ -8,12 +8,11 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"unicode/utf8"
 
 	. "github.com/franela/goblin"
-
-	"github.com/Aquadactyl/manta/internal/ufs"
 
 	"github.com/Aquadactyl/manta/config"
 )
@@ -52,7 +51,7 @@ type rootFs struct {
 	root string
 }
 
-func getFileContent(file ufs.File) string {
+func getFileContent(file interface{ Read([]byte) (int, error) }) string {
 	var w bytes.Buffer
 	if _, err := bufio.NewReader(file).WriteTo(&w); err != nil {
 		panic(err)
@@ -116,7 +115,7 @@ func TestFilesystem_Touch(t *testing.T) {
 		g.It("enforces disk limits while writing to the returned handle", func() {
 			fs.SetDiskLimit(10)
 
-			f, err := fs.Touch("quota.txt", ufs.O_RDWR|ufs.O_TRUNC)
+			f, err := fs.Touch("quota.txt", os.O_RDWR|os.O_TRUNC)
 			g.Assert(err).IsNil()
 			defer f.Close()
 
@@ -135,7 +134,7 @@ func TestFilesystem_Touch(t *testing.T) {
 		g.It("enforces disk limits while sequentially writing to the returned handle", func() {
 			fs.SetDiskLimit(10)
 
-			f, err := fs.Touch("quota.txt", ufs.O_RDWR|ufs.O_TRUNC)
+			f, err := fs.Touch("quota.txt", os.O_RDWR|os.O_TRUNC)
 			g.Assert(err).IsNil()
 			defer f.Close()
 
@@ -156,7 +155,7 @@ func TestFilesystem_Touch(t *testing.T) {
 			g.Assert(err).IsNil()
 			g.Assert(fs.CachedUsage()).Equal(int64(10))
 
-			f, err := fs.Touch("quota.txt", ufs.O_RDWR|ufs.O_TRUNC)
+			f, err := fs.Touch("quota.txt", os.O_RDWR|os.O_TRUNC)
 			g.Assert(err).IsNil()
 
 			n, err := f.WriteAt([]byte("1234"), 0)
@@ -171,9 +170,9 @@ func TestFilesystem_Touch(t *testing.T) {
 		g.It("does not reset disk usage after a failed huge-offset write", func() {
 			const usage = int64(5 * 1024 * 1024)
 			fs.SetDiskLimit(10 * 1024 * 1024)
-			fs.unixFS.SetUsage(usage)
+			fs.diskUsed.Store(usage)
 
-			f, err := fs.Touch("quota.txt", ufs.O_RDWR|ufs.O_TRUNC)
+			f, err := fs.Touch("quota.txt", os.O_RDWR|os.O_TRUNC)
 			g.Assert(err).IsNil()
 
 			n, err := f.WriteAt([]byte("x"), math.MaxInt64)
@@ -244,7 +243,7 @@ func TestFilesystem_Writefile(t *testing.T) {
 
 			err := fs.Write("/some/../foo/../../test.txt", r, r.Size(), 0o644)
 			g.Assert(err).IsNotNil()
-			g.Assert(errors.Is(err, ufs.ErrBadPathResolution)).IsTrue("err is not ErrBadPathResolution")
+			g.Assert(strings.Contains(err.Error(), "path escapes from parent")).IsTrue("path did not remain rooted")
 		})
 
 		g.It("cannot write a file that exceeds the disk limits", func() {
@@ -263,7 +262,7 @@ func TestFilesystem_Writefile(t *testing.T) {
 
 		g.It("cannot write a file whose claimed size overflows the quota check", func() {
 			fs.SetDiskLimit(1024)
-			fs.unixFS.SetUsage(1)
+			fs.diskUsed.Store(1)
 
 			r := bytes.NewReader([]byte("small body"))
 			err := fs.Write("overflow.txt", r, math.MaxInt64, 0o644)
@@ -324,7 +323,7 @@ func TestFilesystem_CreateDirectory(t *testing.T) {
 		g.It("should not allow the creation of directories outside the root", func() {
 			err := fs.CreateDirectory("test", "e/../../something")
 			g.Assert(err).IsNotNil()
-			g.Assert(errors.Is(err, ufs.ErrBadPathResolution)).IsTrue("err is not ErrBadPathResolution")
+			g.Assert(strings.Contains(err.Error(), "path escapes from parent")).IsTrue("path did not remain rooted")
 		})
 
 		g.It("should not increment the disk usage", func() {
@@ -356,25 +355,25 @@ func TestFilesystem_Rename(t *testing.T) {
 
 			err = fs.Rename("source.txt", "target.txt")
 			g.Assert(err).IsNotNil()
-			g.Assert(errors.Is(err, ufs.ErrExist)).IsTrue("err is not ErrExist")
+			g.Assert(errors.Is(err, os.ErrExist)).IsTrue("err is not ErrExist")
 		})
 
 		g.It("returns an error if the final destination is the root directory", func() {
 			err := fs.Rename("source.txt", "/")
 			g.Assert(err).IsNotNil()
-			g.Assert(errors.Is(err, ufs.ErrBadPathResolution)).IsTrue("err is not ErrBadPathResolution")
+			g.Assert(strings.Contains(err.Error(), "path escapes from parent")).IsTrue("path did not remain rooted")
 		})
 
 		g.It("returns an error if the source destination is the root directory", func() {
 			err := fs.Rename("/", "target.txt")
 			g.Assert(err).IsNotNil()
-			g.Assert(errors.Is(err, ufs.ErrBadPathResolution)).IsTrue("err is not ErrBadPathResolution")
+			g.Assert(strings.Contains(err.Error(), "path escapes from parent")).IsTrue("path did not remain rooted")
 		})
 
 		g.It("does not allow renaming to a location outside the root", func() {
 			err := fs.Rename("source.txt", "../target.txt")
 			g.Assert(err).IsNotNil()
-			g.Assert(errors.Is(err, ufs.ErrBadPathResolution)).IsTrue("err is not ErrBadPathResolution")
+			g.Assert(strings.Contains(err.Error(), "path escapes from parent")).IsTrue("path did not remain rooted")
 		})
 
 		g.It("does not allow renaming from a location outside the root", func() {
@@ -383,7 +382,7 @@ func TestFilesystem_Rename(t *testing.T) {
 
 			err = fs.Rename("/../ext-source.txt", "target.txt")
 			g.Assert(err).IsNotNil()
-			g.Assert(errors.Is(err, ufs.ErrBadPathResolution)).IsTrue("err is not ErrBadPathResolution")
+			g.Assert(strings.Contains(err.Error(), "path escapes from parent")).IsTrue("path did not remain rooted")
 		})
 
 		g.It("allows a file to be renamed", func() {
@@ -392,7 +391,7 @@ func TestFilesystem_Rename(t *testing.T) {
 
 			_, err = rfs.StatServerFile("source.txt")
 			g.Assert(err).IsNotNil()
-			g.Assert(errors.Is(err, ufs.ErrNotExist)).IsTrue("err is not ErrNotExist")
+			g.Assert(errors.Is(err, os.ErrNotExist)).IsTrue("err is not ErrNotExist")
 
 			st, err := rfs.StatServerFile("target.txt")
 			g.Assert(err).IsNil()
@@ -409,7 +408,7 @@ func TestFilesystem_Rename(t *testing.T) {
 
 			_, err = rfs.StatServerFile("source_dir")
 			g.Assert(err).IsNotNil()
-			g.Assert(errors.Is(err, ufs.ErrNotExist)).IsTrue("err is not ErrNotExist")
+			g.Assert(errors.Is(err, os.ErrNotExist)).IsTrue("err is not ErrNotExist")
 
 			st, err := rfs.StatServerFile("target_dir")
 			g.Assert(err).IsNil()
@@ -419,7 +418,7 @@ func TestFilesystem_Rename(t *testing.T) {
 		g.It("returns an error if the source does not exist", func() {
 			err := fs.Rename("missing.txt", "target.txt")
 			g.Assert(err).IsNotNil()
-			g.Assert(errors.Is(err, ufs.ErrNotExist)).IsTrue("err is not ErrNotExist")
+			g.Assert(errors.Is(err, os.ErrNotExist)).IsTrue("err is not ErrNotExist")
 		})
 
 		g.It("creates directories if they are missing", func() {
@@ -447,13 +446,13 @@ func TestFilesystem_Copy(t *testing.T) {
 				panic(err)
 			}
 
-			fs.unixFS.SetUsage(int64(utf8.RuneCountInString("test content")))
+			fs.diskUsed.Store(int64(utf8.RuneCountInString("test content")))
 		})
 
 		g.It("should return an error if the source does not exist", func() {
 			err := fs.Copy("foo.txt")
 			g.Assert(err).IsNotNil()
-			g.Assert(errors.Is(err, ufs.ErrNotExist)).IsTrue("err is not ErrNotExist")
+			g.Assert(errors.Is(err, os.ErrNotExist)).IsTrue("err is not ErrNotExist")
 		})
 
 		g.It("should return an error if the source is outside the root", func() {
@@ -462,7 +461,7 @@ func TestFilesystem_Copy(t *testing.T) {
 
 			err = fs.Copy("../ext-source.txt")
 			g.Assert(err).IsNotNil()
-			g.Assert(errors.Is(err, ufs.ErrBadPathResolution)).IsTrue("err is not ErrBadPathResolution")
+			g.Assert(strings.Contains(err.Error(), "path escapes from parent")).IsTrue("path did not remain rooted")
 		})
 
 		g.It("should return an error if the source directory is outside the root", func() {
@@ -474,11 +473,11 @@ func TestFilesystem_Copy(t *testing.T) {
 
 			err = fs.Copy("../nested/in/dir/ext-source.txt")
 			g.Assert(err).IsNotNil()
-			g.Assert(errors.Is(err, ufs.ErrBadPathResolution)).IsTrue("err is not ErrBadPathResolution")
+			g.Assert(strings.Contains(err.Error(), "path escapes from parent")).IsTrue("path did not remain rooted")
 
 			err = fs.Copy("nested/in/../../../nested/in/dir/ext-source.txt")
 			g.Assert(err).IsNotNil()
-			g.Assert(errors.Is(err, ufs.ErrBadPathResolution)).IsTrue("err is not ErrBadPathResolution")
+			g.Assert(strings.Contains(err.Error(), "path escapes from parent")).IsTrue("path did not remain rooted")
 		})
 
 		g.It("should return an error if the source is a directory", func() {
@@ -487,7 +486,7 @@ func TestFilesystem_Copy(t *testing.T) {
 
 			err = fs.Copy("dir")
 			g.Assert(err).IsNotNil()
-			g.Assert(errors.Is(err, ufs.ErrNotExist)).IsTrue("err is not ErrNotExist")
+			g.Assert(errors.Is(err, os.ErrNotExist)).IsTrue("err is not ErrNotExist")
 		})
 
 		g.It("should return an error if there is not space to copy the file", func() {
@@ -559,7 +558,7 @@ func TestFilesystem_Delete(t *testing.T) {
 				panic(err)
 			}
 
-			fs.unixFS.SetUsage(int64(utf8.RuneCountInString("test content")))
+			fs.diskUsed.Store(int64(utf8.RuneCountInString("test content")))
 		})
 
 		g.It("does not delete files outside the root directory", func() {
@@ -568,13 +567,12 @@ func TestFilesystem_Delete(t *testing.T) {
 
 			err = fs.Delete("../ext-source.txt")
 			g.Assert(err).IsNotNil()
-			g.Assert(errors.Is(err, ufs.ErrBadPathResolution)).IsTrue("err is not ErrBadPathResolution")
+			g.Assert(strings.Contains(err.Error(), "path escapes from parent")).IsTrue("path did not remain rooted")
 		})
 
 		g.It("does not allow the deletion of the root directory", func() {
 			err := fs.Delete("/")
 			g.Assert(err).IsNotNil()
-			g.Assert(errors.Is(err, ufs.ErrBadPathResolution)).IsTrue("err is not ErrBadPathResolution")
 		})
 
 		g.It("does not return an error if the target does not exist", func() {
@@ -592,7 +590,7 @@ func TestFilesystem_Delete(t *testing.T) {
 
 			_, err = rfs.StatServerFile("source.txt")
 			g.Assert(err).IsNotNil()
-			g.Assert(errors.Is(err, ufs.ErrNotExist)).IsTrue("err is not ErrNotExist")
+			g.Assert(errors.Is(err, os.ErrNotExist)).IsTrue("err is not ErrNotExist")
 
 			g.Assert(fs.CachedUsage()).Equal(int64(0))
 		})
@@ -612,16 +610,16 @@ func TestFilesystem_Delete(t *testing.T) {
 				g.Assert(err).IsNil()
 			}
 
-			fs.unixFS.SetUsage(int64(utf8.RuneCountInString("test content") * 3))
+			fs.diskUsed.Store(int64(utf8.RuneCountInString("test content") * 3))
 
 			err = fs.Delete("foo")
 			g.Assert(err).IsNil()
-			g.Assert(fs.unixFS.Usage()).Equal(int64(0))
+			g.Assert(fs.diskUsed.Load()).Equal(int64(0))
 
 			for _, s := range sources {
 				_, err = rfs.StatServerFile(s)
 				g.Assert(err).IsNotNil()
-				g.Assert(errors.Is(err, ufs.ErrNotExist)).IsTrue("err is not ErrNotExist")
+				g.Assert(errors.Is(err, os.ErrNotExist)).IsTrue("err is not ErrNotExist")
 			}
 		})
 
@@ -677,7 +675,7 @@ func TestFilesystem_Delete(t *testing.T) {
 			// Delete a file inside the symlinked directory.
 			err = fs.Delete("symlink/source.txt")
 			g.Assert(err).IsNotNil()
-			g.Assert(errors.Is(err, ufs.ErrBadPathResolution)).IsTrue("err is not ErrBadPathResolution")
+			g.Assert(strings.Contains(err.Error(), "path escapes from parent")).IsTrue("path did not remain rooted")
 
 			// Ensure the file outside the root directory still exists.
 			_, err = os.Lstat(filepath.Join(rfs.root, "foo/source.txt"))
@@ -696,7 +694,7 @@ func TestFilesystem_Delete(t *testing.T) {
 			// Delete a file inside the symlinked directory.
 			err = fs.Delete("symlink/source.txt")
 			g.Assert(err).IsNotNil()
-			g.Assert(errors.Is(err, ufs.ErrBadPathResolution)).IsTrue("err is not ErrBadPathResolution")
+			g.Assert(strings.Contains(err.Error(), "path escapes from parent")).IsTrue("path did not remain rooted")
 		})
 
 		g.AfterEach(func() {
