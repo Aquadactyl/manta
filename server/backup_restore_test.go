@@ -199,6 +199,17 @@ func TestRestoreTruncatesBeforeRestoring(t *testing.T) {
 	assert.True(t, os.SameFile(before, after), "the server directory should be kept")
 }
 
+func TestRestoreBackupReturnsTruncateFailure(t *testing.T) {
+	s, _, _ := newRestoreTestServer(t)
+	old := truncateBackupRootDirectory
+	want := errors.New("truncate failed")
+	truncateBackupRootDirectory = func(*filesystem.Filesystem) error { return want }
+	t.Cleanup(func() { truncateBackupRootDirectory = old })
+
+	err := s.RestoreBackup(restoreTestLocal(), nil, true)
+	assert.ErrorIs(t, err, want)
+}
+
 type mockFailingBackup struct {
 	backup.BackupInterface
 }

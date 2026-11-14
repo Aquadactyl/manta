@@ -1050,6 +1050,14 @@ func TestServerEnsureDataDirectoryExists(t *testing.T) {
 	assert.NoError(t, s.EnsureDataDirectoryExists())
 	assert.DirExists(t, serverDir)
 
+	require.NoError(t, os.RemoveAll(serverDir))
+	oldCreateDirectory := createServerDataDirectory
+	createServerDataDirectory = func(string, os.FileMode) error { return errors.New("mkdir failed") }
+	t.Cleanup(func() { createServerDataDirectory = oldCreateDirectory })
+	assert.Error(t, s.EnsureDataDirectoryExists())
+	assert.Error(t, s.CreateEnvironment())
+	createServerDataDirectory = oldCreateDirectory
+
 	// 2. Directory already exists
 	assert.NoError(t, s.EnsureDataDirectoryExists())
 

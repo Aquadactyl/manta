@@ -28,7 +28,7 @@ const (
 	AT_EMPTY_PATH = unix.AT_FDCWD
 )
 
-func openedPathIsSymlink(_ int, _ int, _ bool) bool { return false }
+var openedPathIsSymlink = func(_ int, _ int, _ bool) bool { return false }
 
 const (
 	// oPath is zero as macOS has no O_PATH. Descriptors that are only described
@@ -39,6 +39,8 @@ const (
 	// of UTIME_OMIT in <sys/stat.h>.
 	utimeOmit = -2
 )
+
+var statResolvedFstat = unix.Fstat
 
 // minimumScratchBufferSize is the smallest buffer used to read directory
 // entries. getdirentries(2) fails if the buffer is smaller than the block size
@@ -102,7 +104,7 @@ func (fs *UnixFS) statResolved(rootfd int, rel, name string, st *unix.Stat_t) er
 	if err == nil {
 		defer unix.Close(fd)
 		if err := ignoringEINTR(func() error {
-			return unix.Fstat(fd, st)
+			return statResolvedFstat(fd, st)
 		}); err != nil {
 			return ensurePathError(err, "stat", name)
 		}

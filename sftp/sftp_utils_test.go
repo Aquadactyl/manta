@@ -318,6 +318,7 @@ func TestSFTPServerPrivateKeyAndUtils(t *testing.T) {
 	// 5. droppedLog
 	dl := &droppedLog{}
 	dl.log("testing dropped log", "test-key")
+	dl.log("testing throttled dropped log", "test-key")
 }
 
 func TestGenerateED25519PrivateKeyPropagatesEntropyError(t *testing.T) {

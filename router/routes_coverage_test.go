@@ -1243,6 +1243,43 @@ func TestPostCreateServerAutomaticStartDeadline(t *testing.T) {
 	}
 }
 
+func TestPostCreateServerAutomaticStartErrorAndSkip(t *testing.T) {
+	for _, start := range []bool{false, true} {
+		name := "skip automatic start"
+		if start {
+			name = "log automatic start error"
+		}
+		t.Run(name, func(t *testing.T) {
+			h := newTransferHarness(t, &transferTestPanel{})
+			id := "00000000-0000-4000-8000-000000000090"
+			if start {
+				id = "00000000-0000-4000-8000-000000000089"
+			}
+			oldCreate, oldInstall, oldWorker, oldStart := createInstallEnvironment, runServerInstall, startServerInstall, startServerAfterInstall
+			createInstallEnvironment = func(*wserver.Server) error { return nil }
+			runServerInstall = func(*wserver.Server) error { return nil }
+			startServerInstall = func(_ *wserver.Server, run func()) { run() }
+			startServerAfterInstall = func(*wserver.Server) error { return errors.New("start failed") }
+			t.Cleanup(func() {
+				createInstallEnvironment, runServerInstall = oldCreate, oldInstall
+				startServerInstall, startServerAfterInstall = oldWorker, oldStart
+			})
+
+			w := postCreateServerForInstallCoverage(t, h, id, start)
+			require.Equal(t, http.StatusAccepted, w.Code)
+		})
+	}
+}
+
+func TestDefaultPostCreateInstallCallbacks(t *testing.T) {
+	h := newTransferHarness(t, &transferTestPanel{})
+	s := h.seedServer()
+	s.Config().SkipEggScripts = true
+	require.NoError(t, createInstallEnvironment(s))
+	require.NoError(t, runServerInstall(s))
+	assert.NoError(t, startServerAfterInstall(s))
+}
+
 func postCreateServerForInstallCoverage(t *testing.T, h *transferHarness, id string, start bool) *httptest.ResponseRecorder {
 	t.Helper()
 	settings, err := json.Marshal(map[string]any{"uuid": id, "skip_egg_scripts": true})

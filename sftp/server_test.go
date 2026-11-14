@@ -154,6 +154,39 @@ func TestConnectionCounterLimitsAndRelease(t *testing.T) {
 	}
 }
 
+type oneConnectionListener struct {
+	conn net.Conn
+	used bool
+}
+
+func (l *oneConnectionListener) Accept() (net.Conn, error) {
+	if !l.used {
+		l.used = true
+		return l.conn, nil
+	}
+	return nil, net.ErrClosed
+}
+func (*oneConnectionListener) Close() error   { return nil }
+func (*oneConnectionListener) Addr() net.Addr { return testPipeAddr("pipe") }
+
+type testPipeAddr string
+
+func (a testPipeAddr) Network() string { return string(a) }
+func (a testPipeAddr) String() string  { return string(a) }
+
+func TestServeDropsConnectionAtPendingLimit(t *testing.T) {
+	serverConn, clientConn := net.Pipe()
+	defer clientConn.Close()
+	listener := &oneConnectionListener{conn: serverConn}
+	srv := &SFTPServer{limits: connectionLimits{maxPending: 1, maxPendingPerIP: 1}}
+	require.True(t, srv.pending.acquire("pipe", 1, 1))
+
+	err := srv.serve(listener, &ssh.ServerConfig{})
+	require.ErrorIs(t, err, net.ErrClosed)
+	_, err = clientConn.Read(make([]byte, 1))
+	require.Error(t, err)
+}
+
 // Every address in an IPv6 /64 network belongs to the same user, so they share a
 // limit.
 func TestConnectionKey(t *testing.T) {

@@ -83,7 +83,10 @@ type Server struct {
 	sinks map[system.SinkName]*system.SinkPool
 }
 
-var chownServerDataDirectory = func(fs *filesystem.Filesystem) error { return fs.Chown("/") }
+var (
+	chownServerDataDirectory  = func(fs *filesystem.Filesystem) error { return fs.Chown("/") }
+	createServerDataDirectory = os.MkdirAll
+)
 
 var setServerDefaults = defaults.Set
 
@@ -315,7 +318,7 @@ func (s *Server) EnsureDataDirectoryExists() error {
 	if _, err := os.Lstat(s.fs.Path()); err != nil {
 		if os.IsNotExist(err) {
 			s.Log().Debug("server: creating root directory and setting permissions")
-			if err := os.MkdirAll(s.fs.Path(), 0o700); err != nil {
+			if err := createServerDataDirectory(s.fs.Path(), 0o700); err != nil {
 				return errors.WithStack(err)
 			}
 			if err := chownServerDataDirectory(s.fs); err != nil {

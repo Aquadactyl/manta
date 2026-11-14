@@ -19,6 +19,7 @@ import (
 )
 
 var readServerwideIgnoreFile = io.ReadAll
+var truncateBackupRootDirectory = (*filesystem.Filesystem).TruncateRootDirectory
 
 // Notifies the panel of a backup's state and returns an error if one is encountered
 // while performing this action.
@@ -155,7 +156,7 @@ func (s *Server) RestoreBackup(b backup.BackupInterface, reader io.ReadCloser, t
 
 	if truncate {
 		s.Log().Info("deleting server files before restoring backup")
-		if err = s.Filesystem().TruncateRootDirectory(); err != nil {
+		if err = truncateBackupRootDirectory(s.Filesystem()); err != nil {
 			return errors.WrapIf(err, "server/backup: restore: failed to delete server files")
 		}
 	}

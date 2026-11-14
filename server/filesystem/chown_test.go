@@ -32,6 +32,7 @@ func TestChownPaths(t *testing.T) {
 	require.NoError(t, os.WriteFile(filepath.Join(root, "file"), []byte("contents"), 0o600))
 	require.NoError(t, os.Mkdir(filepath.Join(root, "directory"), 0o700))
 	require.NoError(t, os.WriteFile(filepath.Join(root, "directory", "child"), []byte("child"), 0o600))
+	require.NoError(t, filesystemLchown(fs.unixFS.UnixFS, "file", os.Geteuid(), os.Getegid()))
 
 	t.Run("non-root is a no-op", func(t *testing.T) {
 		filesystemIsRoot = func() bool { return false }

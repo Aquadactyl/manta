@@ -302,6 +302,9 @@ func TestRootCmdRunLifecycle(t *testing.T) {
 	oldRootPowerAction := rootPowerAction
 	t.Cleanup(func() { rootPowerAction = oldRootPowerAction })
 	rootPowerAction = func(*server.Server, server.PowerAction) error { return errors.New("start failed") }
+	oldConfigureDocker := configureDocker
+	t.Cleanup(func() { configureDocker = oldConfigureDocker })
+	configureDocker = func(context.Context) error { return nil }
 
 	origConfigPath := configPath
 	configPath = cfgPath

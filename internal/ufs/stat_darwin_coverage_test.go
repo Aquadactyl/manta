@@ -67,3 +67,55 @@ func TestDarwinStatResolvedPermissionFallback(t *testing.T) {
 		}
 	})
 }
+
+func TestDarwinStatResolvedFstatError(t *testing.T) {
+	root := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(root, "file"), []byte("data"), 0o600))
+	fs, err := NewUnixFS(root, false)
+	require.NoError(t, err)
+	dir, err := os.Open(root)
+	require.NoError(t, err)
+	defer dir.Close()
+
+	old := statResolvedFstat
+	statResolvedFstat = func(int, *unix.Stat_t) error { return unix.EIO }
+	t.Cleanup(func() { statResolvedFstat = old })
+	var st unix.Stat_t
+	assert.ErrorIs(t, fs.statResolved(int(dir.Fd()), "file", "file", &st), unix.EIO)
+}
+
+func TestDarwinUserspaceOpenBeneathOPathDefensiveSymlinkPath(t *testing.T) {
+	root := t.TempDir()
+	require.NoError(t, os.Mkdir(filepath.Join(root, "target"), 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(root, "target", "file"), []byte("data"), 0o600))
+	dir, err := os.Open(root)
+	require.NoError(t, err)
+	defer dir.Close()
+
+	oldOpen, oldReadlink, oldSymlink := userspaceOpenRetry, userspaceReadlinkat, openedPathIsSymlink
+	t.Cleanup(func() {
+		userspaceOpenRetry, userspaceReadlinkat, openedPathIsSymlink = oldOpen, oldReadlink, oldSymlink
+	})
+	readlinks := 0
+	userspaceReadlinkat = func(_ int, _ string, buf []byte) (int, error) {
+		readlinks++
+		return copy(buf, "target/file"), nil
+	}
+	first := true
+	openedPathIsSymlink = func(int, int, bool) bool {
+		if first {
+			first = false
+			return true
+		}
+		return false
+	}
+	fd, err := userspaceOpenBeneath(int(dir.Fd()), "file", unix.O_RDONLY, 0)
+	require.NoError(t, err)
+	require.NoError(t, unix.Close(fd))
+	assert.Equal(t, 1, readlinks)
+
+	openedPathIsSymlink = func(int, int, bool) bool { return true }
+	userspaceReadlinkat = func(_ int, _ string, _ []byte) (int, error) { return 0, unix.EINVAL }
+	_, err = userspaceOpenBeneath(int(dir.Fd()), "file", unix.O_RDONLY, 0)
+	assert.ErrorIs(t, err, unix.ENOENT)
+}

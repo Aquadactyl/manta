@@ -195,6 +195,28 @@ func TestCustomMountsResolveAllowedMounts(t *testing.T) {
 	})
 }
 
+func TestCustomMountsIgnoreNonRootPathResolvingToRoot(t *testing.T) {
+	root := setupMountTest(t)
+	allowed := filepath.Join(root, "root-link")
+	config.Update(func(c *config.Configuration) { c.AllowedMounts = []string{allowed} })
+	oldEval := mountPathEvalSymlinks
+	mountPathEvalSymlinks = func(p string) (string, error) {
+		if p == allowed {
+			return string(filepath.Separator), nil
+		}
+		return oldEval(p)
+	}
+	t.Cleanup(func() { mountPathEvalSymlinks = oldEval })
+
+	s, err := New(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if mounts := s.customMounts(); len(mounts) != 0 {
+		t.Fatalf("expected no custom mounts, got %v", mounts)
+	}
+}
+
 // Resolving the allowed mounts touches the filesystem, which can block on a
 // network share that is down, so servers without mounts should not do it.
 func TestCustomMountsWithoutMountsDoNotResolveAllowedMounts(t *testing.T) {

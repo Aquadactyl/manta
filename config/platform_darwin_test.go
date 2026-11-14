@@ -123,3 +123,9 @@ func TestDarwinOtherPlatformHelpers(t *testing.T) {
 
 	assert.ErrorContains(t, probeOpenat2(), "only available on Linux")
 }
+
+func TestDarwinUserCommandHook(t *testing.T) {
+	output, err := runUserCommand("/usr/bin/true")
+	require.NoError(t, err)
+	assert.Empty(t, output)
+}

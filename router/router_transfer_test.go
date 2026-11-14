@@ -150,6 +150,8 @@ func (e transferTestEnvironment) WaitForStop(context.Context, time.Duration, boo
 
 func (transferTestEnvironment) Stop(context.Context) error { return nil }
 
+func (transferTestEnvironment) Start(context.Context) error { return nil }
+
 func (transferTestEnvironment) Terminate(context.Context, string) error { return nil }
 
 type transferHarness struct {

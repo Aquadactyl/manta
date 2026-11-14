@@ -251,6 +251,16 @@ func TestInstallationExecuteUsesSELinuxRelabelBinds(t *testing.T) {
 	require.Contains(t, fake.create.HostConfig.Binds[1], ":ro,z")
 }
 
+func TestInstallationExecuteLogsTemporaryDirectoryRemovalFailure(t *testing.T) {
+	p := newInstallerTestProcess(t, &fakeInstallerDocker{})
+	old := removeInstallTempDirectory
+	removeInstallTempDirectory = func(string) error { return errors.New("temporary directory removal failed") }
+	t.Cleanup(func() { removeInstallTempDirectory = old })
+
+	_, err := p.Execute()
+	require.NoError(t, err)
+}
+
 func TestInstallationExecuteRejectsInvalidSELinuxMode(t *testing.T) {
 	p := newInstallerTestProcess(t, &fakeInstallerDocker{})
 	config.Update(func(cfg *config.Configuration) {

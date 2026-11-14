@@ -39,6 +39,7 @@ var (
 	openInstallLogFile = func(name string, flag int, perm os.FileMode) (io.WriteCloser, error) {
 		return os.OpenFile(name, flag, perm) //nolint:gosec // path is the server's configured installation log
 	}
+	removeInstallTempDirectory = os.RemoveAll
 )
 
 const installLogTemplate = `Pterodactyl Server Installation Log
@@ -589,7 +590,7 @@ func (ip *InstallationProcess) Execute() (string, error) {
 	ip.Server.Log().WithField("install_script", ip.tempDir()+"/install.sh").Info("creating install container for server process")
 	// Remove the temporary directory when the installation process finishes for this server container.
 	defer func() {
-		if err := os.RemoveAll(ip.tempDir()); err != nil {
+		if err := removeInstallTempDirectory(ip.tempDir()); err != nil {
 			if !os.IsNotExist(err) {
 				ip.Server.Log().WithField("error", err).Warn("failed to remove temporary data directory after install process")
 			}
