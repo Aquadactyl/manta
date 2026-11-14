@@ -48,7 +48,7 @@ daemon APIs and does not return configuration, credentials or filesystem paths.
 Use Linux or macOS and the Go toolchain selected by `go.mod`:
 
 ```sh
-go build -trimpath -o build/manta .
+go build -trimpath -o build/wings .
 go test ./...
 go test -race ./...
 go vet ./...
@@ -57,7 +57,7 @@ go vet ./...
 Run with the existing node configuration:
 
 ```sh
-./build/manta --config /etc/pterodactyl/config.yml
+./build/wings --config /etc/pterodactyl/config.yml
 ```
 
 The Dockerfile also builds the daemon. Existing deployment assets retain the `wings` executable name.

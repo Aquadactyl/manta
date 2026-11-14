@@ -175,9 +175,7 @@ func (fs *Filesystem) ReadDir(p string) ([]os.DirEntry, error) {
 	return f.ReadDir(-1)
 }
 
-// ReadDir reads directory entries.
-// ReadDirStat is like ReadDir except that it returns FileInfo for each entry
-// instead of just a DirEntry.
+// ReadDirStat returns FileInfo for each entry in the directory at path.
 func (fs *Filesystem) ReadDirStat(path string) ([]os.FileInfo, error) {
 	entries, err := fs.ReadDir(path)
 	if err != nil {
@@ -663,14 +661,6 @@ func (fs *Filesystem) Delete(p string) error {
 	return nil
 }
 
-//	type fileOpener struct {
-//		fs   *Filesystem
-//		busy uint
-//	}
-//
-// // Attempts to open a given file up to "attempts" number of times, using a backoff. If the file
-// // cannot be opened because of a "text file busy" error, we will attempt until the number of attempts
-// // has been exhaused, at which point we will abort with an error.
 // ListDirectory lists the contents of a given directory and returns stat
 // information about each file and folder within it.
 func (fs *Filesystem) ListDirectory(p string) ([]Stat, error) {

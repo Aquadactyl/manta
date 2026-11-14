@@ -432,7 +432,6 @@ func TestParserErrorPaths(t *testing.T) {
 }
 
 type mockParserFile struct {
-	configFile
 	statInfo os.FileInfo
 	statErr  error
 	readErr  error

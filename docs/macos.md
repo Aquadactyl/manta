@@ -170,7 +170,7 @@ Stop and unload it with `sudo launchctl bootout system/uk.aquadactyl.manta`.
 ## Building from source
 
 ```sh
-go build -trimpath -o build/manta .
+go build -trimpath -o build/wings .
 ```
 
 Cross-compile for macOS from any host with `GOOS=darwin GOARCH=arm64` (or
