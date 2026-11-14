@@ -25,7 +25,7 @@ func TestStartupReturnsDockerRemovalAndInspectionErrors(t *testing.T) {
 	}))
 	defer api.Close()
 
-	cli, err := client.NewClientWithOpts(client.WithHost(api.URL), client.WithVersion("1.51"))
+	cli, err := client.New(client.WithHost(api.URL), client.WithAPIVersion("1.51"))
 	require.NoError(t, err)
 	defer cli.Close()
 	e := &Environment{
@@ -56,7 +56,7 @@ func TestStartReturnsAttachError(t *testing.T) {
 	}))
 	defer api.Close()
 
-	cli, err := client.NewClientWithOpts(client.WithHost(api.URL), client.WithVersion("1.51"))
+	cli, err := client.New(client.WithHost(api.URL), client.WithAPIVersion("1.51"))
 	require.NoError(t, err)
 	defer cli.Close()
 	e := &Environment{
@@ -83,7 +83,7 @@ func TestStartReturnsLogTruncateError(t *testing.T) {
 	}))
 	defer api.Close()
 
-	cli, err := client.NewClientWithOpts(client.WithHost(api.URL), client.WithVersion("1.51"))
+	cli, err := client.New(client.WithHost(api.URL), client.WithAPIVersion("1.51"))
 	require.NoError(t, err)
 	defer cli.Close()
 	e := &Environment{ID: "container-id", client: cli}
@@ -107,7 +107,7 @@ func TestStartReturnsContainerStartError(t *testing.T) {
 	}))
 	defer api.Close()
 
-	cli, err := client.NewClientWithOpts(client.WithHost(api.URL), client.WithVersion("1.51"))
+	cli, err := client.New(client.WithHost(api.URL), client.WithAPIVersion("1.51"))
 	require.NoError(t, err)
 	defer cli.Close()
 	e := &Environment{
@@ -143,7 +143,7 @@ func TestSignalContainerReturnsDockerKillError(t *testing.T) {
 	}))
 	defer api.Close()
 
-	cli, err := client.NewClientWithOpts(client.WithHost(api.URL), client.WithVersion("1.51"))
+	cli, err := client.New(client.WithHost(api.URL), client.WithAPIVersion("1.51"))
 	require.NoError(t, err)
 	defer cli.Close()
 	e := &Environment{ID: "container-id", client: cli, st: system.NewAtomicString(environment.ProcessRunningState), emitter: events.NewBus()}
@@ -174,7 +174,7 @@ func TestReattachStopsWhenContainerStopsDuringFailedAttach(t *testing.T) {
 	}))
 	defer api.Close()
 
-	cli, err := client.NewClientWithOpts(client.WithHost("tcp://"+api.Listener.Addr().String()), client.WithVersion("1.51"))
+	cli, err := client.New(client.WithHost("tcp://"+api.Listener.Addr().String()), client.WithAPIVersion("1.51"))
 	require.NoError(t, err)
 	defer cli.Close()
 	e := &Environment{
@@ -213,7 +213,7 @@ func TestReattachTerminatesWhenContainerRemainsUnmanageable(t *testing.T) {
 	}))
 	defer api.Close()
 
-	cli, err := client.NewClientWithOpts(client.WithHost("tcp://"+api.Listener.Addr().String()), client.WithVersion("1.51"))
+	cli, err := client.New(client.WithHost("tcp://"+api.Listener.Addr().String()), client.WithAPIVersion("1.51"))
 	require.NoError(t, err)
 	defer cli.Close()
 	e := &Environment{
@@ -245,7 +245,7 @@ func TestInSituUpdateReturnsContainerUpdateError(t *testing.T) {
 	}))
 	defer api.Close()
 
-	cli, err := client.NewClientWithOpts(client.WithHost(api.URL), client.WithVersion("1.51"))
+	cli, err := client.New(client.WithHost(api.URL), client.WithAPIVersion("1.51"))
 	require.NoError(t, err)
 	defer cli.Close()
 	e := &Environment{

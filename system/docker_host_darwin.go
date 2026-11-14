@@ -18,7 +18,7 @@ import (
 // home directory of the user, so that is looked for when neither DOCKER_HOST
 // nor the conventional /var/run/docker.sock are available.
 func DockerClientOpts() []client.Opt {
-	opts := []client.Opt{client.FromEnv, client.WithAPIVersionNegotiation()}
+	opts := []client.Opt{client.FromEnv}
 	if os.Getenv("DOCKER_HOST") == "" {
 		if host := dockerHostFallback(); host != "" {
 			opts = append(opts, client.WithHost(host))

@@ -29,7 +29,7 @@ func TestFastInspectClosesResponseWhenRedirectFails(t *testing.T) {
 	httpClient := &http.Client{CheckRedirect: func(*http.Request, []*http.Request) error {
 		return errors.New("redirect rejected")
 	}}
-	c, err := client.NewClientWithOpts(client.WithHost(ts.URL), client.WithVersion("1.51"), client.WithHTTPClient(httpClient))
+	c, err := client.New(client.WithHost(ts.URL), client.WithAPIVersion("1.51"), client.WithHTTPClient(httpClient))
 	require.NoError(t, err)
 	defer c.Close()
 	config.Set(&config.Configuration{AuthenticationToken: "test-token", Docker: config.DockerConfiguration{UsePerformantInspect: true}})
@@ -63,7 +63,7 @@ func TestFastInspectRejectsMalformedAndTruncatedResponses(t *testing.T) {
 				_, _ = io.WriteString(w, test.body)
 			}))
 			defer ts.Close()
-			c, err := client.NewClientWithOpts(client.WithHost(ts.URL), client.WithVersion("1.51"))
+			c, err := client.New(client.WithHost(ts.URL), client.WithAPIVersion("1.51"))
 			require.NoError(t, err)
 			defer c.Close()
 			config.Set(&config.Configuration{AuthenticationToken: "test-token", Docker: config.DockerConfiguration{UsePerformantInspect: true}})
@@ -90,7 +90,7 @@ func TestReadlogReturnsScannerErrorForOversizedLine(t *testing.T) {
 		_, _ = w.Write(frame)
 	}))
 	defer ts.Close()
-	c, err := client.NewClientWithOpts(client.WithHost(ts.URL), client.WithVersion("1.51"))
+	c, err := client.New(client.WithHost(ts.URL), client.WithAPIVersion("1.51"))
 	require.NoError(t, err)
 	defer c.Close()
 
@@ -108,7 +108,7 @@ func TestExistsAndExitStateReturnUnexpectedInspectErrors(t *testing.T) {
 		http.Error(w, `{"message":"daemon unavailable"}`, http.StatusInternalServerError)
 	}))
 	defer ts.Close()
-	c, err := client.NewClientWithOpts(client.WithHost(ts.URL), client.WithVersion("1.51"))
+	c, err := client.New(client.WithHost(ts.URL), client.WithAPIVersion("1.51"))
 	require.NoError(t, err)
 	defer c.Close()
 	config.Set(&config.Configuration{AuthenticationToken: "test-token", Docker: config.DockerConfiguration{UsePerformantInspect: false}})
@@ -126,7 +126,7 @@ func TestExistsAndExitStateReturnUnexpectedInspectErrors(t *testing.T) {
 func TestFastInspectRejectsInvalidRequestPath(t *testing.T) {
 	previousSettings, previousEnabled := cli, fastEnabled
 	t.Cleanup(func() { o = sync.Once{}; cli, fastEnabled = previousSettings, previousEnabled })
-	c, err := client.NewClientWithOpts(client.WithHost("http://127.0.0.1:1"), client.WithVersion("1.51"))
+	c, err := client.New(client.WithHost("http://127.0.0.1:1"), client.WithAPIVersion("1.51"))
 	require.NoError(t, err)
 	defer c.Close()
 	config.Set(&config.Configuration{AuthenticationToken: "test-token", Docker: config.DockerConfiguration{UsePerformantInspect: true}})
@@ -146,7 +146,7 @@ func TestUptimeRejectsMalformedStartTimeAndReturnsZeroWhenStopped(t *testing.T) 
 		{body: `{"State":{"Running":false}}`},
 	} {
 		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { _, _ = io.Copy(w, strings.NewReader(test.body)) }))
-		c, err := client.NewClientWithOpts(client.WithHost(ts.URL), client.WithVersion("1.51"))
+		c, err := client.New(client.WithHost(ts.URL), client.WithAPIVersion("1.51"))
 		require.NoError(t, err)
 		config.Set(&config.Configuration{AuthenticationToken: "test-token", Docker: config.DockerConfiguration{UsePerformantInspect: true}})
 		o = sync.Once{}

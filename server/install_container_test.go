@@ -166,7 +166,7 @@ func newInstallerTestProcess(t *testing.T, fake *fakeInstallerDocker) *Installat
 	srv := httptest.NewServer(fake)
 	t.Cleanup(srv.Close)
 
-	c, err := dockerclient.NewClientWithOpts(dockerclient.WithHost(strings.Replace(srv.URL, "http://", "tcp://", 1)))
+	c, err := dockerclient.New(dockerclient.WithHost(strings.Replace(srv.URL, "http://", "tcp://", 1)))
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = c.Close() })
 

@@ -32,7 +32,7 @@ func TestAttachReturnsDockerAttachError(t *testing.T) {
 	}))
 	defer api.Close()
 
-	dockerClient, err := client.NewClientWithOpts(client.WithHost("tcp://"+api.Listener.Addr().String()), client.WithVersion("1.51"))
+	dockerClient, err := client.New(client.WithHost("tcp://"+api.Listener.Addr().String()), client.WithAPIVersion("1.51"))
 	require.NoError(t, err)
 	defer dockerClient.Close()
 
@@ -63,7 +63,7 @@ func TestAttachConsumesOutputAndClearsStoppedStream(t *testing.T) {
 		return client.HijackedResponse{Conn: clientSide, Reader: bufio.NewReader(clientSide)}, nil
 	}
 
-	cli, err := client.NewClientWithOpts(client.WithHost("tcp://127.0.0.1:1"), client.WithVersion("1.51"))
+	cli, err := client.New(client.WithHost("tcp://127.0.0.1:1"), client.WithAPIVersion("1.51"))
 	require.NoError(t, err)
 	defer cli.Close()
 	env := &Environment{

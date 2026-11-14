@@ -155,7 +155,7 @@ func TestGetDockerInfoAPIOutcomes(t *testing.T) {
 				}
 			}))
 			defer srv.Close()
-			dockerClient, err := client.NewClientWithOpts(client.WithHost(srv.URL), client.WithVersion("1.51"))
+			dockerClient, err := client.New(client.WithHost(srv.URL), client.WithAPIVersion("1.51"))
 			require.NoError(t, err)
 			newDiagnosticsDockerClient = func() (*client.Client, error) { return dockerClient, nil }
 			version, info, err := getDockerInfo()

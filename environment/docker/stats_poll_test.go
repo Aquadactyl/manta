@@ -64,7 +64,7 @@ func TestPollResourcesErrorAndStopPaths(t *testing.T) {
 			}))
 			defer api.Close()
 
-			cli, err := client.NewClientWithOpts(client.WithHost(api.URL), client.WithVersion("1.51"))
+			cli, err := client.New(client.WithHost(api.URL), client.WithAPIVersion("1.51"))
 			require.NoError(t, err)
 			defer cli.Close()
 			o = sync.Once{}
@@ -105,7 +105,7 @@ func TestPollResourcesStopsAfterServerTurnsOffline(t *testing.T) {
 		}
 	}))
 	defer api.Close()
-	cli, err := client.NewClientWithOpts(client.WithHost(api.URL), client.WithVersion("1.51"))
+	cli, err := client.New(client.WithHost(api.URL), client.WithAPIVersion("1.51"))
 	require.NoError(t, err)
 	defer cli.Close()
 	o = sync.Once{}

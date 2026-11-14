@@ -458,7 +458,7 @@ func TestSetCpuBurstWithInspectedContainer(t *testing.T) {
 	}))
 	defer server.Close()
 
-	cli, err := client.NewClientWithOpts(client.WithHost(server.URL), client.WithVersion("1.51"))
+	cli, err := client.New(client.WithHost(server.URL), client.WithAPIVersion("1.51"))
 	require.NoError(t, err)
 	defer cli.Close()
 
@@ -496,7 +496,7 @@ func TestWaitForStopWaitErrorAndForcedTermination(t *testing.T) {
 	}))
 	defer server.Close()
 
-	cli, err := client.NewClientWithOpts(client.WithHost(server.URL), client.WithVersion("1.51"))
+	cli, err := client.New(client.WithHost(server.URL), client.WithAPIVersion("1.51"))
 	require.NoError(t, err)
 	defer cli.Close()
 
@@ -544,7 +544,7 @@ func TestWaitForStopParentCancellationAfterStop(t *testing.T) {
 	}))
 	defer server.Close()
 
-	cli, err := client.NewClientWithOpts(client.WithHost(server.URL), client.WithVersion("1.51"))
+	cli, err := client.New(client.WithHost(server.URL), client.WithAPIVersion("1.51"))
 	require.NoError(t, err)
 	defer cli.Close()
 	newEnvironment := func() *Environment {
@@ -600,7 +600,7 @@ func TestEnsureImageExistsPullPolicies(t *testing.T) {
 		http.NotFound(w, r)
 	}))
 	defer server.Close()
-	cli, err := client.NewClientWithOpts(client.WithHost(server.URL), client.WithVersion("1.51"))
+	cli, err := client.New(client.WithHost(server.URL), client.WithAPIVersion("1.51"))
 	require.NoError(t, err)
 	defer cli.Close()
 	e := &Environment{client: cli, emitter: events.NewBus()}

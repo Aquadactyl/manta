@@ -71,8 +71,8 @@ func ensurePlatformUser() (bool, error) {
 	}
 	log.WithField("username", u.Username).Info("running on macOS, using the current user for servers and skipping user creation")
 	_config.System.Username = u.Username
-	_config.System.User.Uid = system.MustInt(u.Uid)
-	_config.System.User.Gid = system.MustInt(u.Gid)
+	_config.System.User.UID = system.MustInt(u.Uid)
+	_config.System.User.GID = system.MustInt(u.Gid)
 	return true, nil
 }
 

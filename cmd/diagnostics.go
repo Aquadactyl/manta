@@ -257,7 +257,7 @@ func getDockerInfo() (dockersystem.VersionResponse, dockersystem.Info, error) {
 		MinAPIVersion: dockerVersion.MinAPIVersion,
 		Os:            dockerVersion.Os,
 		Arch:          dockerVersion.Arch,
-		Experimental:  dockerVersion.Experimental,
+		Experimental:  dockerInfo.Info.ExperimentalBuild,
 		Components:    dockerVersion.Components,
 	}, dockerInfo.Info, nil
 }

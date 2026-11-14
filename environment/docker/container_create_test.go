@@ -27,7 +27,7 @@ func TestCreateReturnsContainerInspectError(t *testing.T) {
 	}))
 	defer server.Close()
 
-	cli, err := client.NewClientWithOpts(client.WithHost(server.URL), client.WithVersion("1.51"))
+	cli, err := client.New(client.WithHost(server.URL), client.WithAPIVersion("1.51"))
 	require.NoError(t, err)
 	defer cli.Close()
 
@@ -63,7 +63,7 @@ func TestCreateReturnsImageAvailabilityError(t *testing.T) {
 	}))
 	defer server.Close()
 
-	cli, err := client.NewClientWithOpts(client.WithHost(server.URL), client.WithVersion("1.51"))
+	cli, err := client.New(client.WithHost(server.URL), client.WithAPIVersion("1.51"))
 	require.NoError(t, err)
 	defer cli.Close()
 
@@ -94,7 +94,7 @@ func TestCreateExistingContainerDoesNotCallDockerAgain(t *testing.T) {
 	}))
 	defer server.Close()
 
-	cli, err := client.NewClientWithOpts(client.WithHost(server.URL), client.WithVersion("1.51"))
+	cli, err := client.New(client.WithHost(server.URL), client.WithAPIVersion("1.51"))
 	require.NoError(t, err)
 	defer cli.Close()
 
@@ -119,7 +119,7 @@ func TestCreateRejectsInvalidSELinuxMode(t *testing.T) {
 	}))
 	defer server.Close()
 
-	cli, err := client.NewClientWithOpts(client.WithHost(server.URL), client.WithVersion("1.51"))
+	cli, err := client.New(client.WithHost(server.URL), client.WithAPIVersion("1.51"))
 	require.NoError(t, err)
 	defer cli.Close()
 
@@ -154,7 +154,7 @@ func TestCreateReturnsDockerContainerCreateError(t *testing.T) {
 	}))
 	defer server.Close()
 
-	cli, err := client.NewClientWithOpts(client.WithHost(server.URL), client.WithVersion("1.51"))
+	cli, err := client.New(client.WithHost(server.URL), client.WithAPIVersion("1.51"))
 	require.NoError(t, err)
 	defer cli.Close()
 
@@ -201,7 +201,7 @@ func TestCreateForceOutgoingIPNetworkErrors(t *testing.T) {
 			}))
 			defer server.Close()
 
-			cli, err := client.NewClientWithOpts(client.WithHost(server.URL), client.WithVersion("1.51"))
+			cli, err := client.New(client.WithHost(server.URL), client.WithAPIVersion("1.51"))
 			require.NoError(t, err)
 			defer cli.Close()
 

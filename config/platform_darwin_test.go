@@ -58,8 +58,8 @@ func TestDarwinEnsurePlatformUserUsesTheCurrentUser(t *testing.T) {
 
 	require.NoError(t, EnsurePterodactylUser())
 	assert.Equal(t, u.Username, Get().System.Username)
-	assert.Equal(t, u.Uid, strconv.Itoa(Get().System.User.Uid))
-	assert.Equal(t, u.Gid, strconv.Itoa(Get().System.User.Gid))
+	assert.Equal(t, u.Uid, strconv.Itoa(Get().System.User.UID))
+	assert.Equal(t, u.Gid, strconv.Itoa(Get().System.User.GID))
 }
 
 func TestDarwinDetectPlatformTimezone(t *testing.T) {

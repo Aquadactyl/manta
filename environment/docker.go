@@ -28,7 +28,7 @@ var (
 func Docker() (*client.Client, error) {
 	var err error
 	_conce.Do(func() {
-		_client, err = client.NewClientWithOpts(system.DockerClientOpts()...)
+		_client, err = client.New(system.DockerClientOpts()...)
 	})
 	return _client, errors.Wrap(err, "environment/docker: could not create client")
 }

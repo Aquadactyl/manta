@@ -120,7 +120,7 @@ func GetSystemInformation() (*Information, error) {
 
 // GetDockerInfo returns the version and system info from the host Docker daemon.
 func GetDockerInfo(ctx context.Context) (dockersystem.VersionResponse, dockersystem.Info, error) {
-	c, err := client.NewClientWithOpts(DockerClientOpts()...)
+	c, err := client.New(DockerClientOpts()...)
 	if err != nil {
 		return dockersystem.VersionResponse{}, dockersystem.Info{}, err
 	}
@@ -143,7 +143,7 @@ func GetDockerInfo(ctx context.Context) (dockersystem.VersionResponse, dockersys
 		MinAPIVersion: dockerVersion.MinAPIVersion,
 		Os:            dockerVersion.Os,
 		Arch:          dockerVersion.Arch,
-		Experimental:  dockerVersion.Experimental,
+		Experimental:  dockerInfo.Info.ExperimentalBuild,
 		Components:    dockerVersion.Components,
 	}, dockerInfo.Info, nil
 }

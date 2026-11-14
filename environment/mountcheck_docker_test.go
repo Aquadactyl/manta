@@ -18,7 +18,7 @@ func dockerMountCheckerForTest(t *testing.T, handler http.Handler) *dockerMountC
 	t.Helper()
 	srv := httptest.NewServer(handler)
 	t.Cleanup(srv.Close)
-	cli, err := client.NewClientWithOpts(client.WithHost(srv.URL), client.WithVersion("1.51"))
+	cli, err := client.New(client.WithHost(srv.URL), client.WithAPIVersion("1.51"))
 	if err != nil {
 		t.Fatal(err)
 	}

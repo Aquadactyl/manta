@@ -31,7 +31,7 @@ func TestImageExistsLocally(t *testing.T) {
 				_, _ = fmt.Fprint(w, tc.body)
 			}))
 			defer srv.Close()
-			cli, err := client.NewClientWithOpts(client.WithHost(srv.URL), client.WithVersion("1.51"))
+			cli, err := client.New(client.WithHost(srv.URL), client.WithAPIVersion("1.51"))
 			if err != nil {
 				t.Fatal(err)
 			}

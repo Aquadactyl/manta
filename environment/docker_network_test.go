@@ -39,7 +39,7 @@ func TestConfigureDockerErrorAndOverlayNetwork(t *testing.T) {
 		_, _ = w.Write([]byte(`{"Driver":"overlay"}`))
 	}))
 	defer api.Close()
-	cli, err := client.NewClientWithOpts(client.WithHost(api.URL), client.WithVersion("1.41"))
+	cli, err := client.New(client.WithHost(api.URL), client.WithAPIVersion("1.41"))
 	require.NoError(t, err)
 	defer cli.Close()
 	dockerClientFactory = func() (*client.Client, error) { return cli, nil }
@@ -77,9 +77,9 @@ func TestConfigureDockerNetworkCreationError(t *testing.T) {
 	}))
 	defer api.Close()
 
-	cli, err := client.NewClientWithOpts(
+	cli, err := client.New(
 		client.WithHost(api.URL),
-		client.WithVersion("1.41"),
+		client.WithAPIVersion("1.41"),
 		client.WithHTTPClient(api.Client()),
 	)
 	require.NoError(t, err)
@@ -132,9 +132,9 @@ func TestCreateDockerNetworkDrivers(t *testing.T) {
 			cfg.Docker.Network.Interfaces.V6.Gateway = "fd00::1"
 			config.Set(cfg)
 
-			cli, err := client.NewClientWithOpts(
+			cli, err := client.New(
 				client.WithHost(api.URL),
-				client.WithVersion("1.41"),
+				client.WithAPIVersion("1.41"),
 				client.WithHTTPClient(api.Client()),
 			)
 			require.NoError(t, err)
@@ -162,9 +162,9 @@ func TestCreateDockerNetworkReturnsAPIError(t *testing.T) {
 	}))
 	defer api.Close()
 
-	cli, err := client.NewClientWithOpts(
+	cli, err := client.New(
 		client.WithHost(api.URL),
-		client.WithVersion("1.41"),
+		client.WithAPIVersion("1.41"),
 		client.WithHTTPClient(api.Client()),
 	)
 	require.NoError(t, err)
