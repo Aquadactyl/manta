@@ -381,7 +381,7 @@ func (e *Environment) Destroy() error {
 	// Don't trigger a destroy failure if we try to delete a container that does not
 	// exist on the system. We're just a step ahead of ourselves in that case.
 	//
-	// @see https://github.com/pterodactyl/panel/issues/2001
+	// @see https://github.com/Aquadactyl/aquadactyl/issues/2001
 	if err != nil && cerrdefs.IsNotFound(err) {
 		return nil
 	}

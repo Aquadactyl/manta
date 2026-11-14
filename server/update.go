@@ -42,7 +42,7 @@ func (s *Server) SyncWithEnvironment() {
 	// If build limits are changed, environment variables also change. Plus, any modifications to
 	// the startup command also need to be properly propagated to this environment.
 	//
-	// @see https://github.com/pterodactyl/panel/issues/2255
+	// @see https://github.com/Aquadactyl/aquadactyl/issues/2255
 	s.Environment.Config().SetEnvironmentVariables(s.GetEnvironmentVariables())
 
 	if !s.IsSuspended() {

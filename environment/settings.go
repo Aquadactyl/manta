@@ -145,7 +145,7 @@ func (l Limits) AsContainerResources() container.Resources {
 	// If the CPU Limit is not set, don't send any of these fields through. Providing
 	// them seems to break some Java services that try to read the available processors.
 	//
-	// @see https://github.com/pterodactyl/panel/issues/3988
+	// @see https://github.com/Aquadactyl/aquadactyl/issues/3988
 	if l.CPULimit > 0 {
 		cfg := config.Get().Docker
 		period := cfg.CPUPeriodMicroseconds()
