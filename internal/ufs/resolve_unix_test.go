@@ -168,6 +168,39 @@ func TestUserspaceOpenBeneathNoFollow(t *testing.T) {
 	assert.Equal(t, "shared", readFD(t, fd))
 }
 
+func TestUserspaceOpenBeneathDefensiveOpenedSymlinkPath(t *testing.T) {
+	base, dirfd := layout(t)
+	require.NoError(t, os.WriteFile(filepath.Join(base, "target-file"), []byte("target"), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(base, "file"), []byte("source"), 0o600))
+
+	oldOpen, oldReadlink, oldSymlink := userspaceOpenRetry, userspaceReadlinkat, openedPathIsSymlink
+	t.Cleanup(func() {
+		userspaceOpenRetry, userspaceReadlinkat, openedPathIsSymlink = oldOpen, oldReadlink, oldSymlink
+	})
+	readlinks := 0
+	userspaceReadlinkat = func(_ int, _ string, buf []byte) (int, error) {
+		readlinks++
+		return copy(buf, "target-file"), nil
+	}
+	first := true
+	openedPathIsSymlink = func(int, int, bool) bool {
+		if first {
+			first = false
+			return true
+		}
+		return false
+	}
+	fd, err := userspaceOpenBeneath(dirfd, "file", unix.O_RDONLY, 0)
+	require.NoError(t, err)
+	require.Equal(t, "target", readFD(t, fd))
+	assert.Equal(t, 1, readlinks)
+
+	openedPathIsSymlink = func(int, int, bool) bool { return true }
+	userspaceReadlinkat = func(_ int, _ string, _ []byte) (int, error) { return 0, unix.EINVAL }
+	_, err = userspaceOpenBeneath(dirfd, "file", unix.O_RDONLY, 0)
+	assert.ErrorIs(t, err, unix.ENOENT)
+}
+
 func TestUserspaceOpenBeneathOPathFollowsFinalSymlink(t *testing.T) {
 	base, dirfd := layout(t)
 	require.NoError(t, os.Symlink("shared/data.txt", filepath.Join(base, "opath-link")))

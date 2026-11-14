@@ -33,7 +33,7 @@ const (
 
 var statOpenedPath = unix.Fstat
 
-func openedPathIsSymlink(fd, flag int, userNoFollow bool) bool {
+var openedPathIsSymlink = func(fd, flag int, userNoFollow bool) bool {
 	if flag&oPath == 0 || userNoFollow {
 		return false
 	}
