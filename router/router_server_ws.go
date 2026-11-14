@@ -25,7 +25,8 @@ var expectedCloseCodes = []int{
 }
 
 var (
-	closeServerWebsocketConnection = (*ws.Conn).Close
+	closeServerWebsocketConnectionMu sync.RWMutex
+	closeServerWebsocketConnection   = (*ws.Conn).Close
 
 	// maxWebsocketConnections is the maximum number of authenticated websocket
 	// connections a server can have open at once.
@@ -36,6 +37,25 @@ var (
 
 	errTooManyWebsockets = errors.New("too many open websocket connections")
 )
+
+func closeWebsocketConnection(conn *ws.Conn) error {
+	closeServerWebsocketConnectionMu.RLock()
+	close := closeServerWebsocketConnection
+	closeServerWebsocketConnectionMu.RUnlock()
+	return close(conn)
+}
+
+func setWebsocketCloseForTest(close func(*ws.Conn) error) func() {
+	closeServerWebsocketConnectionMu.Lock()
+	previous := closeServerWebsocketConnection
+	closeServerWebsocketConnection = close
+	closeServerWebsocketConnectionMu.Unlock()
+	return func() {
+		closeServerWebsocketConnectionMu.Lock()
+		closeServerWebsocketConnection = previous
+		closeServerWebsocketConnectionMu.Unlock()
+	}
+}
 
 // getServerWebsocket returns a handler that upgrades a connection to a websocket
 // and passes events along between, allowing at most maxConnections authenticated
@@ -116,7 +136,7 @@ func handleServerWebsocket(c *gin.Context, maxConnections int, authTimeout time.
 		// suspension) close the connection itself.
 		<-ctx.Done()
 		handler.Logger().Debug("closing connection to server websocket")
-		if err := closeServerWebsocketConnection(handler.Connection); err != nil {
+		if err := closeWebsocketConnection(handler.Connection); err != nil {
 			handler.Logger().WithError(err).Error("failed to close websocket connection")
 		}
 	}()

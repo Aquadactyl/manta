@@ -336,13 +336,12 @@ func TestWebsocketClosesWhenServerBecomesSuspended(t *testing.T) {
 }
 
 func TestWebsocketConnectionCloseErrorIsLogged(t *testing.T) {
-	previousClose := closeServerWebsocketConnection
 	closeCalled := make(chan struct{}, 1)
-	closeServerWebsocketConnection = func(*ws.Conn) error {
+	restoreClose := setWebsocketCloseForTest(func(*ws.Conn) error {
 		closeCalled <- struct{}{}
 		return assert.AnError
-	}
-	t.Cleanup(func() { closeServerWebsocketConnection = previousClose })
+	})
+	t.Cleanup(restoreClose)
 
 	url := startWebsocketTestServer(t)
 	conn, err := dialWebsocket(t, url)

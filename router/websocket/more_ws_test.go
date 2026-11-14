@@ -102,19 +102,19 @@ func TestGetHandler(t *testing.T) {
 }
 
 func TestGetHandlerClosesConnectionWhenUUIDGenerationFails(t *testing.T) {
-	previous := websocketUUIDFactory
 	previousConfig := config.Get()
+	want := errors.New("random source unavailable")
+	restoreUUIDFactory := setWebsocketUUIDFactoryForTest(func() (uuid.UUID, error) {
+		return uuid.Nil, want
+	})
 	t.Cleanup(func() {
-		websocketUUIDFactory = previous
+		restoreUUIDFactory()
 		config.Set(previousConfig)
 	})
 	nextConfig := *previousConfig
 	nextConfig.PanelLocation = ""
 	nextConfig.AllowedOrigins = []string{"*"}
 	config.Set(&nextConfig)
-	want := errors.New("random source unavailable")
-	websocketUUIDFactory = func() (uuid.UUID, error) { return uuid.Nil, want }
-
 	handlerErr := make(chan error, 1)
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, err := GetHandler(nil, w, r, nil)

@@ -26,7 +26,29 @@ import (
 	"github.com/pterodactyl/wings/server"
 )
 
-var websocketUUIDFactory = uuid.NewRandom
+var (
+	websocketUUIDFactoryMu sync.RWMutex
+	websocketUUIDFactory   = uuid.NewRandom
+)
+
+func generateWebsocketUUID() (uuid.UUID, error) {
+	websocketUUIDFactoryMu.RLock()
+	newUUID := websocketUUIDFactory
+	websocketUUIDFactoryMu.RUnlock()
+	return newUUID()
+}
+
+func setWebsocketUUIDFactoryForTest(factory func() (uuid.UUID, error)) func() {
+	websocketUUIDFactoryMu.Lock()
+	previous := websocketUUIDFactory
+	websocketUUIDFactory = factory
+	websocketUUIDFactoryMu.Unlock()
+	return func() {
+		websocketUUIDFactoryMu.Lock()
+		websocketUUIDFactory = previous
+		websocketUUIDFactoryMu.Unlock()
+	}
+}
 
 const (
 	PermissionConnect          = "websocket.connect"
@@ -118,7 +140,7 @@ func GetHandler(s *server.Server, w http.ResponseWriter, r *http.Request, c *gin
 		return nil, err
 	}
 
-	u, err := websocketUUIDFactory()
+	u, err := generateWebsocketUUID()
 	if err != nil {
 		_ = conn.Close()
 		return nil, err

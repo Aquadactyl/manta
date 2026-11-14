@@ -2318,7 +2318,7 @@ func TestServerTransferAndLifecycleBranches(t *testing.T) {
 	w = httptest.NewRecorder()
 	h.router.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusAccepted, w.Code)
-	deadline = time.Now().Add(time.Second)
+	deadline = time.Now().Add(5 * time.Second)
 	for transfer.Outgoing().Get(s.ID()) != nil && time.Now().Before(deadline) {
 		time.Sleep(time.Millisecond)
 	}
@@ -2329,8 +2329,9 @@ func TestServerTransferAndLifecycleBranches(t *testing.T) {
 	// the context-canceled completion path.
 	destinationStarted := make(chan struct{})
 	releaseDestination := make(chan struct{})
-	cancelDestination := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	cancelDestination := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		close(destinationStarted)
+		_, _ = io.Copy(io.Discard, r.Body)
 		<-releaseDestination
 		w.WriteHeader(http.StatusOK)
 	}))
@@ -2352,7 +2353,7 @@ func TestServerTransferAndLifecycleBranches(t *testing.T) {
 	h.router.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusAccepted, w.Code)
 	close(releaseDestination)
-	deadline = time.Now().Add(time.Second)
+	deadline = time.Now().Add(5 * time.Second)
 	for transfer.Outgoing().Get(s.ID()) != nil && time.Now().Before(deadline) {
 		time.Sleep(time.Millisecond)
 	}

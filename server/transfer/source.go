@@ -108,7 +108,9 @@ func (t *Transfer) PushArchiveToTarget(targetURL, token string) ([]byte, error) 
 	// Create a new goroutine to write the archive to the pipe used by the
 	// multipart writer.
 	errChan := make(chan error, 1)
+	producerDone := make(chan struct{})
 	go func() {
+		defer close(producerDone)
 		defer close(errChan)
 		defer writer.Close()
 		defer mp.Close()
@@ -175,11 +177,17 @@ func (t *Transfer) PushArchiveToTarget(targetURL, token string) ([]byte, error) 
 	}
 	res, err := client.Do(req)
 	if err != nil {
+		cancel()
+		_ = body.Close()
+		<-producerDone
 		t.Log().Debug("error while sending archive to destination")
 		return nil, err
 	}
 	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
+		cancel()
+		_ = body.Close()
+		<-producerDone
 		return nil, fmt.Errorf("unexpected status code from destination: %d", res.StatusCode)
 	}
 	t.Log().Debug("waiting for stream to complete")
