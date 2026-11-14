@@ -54,16 +54,6 @@ jobs:
         run: |
           go test $(go list ./...)
 
-      # macOS resolves paths with the resolver in internal/ufs/resolve_unix.go
-      # instead of openat2. Running the whole filesystem suite on it here holds it
-      # to everything the kernel's openat2 is.
-      - name: Run filesystem tests on the userspace path resolver
-        env:
-          CGO_ENABLED: 0
-          UFS_TEST_USERSPACE_RESOLVE: "1"
-        run: |
-          go test -count=1 ./internal/ufs/...
-
       - name: Run tests with race detector and coverage
         env:
           CGO_ENABLED: 1

@@ -71,7 +71,7 @@ func (fs *Filesystem) CompressFiles(dir string, paths []string) (os.FileInfo, er
 	qf := newQuotaFile(fs, f, 0)
 	if err := streamArchive(a, context.Background(), qf); err != nil {
 		_ = qf.Close()
-		_ = fs.Remove(d)
+		_ = fs.Delete(d)
 		return nil, err
 	}
 	st, err := qf.Stat()

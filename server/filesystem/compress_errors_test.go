@@ -20,7 +20,13 @@ func TestCompressFilesStreamAndFileErrors(t *testing.T) {
 		fs := newCompressTestFilesystem(t)
 		want := errors.New("stream failed")
 		previous := streamArchive
-		streamArchive = func(_ *Archive, _ context.Context, _ io.Writer) error { return want }
+		streamArchive = func(_ *Archive, _ context.Context, w io.Writer) error {
+			_, err := io.WriteString(w, "partial gzip header")
+			if err != nil {
+				return err
+			}
+			return want
+		}
 		t.Cleanup(func() { streamArchive = previous })
 
 		_, err := fs.CompressFiles("/", []string{"source.txt"})
@@ -30,6 +36,9 @@ func TestCompressFilesStreamAndFileErrors(t *testing.T) {
 		for _, entry := range entries {
 			require.NotContains(t, entry.Name(), "archive-")
 		}
+		usage, err := fs.DirectorySize("/")
+		require.NoError(t, err)
+		require.Equal(t, usage, fs.CachedUsage())
 	})
 
 }
