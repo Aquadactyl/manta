@@ -30,6 +30,22 @@ var transferNewRequest = http.NewRequestWithContext
 var transferGetArchive = func(t *Transfer) (*Archive, error) { return t.Archive() }
 var transferProgressInterval = 5 * time.Second
 
+func watchArchiveStreamCancellation(ctx context.Context, src *io.PipeReader, streamFinished <-chan struct{}) <-chan struct{} {
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		select {
+		case <-ctx.Done():
+			// Archive.Stream closes its gzip writer before returning. If the
+			// destination has stopped reading, that final flush can otherwise
+			// block forever on this pipe after cancellation.
+			_ = src.CloseWithError(ctx.Err())
+		case <-streamFinished:
+		}
+	}()
+	return done
+}
+
 // IsValidRedirectURL validates that the target URL uses http or https, has a valid
 // host, and does not contain illegal characters or ambiguous authority components.
 func IsValidRedirectURL(raw string) bool {
@@ -144,18 +160,7 @@ func (t *Transfer) PushArchiveToTarget(targetURL, token string) ([]byte, error) 
 		}()
 
 		streamFinished := make(chan struct{})
-		cancelWatcherDone := make(chan struct{})
-		go func() {
-			defer close(cancelWatcherDone)
-			select {
-			case <-ctx.Done():
-				// Archive.Stream closes its gzip writer before returning. If the
-				// destination has stopped reading, that final flush can otherwise
-				// block forever on this pipe after cancellation.
-				_ = src.CloseWithError(ctx.Err())
-			case <-streamFinished:
-			}
-		}()
+		cancelWatcherDone := watchArchiveStreamCancellation(ctx, src, streamFinished)
 		streamErr := a.Stream(ctx, pw)
 		close(streamFinished)
 		<-cancelWatcherDone

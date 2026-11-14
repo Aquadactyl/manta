@@ -87,7 +87,7 @@ func (s *Server) customMounts() []environment.Mount {
 			continue
 		}
 		// Only allow the root directory if it was configured as the root directory.
-		if resolved == "/" && filepath.Clean(a) != "/" {
+		if !isAllowedResolvedMountPath(a, resolved) {
 			s.Log().WithField("allowed_mount", a).Warn("ignoring allowed mount point, it resolves to the root directory")
 			continue
 		}
@@ -141,6 +141,10 @@ func (s *Server) customMounts() []environment.Mount {
 // on the host.
 func (s *Server) publishSkippedMount(target string) {
 	s.PublishConsoleOutputFromDaemon(fmt.Sprintf("Skipped the mount for %s, ask an administrator to check the Wings logs.", target))
+}
+
+func isAllowedResolvedMountPath(configured, resolved string) bool {
+	return resolved != "/" || filepath.Clean(configured) == "/"
 }
 
 // resolveMountPath resolves any symlinks in an absolute path that will be bind

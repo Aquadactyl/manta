@@ -218,6 +218,25 @@ func TestCustomMountsIgnoreNonRootPathResolvingToRoot(t *testing.T) {
 	}
 }
 
+func TestIsAllowedResolvedMountPath(t *testing.T) {
+	for _, test := range []struct {
+		name       string
+		configured string
+		resolved   string
+		want       bool
+	}{
+		{name: "configured root", configured: "/", resolved: "/", want: true},
+		{name: "non-root path resolving to root", configured: "/mnt/root-link", resolved: "/", want: false},
+		{name: "normal resolved path", configured: "/mnt/data", resolved: "/mnt/data", want: true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			if got := isAllowedResolvedMountPath(test.configured, test.resolved); got != test.want {
+				t.Fatalf("expected allowed=%t, got %t", test.want, got)
+			}
+		})
+	}
+}
+
 // Resolving the allowed mounts touches the filesystem, which can block on a
 // network share that is down, so servers without mounts should not do it.
 func TestCustomMountsWithoutMountsDoNotResolveAllowedMounts(t *testing.T) {

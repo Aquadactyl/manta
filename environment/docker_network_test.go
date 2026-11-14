@@ -16,6 +16,11 @@ import (
 )
 
 func TestConfigureDockerErrorAndOverlayNetwork(t *testing.T) {
+	// This test is also run by itself in the Darwin coverage workflow, where no
+	// earlier test has initialized the process-wide configuration.
+	initialConfig, err := config.NewAtPath("")
+	require.NoError(t, err)
+	config.Set(initialConfig)
 	previousConfig, previousFactory := config.Get(), dockerClientFactory
 	t.Cleanup(func() {
 		config.Set(previousConfig)

@@ -30,6 +30,21 @@ func (b *transferResponseBody) Close() error {
 	return nil
 }
 
+func TestArchiveStreamCancellationClosesSourcePipe(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	src, dst := io.Pipe()
+	defer src.Close()
+	defer dst.Close()
+	finished := make(chan struct{})
+	done := watchArchiveStreamCancellation(ctx, src, finished)
+
+	cancel()
+	<-done
+
+	_, err := dst.Write([]byte("archive footer"))
+	require.ErrorIs(t, err, context.Canceled)
+}
+
 func TestTransferClosesResponseOnEveryExit(t *testing.T) {
 	config.Set(&config.Configuration{AuthenticationToken: "test-token"})
 	for _, test := range []struct {
