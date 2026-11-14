@@ -58,6 +58,98 @@ func TestRootCmdRunIgnoreCertErrorsDeprecated(t *testing.T) {
 	assert.NotEmpty(t, dep.Deprecated)
 }
 
+func TestWriteConfigWithLoggingHandlesWriteErrors(t *testing.T) {
+	old := writeRootConfig
+	t.Cleanup(func() { writeRootConfig = old })
+	for _, want := range []error{syscall.EROFS, errors.New("write failed")} {
+		writeRootConfig = func(*config.Configuration) error { return want }
+		assert.NotPanics(t, writeConfigWithLogging)
+	}
+	writeRootConfig = func(*config.Configuration) error { return nil }
+	assert.NotPanics(t, writeConfigWithLogging)
+}
+
+func TestPersistRootStatesUntilDone(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	ticker := time.NewTicker(time.Millisecond)
+	called := make(chan struct{}, 1)
+	done := make(chan struct{})
+	go func() {
+		persistRootStatesUntilDone(ctx, ticker, func() error {
+			called <- struct{}{}
+			return errors.New("persist failed")
+		})
+		close(done)
+	}()
+	select {
+	case <-called:
+	case <-time.After(time.Second):
+		t.Fatal("state persistence ticker did not fire")
+	}
+	cancel()
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("state persistence loop did not stop with its context")
+	}
+}
+
+func TestReadRootServerStatesLogsInvalidStateFile(t *testing.T) {
+	data := t.TempDir()
+	cfg := &config.Configuration{}
+	cfg.System.Data = data
+	config.Set(cfg)
+	require.NoError(t, os.WriteFile(cfg.System.GetStatesPath(), []byte("{"), 0o600))
+	manager := server.NewEmptyManager(remote.New("http://panel.invalid"))
+	assert.Empty(t, readRootServerStates(manager))
+}
+
+func TestEnsureRootStorageDirectoriesLogsCreationErrors(t *testing.T) {
+	dir := t.TempDir()
+	archiveFile, backupFile := filepath.Join(dir, "archive"), filepath.Join(dir, "backup")
+	require.NoError(t, os.WriteFile(archiveFile, []byte("file"), 0o600))
+	require.NoError(t, os.WriteFile(backupFile, []byte("file"), 0o600))
+	ensureRootStorageDirectories(config.SystemConfiguration{ArchiveDirectory: archiveFile, BackupDirectory: backupFile})
+}
+
+type rootStateResetErrorClient struct{ remote.Client }
+
+func (rootStateResetErrorClient) ResetServersState(context.Context) error {
+	return errors.New("panel reset failed")
+}
+
+func TestResetRootStatesOnPanelHandlesErrors(t *testing.T) {
+	old := resetRootServerStates
+	t.Cleanup(func() { resetRootServerStates = old })
+	resetRootStatesOnPanel(context.Background(), rootStateResetErrorClient{})
+}
+
+func TestRootServiceStartupFailuresAreReported(t *testing.T) {
+	oldCron, oldSFTP, oldFatal := startRootCron, serveRootSFTP, rootFatal
+	t.Cleanup(func() { startRootCron, serveRootSFTP, rootFatal = oldCron, oldSFTP, oldFatal })
+	startRootCron = func(context.Context, *server.Manager) error { return errors.New("cron startup failed") }
+	serveRootSFTP = func(*server.Manager, int) error { return errors.New("sftp startup failed") }
+	var reported []string
+	rootFatal = func(_ log.Fields, message string) { reported = append(reported, message) }
+	manager := server.NewEmptyManager(remote.New("http://panel.invalid"))
+	startRootCronOrFatal(context.Background(), manager)
+	runRootSFTPOrFatal(manager, 1)
+	assert.Equal(t, []string{"failed to initialize cron system", "failed to initialize the sftp server"}, reported)
+}
+
+func TestDefaultRootPowerActionDelegatesToServer(t *testing.T) {
+	s, err := server.New(nil)
+	require.NoError(t, err)
+	require.Error(t, rootPowerAction(s, server.PowerAction("invalid")))
+}
+
+func TestDefaultRootFatalUsesExitHook(t *testing.T) {
+	oldExit := exitCommand
+	t.Cleanup(func() { exitCommand = oldExit })
+	exitCommand = func(code int) { panic(code) }
+	require.PanicsWithValue(t, 1, func() { rootFatal(log.Fields{"test": true}, "fatal test") })
+}
+
 func TestRootCmdRunLifecycle(t *testing.T) {
 	existingContainerUUID := "82595161-eed8-4536-8f50-689b2c2912bb"
 	settingsMap := map[string]any{
@@ -81,7 +173,7 @@ func TestRootCmdRunLifecycle(t *testing.T) {
 				"meta": map[string]any{"current_page": 1, "last_page": 1, "total": 1},
 			})
 		case "/api/remote/servers/reset":
-			w.WriteHeader(http.StatusOK)
+			w.WriteHeader(http.StatusInternalServerError)
 		default:
 			w.WriteHeader(http.StatusOK)
 		}
@@ -123,12 +215,14 @@ func TestRootCmdRunLifecycle(t *testing.T) {
 	require.NoError(t, config.WriteToDisk(cfg))
 	config.Set(cfg)
 	require.NoError(t, os.MkdirAll(cfg.System.Data, 0o700))
-	require.NoError(t, os.WriteFile(cfg.System.GetStatesPath(), []byte("{"), 0o600))
+	require.NoError(t, os.WriteFile(cfg.System.GetStatesPath(), []byte(`{"a2519516-1ed8-4536-8f50-689b2c2912bb":"running"}`), 0o600))
 
 	oldManagerFactory := newServerManager
+	var lifecycleManager *server.Manager
 	t.Cleanup(func() { newServerManager = oldManagerFactory })
 	newServerManager = func(_ context.Context, client remote.Client) (*server.Manager, error) {
 		manager := server.NewEmptyManager(client)
+		lifecycleManager = manager
 		settings, err := json.Marshal(settingsMap)
 		if err != nil {
 			return nil, err
@@ -184,8 +278,30 @@ func TestRootCmdRunLifecycle(t *testing.T) {
 		}
 		third.Environment = &rootLifecycleEnvironment{}
 		manager.Add(third)
+		fourthUUID := "b2519516-1ed8-4536-8f50-689b2c2912bb"
+		fourthSettings, err := json.Marshal(map[string]any{
+			"uuid":             fourthUUID,
+			"skip_egg_scripts": true,
+			"build":            map[string]any{"memory_limit": 128, "disk_space": 128},
+			"container":        map[string]any{"image": "~alpine:latest"},
+		})
+		if err != nil {
+			return nil, err
+		}
+		fourth, err := manager.InitServer(fourthUUID, remote.ServerConfigurationResponse{
+			Settings:             fourthSettings,
+			ProcessConfiguration: &remote.ProcessConfiguration{},
+		})
+		if err != nil {
+			return nil, err
+		}
+		fourth.Environment = &rootLifecycleEnvironment{}
+		manager.Add(fourth)
 		return manager, nil
 	}
+	oldRootPowerAction := rootPowerAction
+	t.Cleanup(func() { rootPowerAction = oldRootPowerAction })
+	rootPowerAction = func(*server.Server, server.PowerAction) error { return errors.New("start failed") }
 
 	origConfigPath := configPath
 	configPath = cfgPath
@@ -215,6 +331,7 @@ func TestRootCmdRunLifecycle(t *testing.T) {
 	assert.NotPanics(t, func() {
 		rootCmdRun(cmd, nil)
 	})
+	require.Error(t, startRootCron(context.Background(), lifecycleManager))
 }
 
 func TestRootCmdRunAbortsOnInitializationFailures(t *testing.T) {

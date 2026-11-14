@@ -55,19 +55,48 @@ var (
 	initializeDatabase    = database.Initialize
 	newServerManager      = server.NewManager
 	configureDocker       = environment.ConfigureDocker
-	serveHTTPCommand      = func(s *http.Server, listener net.Listener) error { return s.Serve(listener) }
-	serveTLSCommand       = func(s *http.Server, listener net.Listener, certFile, keyFile string) error {
+	writeRootConfig       = config.WriteToDisk
+	rootPowerAction       = func(s *server.Server, action server.PowerAction) error { return s.HandlePowerAction(action) }
+	startRootCron         = func(ctx context.Context, manager *server.Manager) error {
+		s, err := cron.Scheduler(ctx, manager)
+		if err != nil {
+			return err
+		}
+		log.WithField("subsystem", "cron").Info("starting cron processes")
+		s.StartAsync()
+		return nil
+	}
+	serveRootSFTP = func(manager *server.Manager, maxConnections int) error {
+		srv := sftp.New(manager)
+		srv.MaxConnections = maxConnections
+		return srv.Run()
+	}
+	resetRootServerStates = func(ctx context.Context, client remote.Client) error {
+		return client.ResetServersState(ctx)
+	}
+	serveHTTPCommand = func(s *http.Server, listener net.Listener) error { return s.Serve(listener) }
+	serveTLSCommand  = func(s *http.Server, listener net.Listener, certFile, keyFile string) error {
 		return s.ServeTLS(listener, certFile, keyFile)
 	}
 	serveAutoTLSHTTPCommand = func(handler http.Handler) {
 		go func() {
-			if err := router.NewServer(":http", handler, nil).ListenAndServe(); err != nil {
+			if err := serveAutoTLSHTTPListen(router.NewServer(":http", handler, nil)); err != nil {
 				log.WithError(err).Error("failed to serve autocert http server")
 			}
 		}()
 	}
-	rootFatal = func(fields log.Fields, message string) {
-		log.WithFields(fields).Fatal(message)
+	serveAutoTLSHTTPListen = func(s *http.Server) error { return s.ListenAndServe() }
+	rootFatal              = func(fields log.Fields, message string) {
+		entry := log.WithFields(fields)
+		fatal := &log.Entry{
+			Logger:    entry.Logger,
+			Fields:    fields,
+			Level:     log.FatalLevel,
+			Timestamp: time.Now(),
+			Message:   message,
+		}
+		_ = entry.Logger.Handler.HandleLog(fatal)
+		exitCommand(1)
 	}
 )
 
@@ -182,40 +211,21 @@ func rootCmdRun(cmd *cobra.Command, _ []string) {
 	}
 	startMountCheck(cmd.Context())
 
-	if err := config.WriteToDisk(config.Get()); err != nil {
-		if !errors.Is(err, syscall.EROFS) {
-			log.WithField("error", err).Error("failed to write configuration to disk")
-		} else {
-			log.WithField("error", err).Debug("failed to write configuration to disk")
-		}
-	}
+	writeConfigWithLogging()
 
 	// Just for some nice log output.
 	for _, s := range manager.All() {
 		log.WithField("server", s.ID()).Info("finished loading configuration for server")
 	}
 
-	states, err := manager.ReadStates()
-	if err != nil {
-		log.WithField("error", err).Error("failed to retrieve locally cached server states from disk, assuming all servers in offline state")
-	}
+	states := readRootServerStates(manager)
 
 	ticker := time.NewTicker(time.Minute)
 	// Every minute, write the current server states to the disk to allow for a more
 	// seamless hard-reboot process in which wings will re-sync server states based
 	// on its last tracked state.
 	go func() {
-		for {
-			select {
-			case <-ticker.C:
-				if err := manager.PersistStates(); err != nil {
-					log.WithField("error", err).Warn("failed to persist server states to disk")
-				}
-			case <-cmd.Context().Done():
-				ticker.Stop()
-				return
-			}
-		}
+		persistRootStatesUntilDone(cmd.Context(), ticker, manager.PersistStates)
 	}()
 
 	// Create a new workerpool that limits us to 4 servers being bootstrapped at a time
@@ -264,7 +274,7 @@ func rootCmdRun(cmd *cobra.Command, _ []string) {
 			// This does mean that booting wings after a catastrophic machine crash and wiping out the Docker images
 			// as a result will result in a slow boot.
 			if !r && (st == environment.ProcessRunningState || st == environment.ProcessStartingState) {
-				if err := s.HandlePowerAction(server.PowerActionStart); err != nil {
+				if err := rootPowerAction(s, server.PowerActionStart); err != nil {
 					s.Log().WithField("error", err).Warn("failed to return server to running state")
 				}
 			} else if r || (!r && s.IsRunning()) {
@@ -306,45 +316,22 @@ func rootCmdRun(cmd *cobra.Command, _ []string) {
 		}
 	}()
 
-	if s, err := cron.Scheduler(cmd.Context(), manager); err != nil {
-		log.WithField("error", err).Fatal("failed to initialize cron system")
-	} else {
-		log.WithField("subsystem", "cron").Info("starting cron processes")
-		s.StartAsync()
-	}
+	startRootCronOrFatal(cmd.Context(), manager)
 
 	httpConnections, sftpConnections := connectionLimits()
 	log.WithFields(log.Fields{"http": httpConnections, "sftp": sftpConnections}).Info("limiting the number of open connections, raise the open file limit for Wings to allow more")
 
 	go func() {
 		// Run the SFTP server.
-		srv := sftp.New(manager)
-		srv.MaxConnections = sftpConnections
-		if err := srv.Run(); err != nil {
-			log.WithError(err).Fatal("failed to initialize the sftp server")
-			return
-		}
+		runRootSFTPOrFatal(manager, sftpConnections)
 	}()
 
 	go func() {
-		log.Info("updating server states on Panel: marking installing/restoring servers as normal")
-		// Update all the servers on the Panel to be in a valid state if they're
-		// currently marked as installing/restoring now that Wings is restarted.
-		if err := pclient.ResetServersState(cmd.Context()); err != nil {
-			log.WithField("error", err).Error("failed to reset server states on Panel: some instances may be stuck in an installing/restoring state unexpectedly")
-		}
+		resetRootStatesOnPanel(cmd.Context(), pclient)
 	}()
 
 	sys := config.Get().System
-	// Ensure the archive directory exists.
-	if err := os.MkdirAll(sys.ArchiveDirectory, 0o700); err != nil {
-		log.WithField("error", err).Error("failed to create archive directory")
-	}
-
-	// Ensure the backup directory exists.
-	if err := os.MkdirAll(sys.BackupDirectory, 0o700); err != nil {
-		log.WithField("error", err).Error("failed to create backup directory")
-	}
+	ensureRootStorageDirectories(sys)
 
 	autotls, _ := cmd.Flags().GetBool("auto-tls")
 	tlshostname, _ := cmd.Flags().GetString("tls-hostname")
@@ -364,9 +351,7 @@ func rootCmdRun(cmd *cobra.Command, _ []string) {
 	// and external clients.
 	s := router.NewServer(api.Host+":"+strconv.Itoa(api.Port), router.Configure(manager, pclient), config.DefaultTLSConfig)
 	listener, err := net.Listen("tcp", s.Addr)
-	if err != nil {
-		log.WithField("error", err).Fatal("failed to configure HTTP server")
-	}
+	reportRootHTTPListenError(err)
 	listener = network.LimitListener(listener, httpConnections, "http")
 
 	// Save the state of every server and stop serving requests when Wings is asked
@@ -395,6 +380,72 @@ func rootCmdRun(cmd *cobra.Command, _ []string) {
 	}
 
 	serveConfiguredAPI(s, listener, api, sys, autotls, tlshostname)
+}
+
+func writeConfigWithLogging() {
+	if err := writeRootConfig(config.Get()); err != nil {
+		if !errors.Is(err, syscall.EROFS) {
+			log.WithField("error", err).Error("failed to write configuration to disk")
+		} else {
+			log.WithField("error", err).Debug("failed to write configuration to disk")
+		}
+	}
+}
+
+func readRootServerStates(manager *server.Manager) map[string]string {
+	states, err := manager.ReadStates()
+	if err != nil {
+		log.WithField("error", err).Error("failed to retrieve locally cached server states from disk, assuming all servers in offline state")
+	}
+	return states
+}
+
+func startRootCronOrFatal(ctx context.Context, manager *server.Manager) {
+	if err := startRootCron(ctx, manager); err != nil {
+		rootFatal(log.Fields{"error": err}, "failed to initialize cron system")
+	}
+}
+
+func runRootSFTPOrFatal(manager *server.Manager, maxConnections int) {
+	if err := serveRootSFTP(manager, maxConnections); err != nil {
+		rootFatal(log.Fields{"error": err}, "failed to initialize the sftp server")
+	}
+}
+
+func resetRootStatesOnPanel(ctx context.Context, client remote.Client) {
+	log.Info("updating server states on Panel: marking installing/restoring servers as normal")
+	if err := resetRootServerStates(ctx, client); err != nil {
+		log.WithField("error", err).Error("failed to reset server states on Panel: some instances may be stuck in an installing/restoring state unexpectedly")
+	}
+}
+
+func reportRootHTTPListenError(err error) {
+	if err != nil {
+		rootFatal(log.Fields{"error": err}, "failed to configure HTTP server")
+	}
+}
+
+func ensureRootStorageDirectories(sys config.SystemConfiguration) {
+	if err := os.MkdirAll(sys.ArchiveDirectory, 0o700); err != nil {
+		log.WithField("error", err).Error("failed to create archive directory")
+	}
+	if err := os.MkdirAll(sys.BackupDirectory, 0o700); err != nil {
+		log.WithField("error", err).Error("failed to create backup directory")
+	}
+}
+
+func persistRootStatesUntilDone(ctx context.Context, ticker *time.Ticker, persist func() error) {
+	for {
+		select {
+		case <-ticker.C:
+			if err := persist(); err != nil {
+				log.WithField("error", err).Warn("failed to persist server states to disk")
+			}
+		case <-ctx.Done():
+			ticker.Stop()
+			return
+		}
+	}
 }
 
 // serveConfiguredAPI chooses the configured TLS mode and starts the API

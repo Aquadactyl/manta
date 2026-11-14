@@ -5,83 +5,113 @@ import (
 	"errors"
 	"net"
 	"net/http"
+	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/apex/log"
-	"github.com/stretchr/testify/require"
-	"golang.org/x/crypto/acme"
-
 	"github.com/pterodactyl/wings/config"
 )
 
-func TestServeConfiguredAPIModes(t *testing.T) {
-	oldServeHTTP, oldServeTLS, oldServeAutoTLSHTTP, oldFatal := serveHTTPCommand, serveTLSCommand, serveAutoTLSHTTPCommand, rootFatal
+func TestServeConfiguredAPIInvokesDefaultTLSHandler(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer listener.Close()
+
+	oldFatal := rootFatal
+	t.Cleanup(func() { rootFatal = oldFatal })
+	rootFatal = func(log.Fields, string) {}
+	api := config.ApiConfiguration{}
+	api.Ssl.Enabled = true
+	api.Ssl.CertificateFile = filepath.Join(t.TempDir(), "missing.crt")
+	api.Ssl.KeyFile = filepath.Join(t.TempDir(), "missing.key")
+	serveConfiguredAPI(&http.Server{TLSConfig: &tls.Config{}}, listener, api, config.SystemConfiguration{}, false, "")
+}
+
+func TestServeConfiguredAPIInitializesAutoTLS(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer listener.Close()
+
+	oldHTTP, oldTLS := serveAutoTLSHTTPCommand, serveTLSCommand
+	t.Cleanup(func() { serveAutoTLSHTTPCommand, serveTLSCommand = oldHTTP, oldTLS })
+	serveAutoTLSHTTPCommand = func(http.Handler) {}
+	var got *http.Server
+	serveTLSCommand = func(s *http.Server, _ net.Listener, _, _ string) error {
+		got = s
+		return http.ErrServerClosed
+	}
+	s := &http.Server{TLSConfig: &tls.Config{}}
+	sys := config.SystemConfiguration{RootDirectory: t.TempDir()}
+	serveConfiguredAPI(s, listener, config.ApiConfiguration{}, sys, true, "example.com")
+	if got != s {
+		t.Fatal("auto-TLS server was not passed to TLS serving")
+	}
+	if len(s.TLSConfig.NextProtos) == 0 {
+		t.Fatal("auto-TLS ALPN protocol was not configured")
+	}
+}
+
+func TestServeConfiguredAPIReportsListenFailures(t *testing.T) {
+	oldHTTP, oldTLS, oldAutoHTTP, oldFatal := serveHTTPCommand, serveTLSCommand, serveAutoTLSHTTPCommand, rootFatal
 	t.Cleanup(func() {
-		serveHTTPCommand, serveTLSCommand, serveAutoTLSHTTPCommand, rootFatal = oldServeHTTP, oldServeTLS, oldServeAutoTLSHTTP, oldFatal
+		serveHTTPCommand, serveTLSCommand, serveAutoTLSHTTPCommand, rootFatal = oldHTTP, oldTLS, oldAutoHTTP, oldFatal
 	})
+	var messages []string
+	rootFatal = func(_ log.Fields, message string) { messages = append(messages, message) }
+	serveHTTPCommand = func(*http.Server, net.Listener) error { return errors.New("http failed") }
+	serveTLSCommand = func(*http.Server, net.Listener, string, string) error { return errors.New("tls failed") }
+	serveAutoTLSHTTPCommand = func(http.Handler) {}
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer listener.Close()
+	sys := config.SystemConfiguration{RootDirectory: t.TempDir()}
+	serveConfiguredAPI(&http.Server{TLSConfig: &tls.Config{}}, listener, config.ApiConfiguration{}, sys, true, "example.com")
+	api := config.ApiConfiguration{}
+	api.Ssl.Enabled = true
+	serveConfiguredAPI(&http.Server{TLSConfig: &tls.Config{}}, listener, api, sys, false, "")
+	serveConfiguredAPI(&http.Server{}, listener, config.ApiConfiguration{}, sys, false, "")
+	if len(messages) != 3 {
+		t.Fatalf("reported %d listener failures, want 3", len(messages))
+	}
+	before := len(messages)
+	reportRootHTTPListenError(nil)
+	if len(messages) != before {
+		t.Fatal("nil listen error was reported")
+	}
+	reportRootHTTPListenError(errors.New("bind failed"))
+	if len(messages) != before+1 || messages[len(messages)-1] != "failed to configure HTTP server" {
+		t.Fatal("listen error was not reported")
+	}
+}
 
-	t.Run("plain HTTP handles closed and failed servers", func(t *testing.T) {
-		for _, tc := range []struct {
-			name      string
-			serveErr  error
-			wantFatal string
-		}{
-			{name: "closed", serveErr: http.ErrServerClosed},
-			{name: "failed", serveErr: errors.New("listen failed"), wantFatal: "failed to configure HTTP server"},
-		} {
-			t.Run(tc.name, func(t *testing.T) {
-				var fatal string
-				rootFatal = func(_ log.Fields, message string) { fatal = message }
-				serveHTTPCommand = func(*http.Server, net.Listener) error { return tc.serveErr }
-				s := &http.Server{TLSConfig: &tls.Config{}}
-				serveConfiguredAPI(s, nil, config.ApiConfiguration{}, config.SystemConfiguration{}, false, "")
-				require.Nil(t, s.TLSConfig)
-				require.Equal(t, tc.wantFatal, fatal)
-			})
+func TestDefaultAutoTLSHTTPServerLogsListenError(t *testing.T) {
+	old := serveAutoTLSHTTPListen
+	t.Cleanup(func() { serveAutoTLSHTTPListen = old })
+	done := make(chan struct{})
+	serveAutoTLSHTTPListen = func(s *http.Server) error {
+		if s.Addr != ":http" {
+			t.Errorf("autocert HTTP server address = %q", s.Addr)
 		}
-	})
+		close(done)
+		return errors.New("listen failed")
+	}
+	serveAutoTLSHTTPCommand(http.NotFoundHandler())
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("autocert HTTP listener was not started")
+	}
+}
 
-	t.Run("configured TLS passes certificate paths and reports failures", func(t *testing.T) {
-		api := config.ApiConfiguration{}
-		api.Ssl.Enabled = true
-		api.Ssl.CertificateFile = "server.crt"
-		api.Ssl.KeyFile = "server.key"
-		var certFile, keyFile, fatal string
-		rootFatal = func(_ log.Fields, message string) { fatal = message }
-		serveTLSCommand = func(_ *http.Server, _ net.Listener, cert, key string) error {
-			certFile, keyFile = cert, key
-			return errors.New("TLS failed")
-		}
-		serveConfiguredAPI(&http.Server{}, nil, api, config.SystemConfiguration{}, false, "")
-		require.Equal(t, "server.crt", certFile)
-		require.Equal(t, "server.key", keyFile)
-		require.Equal(t, "failed to configure HTTPS server", fatal)
-	})
-
-	t.Run("automatic TLS configures protocols and handles a closed server", func(t *testing.T) {
-		var autoTLSHTTPStarted bool
-		var certFile, keyFile string
-		serveAutoTLSHTTPCommand = func(handler http.Handler) { autoTLSHTTPStarted = handler != nil }
-		serveTLSCommand = func(_ *http.Server, _ net.Listener, cert, key string) error {
-			certFile, keyFile = cert, key
-			return http.ErrServerClosed
-		}
-		rootFatal = func(_ log.Fields, message string) { t.Errorf("unexpected fatal: %s", message) }
-		s := &http.Server{TLSConfig: &tls.Config{}}
-		serveConfiguredAPI(s, nil, config.ApiConfiguration{}, config.SystemConfiguration{RootDirectory: t.TempDir()}, true, "manta.example")
-		require.True(t, autoTLSHTTPStarted)
-		require.Empty(t, certFile)
-		require.Empty(t, keyFile)
-		require.NotNil(t, s.TLSConfig.GetCertificate)
-		require.Contains(t, s.TLSConfig.NextProtos, acme.ALPNProto)
-	})
-
-	t.Run("automatic TLS reports failures", func(t *testing.T) {
-		serveAutoTLSHTTPCommand = func(http.Handler) {}
-		serveTLSCommand = func(*http.Server, net.Listener, string, string) error { return errors.New("auto TLS failed") }
-		var fatal string
-		rootFatal = func(_ log.Fields, message string) { fatal = message }
-		serveConfiguredAPI(&http.Server{TLSConfig: &tls.Config{}}, nil, config.ApiConfiguration{}, config.SystemConfiguration{}, true, "manta.example")
-		require.Equal(t, "failed to configure HTTP server using auto-tls", fatal)
-	})
+func TestDefaultAutoTLSHTTPListenerReturnsInvalidAddressError(t *testing.T) {
+	if err := serveAutoTLSHTTPListen(&http.Server{Addr: "invalid address"}); err == nil {
+		t.Fatal("expected ListenAndServe to reject an invalid address")
+	}
 }

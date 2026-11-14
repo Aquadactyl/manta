@@ -2266,6 +2266,27 @@ func TestServerTransferAndLifecycleBranches(t *testing.T) {
 	assert.Nil(t, transfer.Outgoing().Get(s.ID()))
 	s.SetTransferring(false)
 
+	// A failed push notifies the panel; the notification failure is logged and
+	// the local transfer still completes its cleanup.
+	h.panel.statusErr = errors.New("panel transfer status unavailable")
+	failingDestination := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = io.Copy(io.Discard, r.Body)
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer failingDestination.Close()
+	req = httptest.NewRequest(http.MethodPost, "/api/servers/"+s.ID()+"/transfer", strings.NewReader(`{"url":"`+failingDestination.URL+`/api/transfers","token":"test-token"}`))
+	req.Header.Set("Authorization", "Bearer test-token")
+	req.Header.Set("Content-Type", "application/json")
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusAccepted, w.Code)
+	deadline = time.Now().Add(time.Second)
+	for transfer.Outgoing().Get(s.ID()) != nil && time.Now().Before(deadline) {
+		time.Sleep(time.Millisecond)
+	}
+	assert.Nil(t, transfer.Outgoing().Get(s.ID()))
+	h.panel.statusErr = nil
+
 	// Cancel a transfer after its destination has accepted the request, exercising
 	// the context-canceled completion path.
 	destinationStarted := make(chan struct{})
@@ -2535,6 +2556,18 @@ func TestFileOperationsComprehensiveCoverage(t *testing.T) {
 	h.router.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 	assert.Contains(t, w.Body.String(), "No files were found")
+
+	// A malformed subsequent multipart part causes NextPart to fail after parsing starts.
+	malformedMultipart := "--broken\r\nContent-Disposition: form-data; name=\"other\"\r\n\r\nvalue\r\n--broken\r\nMalformed Header\r\n\r\n"
+	malformedTok := validTok
+	malformedTok.UniqueId = uuid.New().String()
+	signedMalformedTok, err := jwt.Sign(&malformedTok, config.GetJwtAlgorithm())
+	require.NoError(t, err)
+	req = httptest.NewRequest(http.MethodPost, "/upload/file?token="+string(signedMalformedTok), strings.NewReader(malformedMultipart))
+	req.Header.Set("Content-Type", "multipart/form-data; boundary=broken")
+	w = httptest.NewRecorder()
+	h.router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
 
 	// 13. postServerDecompressFiles unknown archive format
 	require.NoError(t, os.MkdirAll(s.Filesystem().Path(), 0755))

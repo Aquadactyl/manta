@@ -28,6 +28,7 @@ var transferCopyBuffers = sync.Pool{
 
 var transferNewRequest = http.NewRequestWithContext
 var transferGetArchive = func(t *Transfer) (*Archive, error) { return t.Archive() }
+var transferProgressInterval = 5 * time.Second
 
 // IsValidRedirectURL validates that the target URL uses http or https, has a valid
 // host, and does not contain illegal characters or ambiguous authority components.
@@ -87,7 +88,7 @@ func (t *Transfer) PushArchiveToTarget(targetURL, token string) ([]byte, error) 
 				t.SendMessage("Uploading " + p.Progress(25))
 			}
 		}
-	}(ctx2, a.Progress(), time.NewTicker(5*time.Second))
+	}(ctx2, a.Progress(), time.NewTicker(transferProgressInterval))
 
 	// Create a new request using the pipe as the body.
 	body, writer := io.Pipe()
@@ -156,22 +157,18 @@ func (t *Transfer) PushArchiveToTarget(targetURL, token string) ([]byte, error) 
 
 		// Wait for the copy to finish before we continue.
 		t.Log().Debug("waiting on copy to finish")
-		if err := <-ch; err != nil {
-			errChan <- err
+		if forwardTransferCopyError(errChan, <-ch) {
 			return
 		}
 
-		if err := mp.WriteField("checksum", hex.EncodeToString(h.Sum(nil))); err != nil {
-			errChan <- errors.New("failed to stream checksum")
+		if writeTransferChecksum(errChan, mp, hex.EncodeToString(h.Sum(nil))) {
 			return
 		}
 
 		cancel2()
 		t.SendMessage("Finished streaming archive to destination.")
 
-		if err := mp.Close(); err != nil {
-			t.Log().WithError(err).Error("error while closing multipart writer")
-		}
+		logTransferMultipartClose(t, mp.Close())
 		t.Log().Debug("closed multipart writer")
 	}()
 
@@ -198,12 +195,7 @@ func (t *Transfer) PushArchiveToTarget(targetURL, token string) ([]byte, error) 
 	case err2 := <-errChan:
 		t.Log().Debug("stream completed")
 		if err2 != nil {
-			if errors.Is(err2, context.Canceled) {
-				return nil, err2
-			}
-
-			t.Log().WithError(err2).Debug("failed to send archive to destination")
-			return nil, fmt.Errorf("multipart error: %w", err2)
+			return nil, transferStreamResultError(t, err2)
 		}
 		t.Log().Debug("received response from destination")
 
@@ -214,4 +206,38 @@ func (t *Transfer) PushArchiveToTarget(targetURL, token string) ([]byte, error) 
 
 		return v, nil
 	}
+}
+
+func forwardTransferCopyError(errChan chan<- error, err error) bool {
+	if err == nil {
+		return false
+	}
+	errChan <- err
+	return true
+}
+
+func writeTransferChecksum(errChan chan<- error, mp interface{ WriteField(string, string) error }, checksum string) bool {
+	if err := mp.WriteField("checksum", checksum); err != nil {
+		errChan <- errors.New("failed to stream checksum")
+		return true
+	}
+	return false
+}
+
+func logTransferMultipartClose(t *Transfer, err error) {
+	if err != nil {
+		t.Log().WithError(err).Error("error while closing multipart writer")
+	}
+}
+
+func isTransferContextCanceled(err error) bool {
+	return errors.Is(err, context.Canceled)
+}
+
+func transferStreamResultError(t *Transfer, err error) error {
+	if isTransferContextCanceled(err) {
+		return err
+	}
+	t.Log().WithError(err).Debug("failed to send archive to destination")
+	return fmt.Errorf("multipart error: %w", err)
 }

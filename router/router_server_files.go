@@ -113,6 +113,22 @@ type renameFile struct {
 
 const fileBatchConcurrency = 8
 
+func fileBatchContextError(ctx context.Context) error {
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+		return nil
+	}
+}
+
+func runFileBatch(ctx context.Context, fn func() error) error {
+	if err := fileBatchContextError(ctx); err != nil {
+		return err
+	}
+	return fn()
+}
+
 // Renames (or moves) files for a server.
 func putServerRenameFiles(c *gin.Context) {
 	s := ExtractServer(c)
@@ -144,10 +160,7 @@ func putServerRenameFiles(c *gin.Context) {
 		pt := path.Join(data.Root, p.To)
 
 		g.Go(func() error {
-			select {
-			case <-ctx.Done():
-				return ctx.Err()
-			default:
+			return runFileBatch(ctx, func() error {
 				fs := s.Filesystem()
 				// Ignore renames on a file that is on the denylist (both as the rename from or
 				// the rename to value).
@@ -166,7 +179,7 @@ func putServerRenameFiles(c *gin.Context) {
 					return err
 				}
 				return nil
-			}
+			})
 		})
 	}
 
@@ -245,12 +258,7 @@ func postServerDeleteFiles(c *gin.Context) {
 		pi := path.Join(data.Root, p)
 
 		g.Go(func() error {
-			select {
-			case <-ctx.Done():
-				return ctx.Err()
-			default:
-				return s.Filesystem().Delete(pi)
-			}
+			return runFileBatch(ctx, func() error { return s.Filesystem().Delete(pi) })
 		})
 	}
 
@@ -577,10 +585,7 @@ func postServerChmodFile(c *gin.Context) {
 			break
 		}
 		g.Go(func() error {
-			select {
-			case <-ctx.Done():
-				return ctx.Err()
-			default:
+			return runFileBatch(ctx, func() error {
 				mode, err := strconv.ParseUint(p.Mode, 8, 32)
 				if err != nil {
 					return errInvalidFileMode
@@ -597,7 +602,7 @@ func postServerChmodFile(c *gin.Context) {
 				}
 
 				return nil
-			}
+			})
 		})
 	}
 

@@ -17,6 +17,8 @@ import (
 	"github.com/pterodactyl/wings/server/transfer"
 )
 
+var removeServerFiles = os.RemoveAll
+
 // Returns a single server from the collection of servers.
 func getServer(c *gin.Context) {
 	c.JSON(http.StatusOK, ExtractServer(c).ToAPIResponse())
@@ -248,7 +250,7 @@ func deleteServer(c *gin.Context) {
 		fs := s.Filesystem()
 		p := fs.Path()
 		_ = fs.UnixFS().Close()
-		if err := os.RemoveAll(p); err != nil {
+		if err := removeServerFiles(p); err != nil {
 			log.WithFields(log.Fields{"path": p, "error": err}).Warn("failed to remove server files during deletion process")
 		}
 	}(s)

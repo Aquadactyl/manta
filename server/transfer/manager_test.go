@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -321,6 +322,9 @@ func TestPushArchiveToTargetReturnsArchiveCreationError(t *testing.T) {
 
 func TestPushArchiveToTarget_AdvancedBranches(t *testing.T) {
 	config.Set(&config.Configuration{AuthenticationToken: "test-token"})
+	previousProgressInterval := transferProgressInterval
+	transferProgressInterval = time.Millisecond
+	t.Cleanup(func() { transferProgressInterval = previousProgressInterval })
 	serverDir := t.TempDir()
 	require.NoError(t, os.WriteFile(filepath.Join(serverDir, "test.txt"), []byte("transfer data"), 0o644))
 	fsys, err := filesystem.New(serverDir, 0, nil)
@@ -411,6 +415,30 @@ func TestPushArchiveToTarget_AdvancedBranches(t *testing.T) {
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "unexpected status code from destination: 500")
 }
+
+func TestPushArchiveToTargetHelpers(t *testing.T) {
+	ch := make(chan error, 1)
+	want := errors.New("copy failed")
+	assert.True(t, forwardTransferCopyError(ch, want))
+	assert.ErrorIs(t, <-ch, want)
+	assert.False(t, forwardTransferCopyError(ch, nil))
+
+	assert.False(t, writeTransferChecksum(ch, checksumWriter{}, "abc"))
+	assert.True(t, writeTransferChecksum(ch, checksumWriter{err: want}, "abc"))
+	assert.ErrorContains(t, <-ch, "failed to stream checksum")
+	assert.True(t, isTransferContextCanceled(context.Canceled))
+	assert.False(t, isTransferContextCanceled(want))
+
+	tr := newManagerTestTransfer(t, "transfer-close-log")
+	assert.ErrorIs(t, transferStreamResultError(tr, context.Canceled), context.Canceled)
+	assert.ErrorContains(t, transferStreamResultError(tr, want), "multipart error")
+	logTransferMultipartClose(tr, want)
+	logTransferMultipartClose(tr, nil)
+}
+
+type checksumWriter struct{ err error }
+
+func (w checksumWriter) WriteField(string, string) error { return w.err }
 
 func TestTransferArchiveCacheAndRedirectURLs(t *testing.T) {
 	assert.False(t, IsValidRedirectURL("ftp://example.com"))
