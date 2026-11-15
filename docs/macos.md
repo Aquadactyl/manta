@@ -59,7 +59,7 @@ The directory is set in the panel under the node's settings.
    `wings_darwin_arm64` on Apple Silicon and `wings_darwin_amd64` on Intel.
 
    ```sh
-   MANTA_VERSION="v0.3-beta"
+   MANTA_VERSION="v1.0-beta"
    ARCH="$(uname -m | sed 's/x86_64/amd64/')"
 
    curl -fL -o wings "https://github.com/Aquadactyl/manta/releases/download/${MANTA_VERSION}/wings_darwin_${ARCH}"
