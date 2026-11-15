@@ -61,6 +61,7 @@ jobs:
           fi
 
       - name: Prepare immutable release source
+        id: release_source
         run: |
           git fetch origin --tags
           if git show-ref --verify --quiet "refs/tags/$RELEASE_TAG"; then
@@ -77,6 +78,7 @@ jobs:
             git push origin "refs/tags/$RELEASE_TAG"
           fi
           grep -Fq "var Version = \"${RELEASE_TAG#v}\"" system/const.go
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Setup Go
         uses: actions/setup-go@v7.0.0
@@ -101,7 +103,7 @@ jobs:
         with:
           name: ${{ steps.resolve-release.outputs.release_tag }}
           tag_name: ${{ steps.resolve-release.outputs.release_tag }}
-          target_commitish: ${{ steps.resolve-release.outputs.release_tag }}
+          target_commitish: ${{ steps.release_source.outputs.sha }}
           draft: true
           fail_on_unmatched_files: true
           prerelease: ${{ steps.resolve-release.outputs.is_prerelease == 'true' }}
