@@ -1,6 +1,6 @@
 # Install and update Manta
 
-![Manta](../.github/assets/manta-wordmark.svg)
+![Manta](../.github/assets/manta-logo.png)
 
 Manta v1.0-beta is a prerelease. Use a staging node before upgrading a production
 fleet. Linux amd64 and arm64 releases are intended for server deployments;
