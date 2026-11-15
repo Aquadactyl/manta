@@ -91,3 +91,14 @@ panel migrations or configuration changes.
 For an offline deployment, download the binary and `checksums.txt` from the same
 release and pass `--from-directory /path/to/downloads`. Checksums detect download
 corruption; trust in the GitHub release and maintainers is still required.
+
+## Maintainer publication
+
+Dispatch the **Release** workflow for the reviewed tag. It uploads a
+`release-VERSION` artifact containing the four platform binaries,
+`checksums.txt` and `RELEASE_CHANGELOG`. Verify checksums, the source version,
+Linux/macOS CI and the binary's `version` output before publishing. A maintainer
+can create the draft with `gh release create VERSION --verify-tag --draft
+--prerelease --notes-file RELEASE_CHANGELOG wings_* checksums.txt`, then publish
+with `gh release edit VERSION --draft=false --prerelease`. Build artifacts alone
+do not create a public release. Keep published tags immutable.

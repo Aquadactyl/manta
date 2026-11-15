@@ -14,7 +14,7 @@ This project follows [Semantic Versioning](http://semver.org) guidelines.
   SHA256 and executable-version verification, atomic replacement and rollback
   when restarting an active daemon fails.
 - Publish source tags with the matching runtime version before building Linux
-  and macOS binaries. Release packaging creates a draft for final verification.
+  and macOS binaries. Release packaging uploads artifacts for maintainer verification.
 - Document installation, Wings migration, HTTPS, service setup and recovery.
 - Normalize verification scripts for Windows checkouts before running in Linux.
 - Use the current Manta terminal wordmark in project branding and installation
