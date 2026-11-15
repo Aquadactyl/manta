@@ -250,6 +250,10 @@ func TestDockerStopConfigurationsAndTerminate(t *testing.T) {
 		AuthenticationToken: "test-auth-token-12345",
 	}
 	cfg.Docker.Network.Mode = "bridge"
+	// This matrix tests process control, not registry availability. Reuse the
+	// image after its first pull rather than spending each action's deadline
+	// on another network request (especially on cold ARM64 CI runners).
+	cfg.Docker.ImagePullPolicy = "IfNotPresent"
 	cfg.Docker.TmpfsSize = 100
 	cfg.System.User.UID = 0
 	cfg.System.User.GID = 0
