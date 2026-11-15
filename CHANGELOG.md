@@ -8,6 +8,22 @@ This project follows [Semantic Versioning](http://semver.org) guidelines.
 
 ## Unreleased (Manta)
 
+## v1.0-beta
+
+- Add a Git-distributed Linux release installer with architecture selection,
+  SHA256 and executable-version verification, atomic replacement and rollback
+  when restarting an active daemon fails.
+- Publish source tags with the matching runtime version before building Linux
+  and macOS binaries. Release packaging creates a draft for final verification.
+- Document installation, Wings migration, HTTPS, service setup and recovery.
+- Normalize verification scripts for Windows checkouts before running in Linux.
+- Use the current Manta terminal wordmark in project branding and installation
+  documentation. Keep inherited Wings executable/service names for deployment compatibility.
+- Linux verification passed 1,235 cases/subtests across 29 packages with race
+  detection and `go vet`, with 98.70% full-module statement coverage. The separate
+  100% coverage audit target remains unmet.
+
+
 ### Added
 
 - Add an authenticated server file search endpoint that searches recursively beneath a supplied directory for case-insensitive path matches and returns up to 100 file paths.

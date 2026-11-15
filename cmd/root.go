@@ -573,7 +573,7 @@ Copyright © 2018 - %d Dane Everitt & Contributors
 
 Website:  https://aquadactyl.uk
  Source:  https://github.com/Aquadactyl/manta
-License:  https://github.com/Aquadactyl/manta/blob/develop/LICENSE
+License:  https://github.com/Aquadactyl/manta/blob/main/LICENSE
 
 This software is made available under the terms of the MIT license.
 The above copyright notice and this permission notice shall be included

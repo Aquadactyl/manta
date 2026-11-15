@@ -33,7 +33,7 @@ jobs:
           INPUT_PRERELEASE: ${{ inputs.prerelease }}
         run: |
           if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
-            TAG="$(echo "$INPUT_VERSION" | xargs)"
+            TAG="$INPUT_VERSION"
             if [[ "$TAG" != v* ]]; then
               TAG="v$TAG"
             fi
@@ -46,6 +46,8 @@ jobs:
               IS_PRERELEASE="false"
             fi
           fi
+          if [[ "$TAG" == *-* ]]; then IS_PRERELEASE=true; fi
+          [[ ${#TAG} -le 100 && "$TAG" =~ ^v(0|[1-9][0-9]*)(\.(0|[1-9][0-9]*)){0,2}(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$ ]] || exit 64
           echo "RELEASE_TAG=$TAG" >> "$GITHUB_ENV"
           echo "IS_PRERELEASE=$IS_PRERELEASE" >> "$GITHUB_ENV"
           echo "release_tag=$TAG" >> "$GITHUB_OUTPUT"
@@ -53,10 +55,28 @@ jobs:
 
       - name: Validate release tag
         run: |
-          if [[ ! "$RELEASE_TAG" =~ ^v[0-9]+(\.[0-9]+)*(-[0-9A-Za-z.-]+)?$ ]]; then
+          if [[ ! "$RELEASE_TAG" =~ ^v(0|[1-9][0-9]*)(\.(0|[1-9][0-9]*)){0,2}(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$ ]]; then
             echo "Release tags must use a v-prefixed version or versioned prerelease." >&2
             exit 1
           fi
+
+      - name: Prepare immutable release source
+        run: |
+          git fetch origin --tags
+          if git show-ref --verify --quiet "refs/tags/$RELEASE_TAG"; then
+            git checkout --detach "refs/tags/$RELEASE_TAG"
+          else
+            test "$GITHUB_EVENT_NAME" = workflow_dispatch
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git config user.name 'Aquadactyl CI'
+            VERSION="${RELEASE_TAG#v}"
+            sed -i "s/var Version = \".*\"/var Version = \"$VERSION\"/" system/const.go
+            git add system/const.go
+            git commit -m "Release $RELEASE_TAG"
+            git tag -a "$RELEASE_TAG" -m "Release $RELEASE_TAG"
+            git push origin "refs/tags/$RELEASE_TAG"
+          fi
+          grep -Fq "var Version = \"${RELEASE_TAG#v}\"" system/const.go
 
       - name: Setup Go
         uses: actions/setup-go@v7.0.0
@@ -67,38 +87,13 @@ jobs:
         env:
           CGO_ENABLED: 0
         run: |
-          mkdir -p dist
-          GOARCH=amd64 go build -o dist/wings_linux_amd64 -v -trimpath -ldflags="-s -w -X github.com/Aquadactyl/manta/system.Version=${RELEASE_TAG}" github.com/Aquadactyl/manta
-          chmod 755 dist/wings_linux_amd64
-          GOARCH=arm64 go build -o dist/wings_linux_arm64 -v -trimpath -ldflags="-s -w -X github.com/Aquadactyl/manta/system.Version=${RELEASE_TAG}" github.com/Aquadactyl/manta
-          chmod 755 dist/wings_linux_arm64
-          GOOS=darwin GOARCH=amd64 go build -o dist/wings_darwin_amd64 -v -trimpath -ldflags="-s -w -X github.com/Aquadactyl/manta/system.Version=${RELEASE_TAG}" github.com/Aquadactyl/manta
-          chmod 755 dist/wings_darwin_amd64
-          GOOS=darwin GOARCH=arm64 go build -o dist/wings_darwin_arm64 -v -trimpath -ldflags="-s -w -X github.com/Aquadactyl/manta/system.Version=${RELEASE_TAG}" github.com/Aquadactyl/manta
-          chmod 755 dist/wings_darwin_arm64
-          cd dist && sha256sum wings_linux_* wings_darwin_* > checksums.txt && cd ..
-
-      - name: create release branch and bump version
-        run: |
-          VERSION="${RELEASE_TAG#v}"
-          BRANCH="release/$RELEASE_TAG"
-          git config --local user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git config --local user.name 'Manta CI'
-          git checkout -b "$BRANCH"
-          sed -i "s/var Version = \".*\"/var Version = \"$VERSION\"/" system/const.go
-          git add system/const.go
-          git commit -m 'ci(release): bump version'
-          git push -u origin "$BRANCH"
-          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
-            if [ -z "$(git ls-remote --tags origin "refs/tags/$RELEASE_TAG")" ]; then
-              git tag -a "$RELEASE_TAG" -m "Release $RELEASE_TAG"
-              git push origin "$RELEASE_TAG"
-            fi
-          fi
+          VERSION="${RELEASE_TAG#v}" bash scripts/build-release.sh
+          test "$(dist/wings_linux_amd64 version | head -n 1)" = "manta ${RELEASE_TAG#v}"
 
       - name: write changelog
         run: |
-          sed -n "/^## $RELEASE_TAG/,/^## /{/^## /b;p}" CHANGELOG.md > ./RELEASE_CHANGELOG
+          awk -v heading="## $RELEASE_TAG" '$0 == heading { found=1; next } found && /^## / { exit } found { print }' CHANGELOG.md > RELEASE_CHANGELOG
+          test -s RELEASE_CHANGELOG
 
       - uses: softprops/action-gh-release@8a0cd651e5b2365bd640854a3fa5dfc70e4875f3
         env:
@@ -106,8 +101,9 @@ jobs:
         with:
           name: ${{ steps.resolve-release.outputs.release_tag }}
           tag_name: ${{ steps.resolve-release.outputs.release_tag }}
-          target_commitish: release/${{ steps.resolve-release.outputs.release_tag }}
-          draft: false
+          target_commitish: ${{ steps.resolve-release.outputs.release_tag }}
+          draft: true
+          fail_on_unmatched_files: true
           prerelease: ${{ steps.resolve-release.outputs.is_prerelease == 'true' }}
           body_path: ./RELEASE_CHANGELOG
           files: |

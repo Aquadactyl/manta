@@ -14,7 +14,10 @@ $volumesCreated = @()
 $coverageStatus = $null
 
 function Invoke-VerificationDocker {
-    & docker @args
+    # Windows PowerShell treats native stderr as an ErrorRecord. Docker pulls
+    # and Go downloads use stderr for progress even when they succeed.
+    $ErrorActionPreference = 'Continue'
+    & docker @args 2>&1 | ForEach-Object { $_.ToString() }
     if ($LASTEXITCODE -ne 0) { throw "Verification Docker command failed ($LASTEXITCODE)." }
 }
 
@@ -56,7 +59,8 @@ go version > /results/go-version.txt
 go test -race -json -count=1 -coverpkg=./... -covermode=atomic -coverprofile=/results/coverage.out ./... > /results/race.json
 go vet ./...
 '@
-    Invoke-VerificationDocker run --rm --cpus 4 --memory 4g --network $prefix `
+    $testScript = $testScript.Replace("`r`n", "`n")
+    Invoke-VerificationDocker run --rm --name "$prefix-tests" --cpus 4 --memory 4g --network $prefix `
         --mount "type=bind,source=$workspacePath,target=/workspace" `
         --mount "type=bind,source=$resultsPath,target=/results" `
         --mount "type=volume,source=$prefix-socket,target=/var/run" `
@@ -91,6 +95,8 @@ go vet ./...
     Write-Output "$($validation.passedCases) Go cases/subtests in $($validation.passedPackages) packages passed with race detection; vet passed."
 } finally {
     # Remove only resources successfully created by this invocation.
+    $ErrorActionPreference = 'Continue'
+    if ((& docker ps -aq --filter "name=^/$prefix-tests`$")) { & docker rm --force "$prefix-tests" | Out-Null }
     if ($engineCreated) { & docker rm --force --volumes $prefix | Out-Null }
     foreach ($volume in $volumesCreated) { & docker volume rm $volume | Out-Null }
     if ($networkCreated) { & docker network rm $prefix | Out-Null }

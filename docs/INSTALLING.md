@@ -1,0 +1,93 @@
+# Install and update Manta
+
+![Manta](../.github/assets/manta-wordmark.svg)
+
+Manta v1.0-beta is a prerelease. Use a staging node before upgrading a production
+fleet. Linux amd64 and arm64 releases are intended for server deployments;
+[macOS](macos.md) supports local development and small hosts through a Docker VM.
+
+## Linux
+
+Install Docker Engine using the [official instructions](https://docs.docker.com/engine/install/),
+then clone the matching release of Manta's tools:
+
+```bash
+git clone --depth 1 --branch v1.0-beta https://github.com/Aquadactyl/manta.git /opt/manta
+cd /opt/manta
+sudo bash scripts/install.sh v1.0-beta
+```
+
+The installer selects amd64/arm64, verifies the release SHA256 and executable
+version, and atomically installs `/usr/local/bin/wings`. Keeping the Wings file,
+service and configuration names preserves existing panel integration. Source
+builds use Go selected by `go.mod`: `go build -trimpath -o build/wings .`.
+
+For a new node, create a location and node in **Admin > Nodes**, configure its
+public HTTPS hostname and allocations, then save its generated configuration as
+`/etc/pterodactyl/config.yml` (directory `0700`, file `0600`, owned by root). The
+panel, browser and daemon must be able to reach each other's public addresses.
+Configure a trusted certificate or TLS reverse proxy for the daemon; do not use
+certificate-verification bypasses. Expose only the daemon, SFTP and required
+game ports, keeping Docker's socket private.
+
+Run `sudo /usr/local/bin/wings --config /etc/pterodactyl/config.yml` once to check
+the configuration, then install this service at `/etc/systemd/system/wings.service`:
+
+```ini
+[Unit]
+Description=Manta daemon
+After=docker.service network-online.target
+Requires=docker.service
+Wants=network-online.target
+
+[Service]
+User=root
+WorkingDirectory=/etc/pterodactyl
+ExecStart=/usr/local/bin/wings --config /etc/pterodactyl/config.yml
+Restart=on-failure
+RestartSec=5
+LimitNOFILE=4096
+TimeoutStopSec=180
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now wings
+sudo systemctl status wings --no-pager
+```
+
+Check node connectivity and an expendable test server's install, start, console,
+files, SFTP and backup before opening access to users. The daemon requires root
+on Linux and access to Docker, so install only trusted server images and eggs.
+On SELinux hosts configure `docker.selinux_relabel` as described in the README.
+
+## Update or migrate from Wings
+
+Back up `config.yml` and server data. Keep the previous binary and record its
+version. From the reviewed Manta tools checkout:
+
+```bash
+git fetch origin tag v1.0-beta
+git checkout --detach v1.0-beta
+sudo bash scripts/install.sh v1.0-beta
+sudo systemctl status wings --no-pager
+sudo journalctl -u wings -n 50 --no-pager
+```
+
+The installer checks the download before stopping an active daemon, retains
+`wings.previous`, and restarts an active service. A daemon restart briefly
+disconnects consoles and SFTP; existing game containers keep running. Schedule
+it outside installs, backups and transfers. A failed service start restores the
+previous binary. Verify node health after every update; runtime configuration
+errors may be reported after systemd accepts a start request.
+
+To roll back, stop `wings`, copy `wings.previous` to `/usr/local/bin/wings`, then
+start it and inspect its logs. Reverting the daemon binary does not roll back
+panel migrations or configuration changes.
+
+For an offline deployment, download the binary and `checksums.txt` from the same
+release and pass `--from-directory /path/to/downloads`. Checksums detect download
+corruption; trust in the GitHub release and maintainers is still required.

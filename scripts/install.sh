@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+# Install a checked release binary. Keeps the Wings executable and service names.
+set -Eeuo pipefail
+
+main() {
+    local tag="${1:-}" offline="" asset work target old active=0 installed=0
+    if [[ "${tag}" == --help || "${tag}" == -h ]]; then
+        printf 'Usage: sudo bash scripts/install.sh v1.0-beta [--from-directory DIR]\n'
+        return
+    fi
+    [[ ${#tag} -le 100 && "${tag}" =~ ^v(0|[1-9][0-9]*)(\.(0|[1-9][0-9]*)){0,2}(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$ ]] || {
+        echo 'Specify an exact release tag such as v1.0-beta.' >&2; return 64;
+    }
+    [[ ${EUID} -eq 0 ]] || { echo 'Run as root on Linux.' >&2; return 77; }
+    [[ "$(uname -s)" == Linux ]] || { echo 'For macOS use docs/macos.md.' >&2; return 69; }
+    shift
+    if [[ $# -gt 0 ]]; then
+        [[ $# -eq 2 && "$1" == --from-directory ]] || return 64
+        offline="$(realpath "$2")"
+    fi
+    case "$(uname -m)" in
+        x86_64) asset=wings_linux_amd64 ;;
+        aarch64|arm64) asset=wings_linux_arm64 ;;
+        *) echo 'Supported Linux architectures: amd64 and arm64.' >&2; return 69 ;;
+    esac
+    umask 077
+    work="$(mktemp -d)"
+    # This directory is created by this process, never supplied by the caller.
+    local cleanup_command
+    printf -v cleanup_command 'rm -rf -- %q' "${work}"
+    # Capture the local directory now; main's locals are out of scope at EXIT.
+    # shellcheck disable=SC2064
+    trap "${cleanup_command}" EXIT
+    if [[ -n "${offline}" ]]; then
+        cp -- "${offline}/${asset}" "${offline}/checksums.txt" "${work}/"
+    else
+        local base="https://github.com/Aquadactyl/manta/releases/download/${tag}"
+        curl --proto '=https' --tlsv1.2 -fSsL "${base}/${asset}" -o "${work}/${asset}"
+        curl --proto '=https' --tlsv1.2 -fSsL "${base}/checksums.txt" -o "${work}/checksums.txt"
+    fi
+    local checksum
+    checksum="$(awk -v asset="${asset}" '$2 == asset {print $1}' "${work}/checksums.txt")"
+    [[ "${checksum}" =~ ^[a-fA-F0-9]{64}$ ]] || { echo 'Missing or ambiguous release checksum.' >&2; return 65; }
+    (cd "${work}" && printf '%s  %s\n' "${checksum}" "${asset}" | sha256sum --check --status)
+    chmod 0700 "${work}/${asset}"
+    [[ "$("${work}/${asset}" version | head -n 1)" == "manta ${tag#v}" ]] || {
+        echo 'Binary version does not match the requested release.' >&2; return 65;
+    }
+    target="${MANTA_INSTALL_DIR:-/usr/local/bin}/wings"
+    [[ ! -L "${target}" ]] || { echo 'Refusing to replace a symlinked daemon executable.' >&2; return 65; }
+    mkdir -p -- "$(dirname "${target}")"
+    old="${target}.previous"
+    if [[ -f "${target}" ]]; then cp -p -- "${target}" "${old}"; fi
+    if [[ "${MANTA_MANAGE_SERVICE:-1}" == 1 ]] && command -v systemctl >/dev/null && systemctl is-active --quiet wings.service; then
+        active=1
+        systemctl stop wings.service
+    fi
+    # Stage on the destination filesystem so rename is atomic.
+    install -m 0755 -- "${work}/${asset}" "${target}.new"
+    mv -f -- "${target}.new" "${target}"
+    installed=1
+    if [[ "${active}" == 1 ]]; then
+        if ! systemctl start wings.service; then
+            if [[ -f "${old}" && "${installed}" == 1 ]]; then
+                cp -p -- "${old}" "${target}"
+                systemctl start wings.service || true
+            fi
+            echo 'Service failed to start; restored the previous executable. Inspect journalctl -u wings.' >&2
+            return 1
+        fi
+    fi
+    printf 'Installed Manta %s at %s.\n' "${tag#v}" "${target}"
+    printf 'Configuration and game server data were preserved. See docs/INSTALLING.md for first-time setup.\n'
+}
+
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then main "$@"; fi

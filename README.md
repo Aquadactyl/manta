@@ -1,8 +1,25 @@
+<p align="center"><img src=".github/assets/manta-wordmark.svg" alt="Manta — Aquadactyl daemon" width="600"></p>
+
 # Manta
 
 Manta is a server daemon for Aquadactyl Panel, based on Pterodactyl Wings. It runs on Linux and, for development and small hosts, natively on macOS. It manages Docker game servers, exposes the Wings HTTP and WebSocket APIs, provides SFTP access, and handles files, backups, installations, and transfers.
 
-The existing Go module path, API routes, authentication format, and configuration paths are retained for compatibility. Aquadactyl integration should be verified against your Panel version before replacing a running daemon.
+The API routes, authentication format, executable and configuration paths retain Wings compatibility. The Go module is `github.com/Aquadactyl/manta`. Aquadactyl integration should be verified against your Panel version before replacing a running daemon.
+
+## Install v1.0-beta
+
+```bash
+git clone --depth 1 --branch v1.0-beta https://github.com/Aquadactyl/manta.git /opt/manta
+cd /opt/manta
+sudo bash scripts/install.sh v1.0-beta
+```
+
+The Linux installer verifies the checksum and binary version, keeps the previous
+executable, and restarts an existing active `wings.service`. Configuration and
+server data stay in place. See the [installation and update guide](docs/INSTALLING.md)
+for Docker, HTTPS, systemd, migration from Wings and rollback. macOS uses the
+[macOS guide](docs/macos.md). This is a prerelease: test your workload before
+updating production nodes.
 
 ## Performance and security
 
@@ -22,7 +39,11 @@ These bounds apply per request. They do not establish a global limit for simulta
 
 See the [hardening review](HARDENING.md) for benchmark results, regression coverage, and the remaining Docker dependency scan findings.
 
-The [2 November coverage audit](benchmarks/COVERAGE.md) records 823 passing Go cases/subtests with race detection and 91.70% statement coverage across the complete module. The 100% coverage target remains unmet; the audit retains every uncovered source block and provides a command that fails until the target is reached.
+The 15 November release check passed 1,235 Go cases/subtests across 29 packages
+with race detection and `go vet`. Full-module statement coverage measured
+7,941/8,046 statements (98.70%). The 100% target remains unmet; the
+[coverage audit](benchmarks/COVERAGE.md) retains its strict gate and commands for
+recording every uncovered block. No source exclusions were added for this beta.
 
 ## Host resource metrics
 
@@ -82,4 +103,4 @@ The [resource-event comparison](benchmarks/RESOURCE_EVENTS.md) measures typed st
 
 ## Upstream
 
-Manta derives from [Pterodactyl Wings](https://github.com/Aquadactyl/manta), distributed under the [MIT license](LICENSE). The upstream [Wings documentation](https://docs.pterodactyl.io/v1/wings/) remains useful for the inherited configuration and API behavior.
+Manta derives from [Pterodactyl Wings](https://github.com/pterodactyl/wings), distributed under the [MIT license](LICENSE). The upstream [Wings documentation](https://docs.pterodactyl.io/v1/wings/) remains useful for the inherited configuration and API behavior.
