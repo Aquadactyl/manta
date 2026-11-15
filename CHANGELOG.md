@@ -17,7 +17,7 @@ This project follows [Semantic Versioning](http://semver.org) guidelines.
   and macOS binaries. Release packaging uploads artifacts for maintainer verification.
 - Document installation, Wings migration, HTTPS, service setup and recovery.
 - Normalize verification scripts for Windows checkouts before running in Linux.
-- Use the current Manta terminal wordmark in project branding and installation
+- Use the supplied Manta logo in project branding and installation
   documentation. Keep inherited Wings executable/service names for deployment compatibility.
 - Linux verification passed 1,235 cases/subtests across 29 packages with race
   detection and `go vet`, with 98.70% full-module statement coverage. The separate

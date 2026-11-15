@@ -1,4 +1,4 @@
-<p align="center"><img src=".github/assets/manta-wordmark.svg" alt="Manta — Aquadactyl daemon" width="600"></p>
+<p align="center"><img src=".github/assets/manta-logo.png" alt="Manta — Aquadactyl daemon" width="240"></p>
 
 # Manta
 
