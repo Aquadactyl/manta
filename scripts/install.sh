@@ -3,7 +3,7 @@
 set -Eeuo pipefail
 
 main() {
-    local tag="${1:-}" offline="" asset work target old active="" installed=0 legacy legacy_updated=0
+    local tag="${1:-}" offline="" asset work target old active="" installed=0 legacy legacy_updated=0 had_target=0
     if [[ "${tag}" == --help || "${tag}" == -h ]]; then
         printf 'Usage: sudo bash scripts/install.sh v1.1-beta.2 [--from-directory DIR]\n'
         return
@@ -52,7 +52,10 @@ main() {
     legacy="${MANTA_INSTALL_DIR:-/usr/local/bin}/wings"
     [[ ! -L "${legacy}" ]] || { echo 'Refusing to replace a symlinked legacy executable.' >&2; return 65; }
     old="${target}.previous"
-    if [[ -f "${target}" ]]; then cp -p -- "${target}" "${old}"; fi
+    if [[ -f "${target}" ]]; then
+        cp -p -- "${target}" "${old}"
+        had_target=1
+    fi
     if [[ "${MANTA_MANAGE_SERVICE:-1}" == 1 ]] && command -v systemctl >/dev/null; then
         if systemctl is-active --quiet manta.service; then active=manta.service; fi
         if systemctl is-active --quiet wings.service; then
@@ -74,7 +77,7 @@ main() {
     installed=1
     if [[ -n "${active}" ]]; then
         if ! systemctl start "${active}"; then
-            if [[ -f "${old}" && "${installed}" == 1 ]]; then
+            if [[ "${had_target}" == 1 && "${installed}" == 1 ]]; then
                 cp -p -- "${old}" "${target}"
             else
                 rm -f -- "${target}"
