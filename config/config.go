@@ -343,7 +343,7 @@ type Configuration struct {
 	// if the debug flag is passed through the command line arguments.
 	Debug bool
 
-	AppName string `default:"Pterodactyl" json:"app_name" yaml:"app_name"`
+	AppName string `default:"Aquadactyl" json:"app_name" yaml:"app_name"`
 
 	// A unique identifier for this node in the Panel.
 	UUID string
@@ -643,7 +643,7 @@ func EnsurePterodactylUser() error {
 		return nil
 	}
 
-	log.WithField("username", _config.System.Username).Info("checking for pterodactyl system user")
+	log.WithField("username", _config.System.Username).Info("checking for the configured Manta system user")
 	u, err := lookupSystemUser(_config.System.Username)
 	// If an error is returned but it isn't the unknown user error just abort
 	// the process entirely. If we did find a user, return it immediately.
@@ -826,7 +826,7 @@ func SetLogrotateDirectory(dir string) {
 // This function IS NOT thread-safe.
 func EnableLogRotation() error {
 	if !_config.System.EnableLogRotate || _config.System.User.Rootless.Enabled {
-		log.Info("skipping log rotate configuration, disabled in wings config file or rootless mode enabled")
+		log.Info("skipping log rotate configuration, disabled in Manta config file or rootless mode enabled")
 		return nil
 	}
 

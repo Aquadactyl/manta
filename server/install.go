@@ -55,7 +55,7 @@ var (
 	removeInstallTempDirectory = os.RemoveAll
 )
 
-const installLogTemplate = `Pterodactyl Server Installation Log
+const installLogTemplate = `Aquadactyl Manta Server Installation Log
 
 |
 | Details

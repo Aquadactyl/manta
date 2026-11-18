@@ -30,7 +30,8 @@ import (
 )
 
 const (
-	DefaultHastebinURL = "https://ptero.co"
+	// Reports stay local unless the operator explicitly selects an upload service.
+	DefaultHastebinURL = ""
 	DefaultLogLines    = 200
 )
 
@@ -56,7 +57,7 @@ var (
 func newDiagnosticsCommand() *cobra.Command {
 	command := &cobra.Command{
 		Use:   "diagnostics",
-		Short: "Collect and report information about this Wings instance to assist in debugging.",
+		Short: "Collect information about this Manta instance to assist in debugging Aquadactyl.",
 		PreRun: func(cmd *cobra.Command, args []string) {
 			initConfig()
 			log.SetHandler(cli.Default)
@@ -64,7 +65,7 @@ func newDiagnosticsCommand() *cobra.Command {
 		Run: diagnosticsCmdRun,
 	}
 
-	command.Flags().StringVar(&diagnosticsArgs.HastebinURL, "hastebin-url", DefaultHastebinURL, "the url of the hastebin instance to use")
+	command.Flags().StringVar(&diagnosticsArgs.HastebinURL, "hastebin-url", DefaultHastebinURL, "optional Hastebin upload URL; reports stay local when unset")
 	command.Flags().IntVar(&diagnosticsArgs.LogLines, "log-lines", DefaultLogLines, "the number of log lines to include in the report")
 
 	return command
@@ -87,14 +88,16 @@ func diagnosticsCmdRun(*cobra.Command, []string) {
 			Name:   "IncludeLogs",
 			Prompt: &survey.Confirm{Message: "Do you want to include the latest logs?", Default: true},
 		},
-		{
+	}
+	if diagnosticsArgs.HastebinURL != "" {
+		questions = append(questions, &survey.Question{
 			Name: "ReviewBeforeUpload",
 			Prompt: &survey.Confirm{
 				Message: "Do you want to review the collected data before uploading to " + diagnosticsArgs.HastebinURL + "?",
 				Help:    "The data, especially the logs, might contain sensitive information, so you should review it. You will be asked before anything is uploaded.",
 				Default: true,
 			},
-		},
+		})
 	}
 	if err := askDiagnosticsQuestions(questions, &diagnosticsArgs); err != nil {
 		if err == terminal.InterruptErr {
@@ -108,10 +111,13 @@ func diagnosticsCmdRun(*cobra.Command, []string) {
 	output := &strings.Builder{}
 	buildDiagnosticsReport(output, dockerVersion, dockerInfo, dockerErr)
 
-	if diagnosticsArgs.ReviewBeforeUpload {
+	if diagnosticsArgs.ReviewBeforeUpload || diagnosticsArgs.HastebinURL == "" {
 		fmt.Println("\n---------------  generated report  ---------------")
 		fmt.Println(output.String())
 		fmt.Print("---------------   end of report    ---------------\n\n")
+	}
+	if diagnosticsArgs.HastebinURL == "" {
+		return
 	}
 
 	// Always ask before uploading, since the report can contain sensitive
@@ -127,9 +133,10 @@ func diagnosticsCmdRun(*cobra.Command, []string) {
 }
 
 func buildDiagnosticsReport(output *strings.Builder, dockerVersion dockersystem.VersionResponse, dockerInfo dockersystem.Info, dockerErr error) *config.Configuration {
-	fmt.Fprintln(output, "Pterodactyl Wings - Diagnostics Report")
+	fmt.Fprintln(output, "Manta - Aquadactyl Diagnostics Report")
+	fmt.Fprintln(output, "Maintained by Euphoria Development (https://euphoriadevelopment.uk)")
 	printHeader(output, "Versions")
-	fmt.Fprintln(output, "               Wings:", system.Version)
+	fmt.Fprintln(output, "               Manta:", system.Version)
 	if dockerErr == nil {
 		fmt.Fprintln(output, "              Docker:", dockerVersion.Version)
 	}
@@ -140,7 +147,7 @@ func buildDiagnosticsReport(output *strings.Builder, dockerVersion dockersystem.
 		fmt.Fprintln(output, "                  OS:", os)
 	}
 
-	printHeader(output, "Wings Configuration")
+	printHeader(output, "Manta Configuration")
 	cfg := writeConfiguration(output)
 
 	printHeader(output, "Docker: Info")
@@ -176,7 +183,7 @@ func buildDiagnosticsReport(output *strings.Builder, dockerVersion dockersystem.
 		fmt.Fprint(output, "Couldn't list containers: ", err)
 	}
 
-	printHeader(output, "Latest Wings Logs")
+	printHeader(output, "Latest Manta Logs")
 	if diagnosticsArgs.IncludeLogs {
 		p := "/var/log/pterodactyl/wings.log"
 		if cfg != nil {

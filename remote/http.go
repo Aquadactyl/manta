@@ -142,7 +142,7 @@ func (c *client) requestOnce(ctx context.Context, method, path string, body io.R
 	}
 
 	tokenID, token := c.credentials()
-	req.Header.Set("User-Agent", fmt.Sprintf("Pterodactyl Wings/v%s (id:%s)", system.Version, tokenID))
+	req.Header.Set("User-Agent", fmt.Sprintf("Aquadactyl Manta/v%s (id:%s)", system.Version, tokenID))
 	req.Header.Set("Accept", "application/vnd.pterodactyl.v1+json")
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s.%s", tokenID, token))
