@@ -15,12 +15,12 @@ Keep them in place when upgrading an existing node.
 `--hastebin-url` with a Hastebin-compatible service you control, review the report
 and confirm the upload. Manta has no default third-party diagnostics destination.
 
-## Install v1.0-beta
+## Install v1.1-beta
 
 ```bash
-git clone --depth 1 --branch v1.0-beta https://github.com/Aquadactyl/manta.git /opt/manta
+git clone --depth 1 --branch v1.1-beta https://github.com/Aquadactyl/manta.git /opt/manta
 cd /opt/manta
-sudo bash scripts/install.sh v1.0-beta
+sudo bash scripts/install.sh v1.1-beta
 ```
 
 The Linux installer verifies the checksum and binary version, keeps the previous

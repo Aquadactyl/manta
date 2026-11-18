@@ -8,6 +8,8 @@ This project follows [Semantic Versioning](http://semver.org) guidelines.
 
 ## Unreleased (Manta)
 
+## v1.1-beta
+
 - Complete the Manta/Aquadactyl branding in configuration help, diagnostics,
   installation logs, errors, outbound User-Agent headers and the default app name.
   Identify Euphoria Development as the maintainer and preserve upstream MIT credits.
