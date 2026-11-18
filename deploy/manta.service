@@ -1,0 +1,16 @@
+[Unit]
+Description=Manta - Aquadactyl server daemon
+After=docker.service network-online.target
+Requires=docker.service
+Wants=network-online.target
+
+[Service]
+User=root
+ExecStart=/usr/local/bin/manta
+Restart=on-failure
+RestartSec=5
+LimitNOFILE=4096
+TimeoutStopSec=180
+
+[Install]
+WantedBy=multi-user.target

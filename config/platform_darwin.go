@@ -27,7 +27,7 @@ func supportDirectory() string {
 	if err != nil || home == "" {
 		// Without a home directory nothing sensible can be derived, so keep the
 		// location every other platform uses.
-		return "/var/lib/pterodactyl"
+		return "/var/lib/aquadactyl"
 	}
 	return filepath.Join(home, "Library", "Application Support", "Manta")
 }
@@ -36,7 +36,7 @@ func supportDirectory() string {
 func logDirectory() string {
 	home, err := platformUserHomeDir()
 	if err != nil || home == "" {
-		return "/var/log/pterodactyl"
+		return "/var/log/aquadactyl"
 	}
 	return filepath.Join(home, "Library", "Logs", "Manta")
 }

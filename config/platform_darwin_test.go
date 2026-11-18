@@ -76,15 +76,15 @@ func TestDarwinPlatformFallbackBranches(t *testing.T) {
 	oldHome := platformUserHomeDir
 	platformUserHomeDir = func() (string, error) { return "", errors.New("home unavailable") }
 	t.Cleanup(func() { platformUserHomeDir = oldHome })
-	assert.Equal(t, "/var/lib/pterodactyl", supportDirectory())
-	assert.Equal(t, "/var/log/pterodactyl", logDirectory())
+	assert.Equal(t, "/var/lib/aquadactyl", supportDirectory())
+	assert.Equal(t, "/var/log/aquadactyl", logDirectory())
 	fallback := &Configuration{}
 	applyPlatformDefaults(fallback)
-	assert.Equal(t, "/var/lib/pterodactyl", fallback.System.RootDirectory)
-	assert.Equal(t, "/var/log/pterodactyl", fallback.System.LogDirectory)
+	assert.Equal(t, "/var/lib/aquadactyl", fallback.System.RootDirectory)
+	assert.Equal(t, "/var/log/aquadactyl", fallback.System.LogDirectory)
 	platformUserHomeDir = func() (string, error) { return "", nil }
-	assert.Equal(t, "/var/lib/pterodactyl", supportDirectory())
-	assert.Equal(t, "/var/log/pterodactyl", logDirectory())
+	assert.Equal(t, "/var/lib/aquadactyl", supportDirectory())
+	assert.Equal(t, "/var/log/aquadactyl", logDirectory())
 
 	oldEval := evalPlatformTimezoneTarget
 	evalPlatformTimezoneTarget = func(string) (string, error) { return "", errors.New("timezone link unavailable") }

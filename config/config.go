@@ -135,26 +135,26 @@ type RemoteQueryConfiguration struct {
 // SystemConfiguration defines basic system configuration settings.
 type SystemConfiguration struct {
 	// The root directory where all of the pterodactyl data is stored at.
-	RootDirectory string `default:"/var/lib/pterodactyl" json:"-" yaml:"root_directory"`
+	RootDirectory string `default:"/var/lib/aquadactyl" json:"-" yaml:"root_directory"`
 
 	// Directory where logs for server installations and other wings events are logged.
-	LogDirectory string `default:"/var/log/pterodactyl" json:"-" yaml:"log_directory"`
+	LogDirectory string `default:"/var/log/aquadactyl" json:"-" yaml:"log_directory"`
 
 	// Directory where the server data is stored at.
-	Data string `default:"/var/lib/pterodactyl/volumes" json:"-" yaml:"data"`
+	Data string `default:"/var/lib/aquadactyl/volumes" json:"-" yaml:"data"`
 
 	// Directory where server archives for transferring will be stored.
-	ArchiveDirectory string `default:"/var/lib/pterodactyl/archives" json:"-" yaml:"archive_directory"`
+	ArchiveDirectory string `default:"/var/lib/aquadactyl/archives" json:"-" yaml:"archive_directory"`
 
 	// Directory where local backups will be stored on the machine.
-	BackupDirectory string `default:"/var/lib/pterodactyl/backups" json:"-" yaml:"backup_directory"`
+	BackupDirectory string `default:"/var/lib/aquadactyl/backups" json:"-" yaml:"backup_directory"`
 
 	// TmpDirectory specifies where temporary files for Pterodactyl installation processes
 	// should be created. This supports environments running docker-in-docker.
-	TmpDirectory string `default:"/tmp/pterodactyl" json:"-" yaml:"tmp_directory"`
+	TmpDirectory string `default:"/tmp/aquadactyl" json:"-" yaml:"tmp_directory"`
 
 	// The user that should own all of the server files, and be used for containers.
-	Username string `default:"pterodactyl" yaml:"username"`
+	Username string `default:"aquadactyl" yaml:"username"`
 
 	// The timezone for this Wings instance. This is detected by Wings automatically if possible,
 	// and falls back to UTC if not able to be detected. If you need to set this manually, that
@@ -200,7 +200,7 @@ type SystemConfiguration struct {
 		// into the Wings container as the exact path on the host, which should match the value
 		// specified here. If you are using SELinux, you will need to make sure this file has the
 		// correct SELinux context in order for containers to use it.
-		Directory string `yaml:"directory" default:"/run/wings/etc"`
+		Directory string `yaml:"directory" default:"/run/manta/etc"`
 	} `yaml:"passwd"`
 
 	// MachineID controls the mounting of a generated `/etc/machine-id` file into containers started by Wings.
@@ -220,7 +220,7 @@ type SystemConfiguration struct {
 		// into the Wings container as the exact path on the host, which should match the value
 		// specified here. If you are using SELinux, you will need to make sure this file has the
 		// correct SELinux context in order for containers to use it.
-		Directory string `yaml:"directory" default:"/run/wings/machine-id"`
+		Directory string `yaml:"directory" default:"/run/manta/machine-id"`
 	} `yaml:"machine_id"`
 
 	// The amount of time in seconds that can elapse before a server's disk space calculation is
@@ -334,6 +334,9 @@ type Token struct {
 }
 
 type Configuration struct {
+	// Version 1 selects native Aquadactyl defaults for newly generated configurations.
+	ConfigVersion int `default:"1" json:"config_version" yaml:"config_version"`
+
 	Token Token `json:"-" yaml:"-"`
 
 	// The location from which this configuration instance was instantiated.
@@ -513,10 +516,10 @@ func (c *Configuration) ResolveToken(remote bool) error {
 	}
 
 	var err error
-	if c.Token.ID, err = resolve("token ID", os.Getenv("WINGS_TOKEN_ID"), c.AuthenticationTokenID); err != nil {
+	if c.Token.ID, err = resolve("token ID", system.FirstNotEmpty(os.Getenv("MANTA_TOKEN_ID"), os.Getenv("WINGS_TOKEN_ID")), c.AuthenticationTokenID); err != nil {
 		return err
 	}
-	if c.Token.Token, err = resolve("token", os.Getenv("WINGS_TOKEN"), c.AuthenticationToken); err != nil {
+	if c.Token.Token, err = resolve("token", system.FirstNotEmpty(os.Getenv("MANTA_TOKEN"), os.Getenv("WINGS_TOKEN")), c.AuthenticationToken); err != nil {
 		return err
 	}
 	return nil
@@ -625,9 +628,9 @@ func EnsurePterodactylUser() error {
 
 	// Our way of detecting if wings is running inside of Docker.
 	if sysName == "distroless" {
-		_config.System.Username = system.FirstNotEmpty(os.Getenv("WINGS_USERNAME"), "pterodactyl")
-		_config.System.User.UID = system.MustInt(system.FirstNotEmpty(os.Getenv("WINGS_UID"), "988"))
-		_config.System.User.GID = system.MustInt(system.FirstNotEmpty(os.Getenv("WINGS_GID"), "988"))
+		_config.System.Username = system.FirstNotEmpty(os.Getenv("MANTA_USERNAME"), os.Getenv("WINGS_USERNAME"), _config.System.Username)
+		_config.System.User.UID = system.MustInt(system.FirstNotEmpty(os.Getenv("MANTA_UID"), os.Getenv("WINGS_UID"), "988"))
+		_config.System.User.GID = system.MustInt(system.FirstNotEmpty(os.Getenv("MANTA_GID"), os.Getenv("WINGS_GID"), "988"))
 		return nil
 	}
 
@@ -724,9 +727,23 @@ func Load(path string) (*Configuration, error) {
 	if err != nil {
 		return nil, err
 	}
+	var header struct {
+		Version int `yaml:"config_version"`
+	}
+	if err := yaml.Unmarshal(b, &header); err != nil {
+		return nil, err
+	}
+	if header.Version < 0 || header.Version > 1 {
+		return nil, fmt.Errorf("config: unsupported config_version %d", header.Version)
+	}
+	if header.Version == 0 {
+		applyLegacyDefaults(c)
+	}
 	if err := yaml.Unmarshal(b, c); err != nil {
 		return nil, err
 	}
+	// Saving materializes every inherited setting before selecting native defaults.
+	c.ConfigVersion = 1
 	return c, nil
 }
 
@@ -835,7 +852,7 @@ func EnableLogRotation() error {
 	} else if (err != nil && os.IsNotExist(err)) || !st.IsDir() {
 		return nil
 	}
-	targetFile := filepath.Join(logrotateDirectory, "wings")
+	targetFile := filepath.Join(logrotateDirectory, "manta")
 	if _, err := os.Stat(targetFile); err == nil || !os.IsNotExist(err) {
 		return err
 	}
@@ -850,7 +867,7 @@ func EnableLogRotation() error {
 	}
 	defer f.Close()
 
-	t, err := parseLogrotateTemplate("logrotate", `{{.LogDirectory}}/wings.log {
+	t, err := parseLogrotateTemplate("logrotate", `{{.LogDirectory}}/manta.log {
     size 10M
     compress
     delaycompress
@@ -859,6 +876,7 @@ func EnableLogRotation() error {
     missingok
     notifempty
     postrotate
+        /usr/bin/systemctl kill -s HUP manta.service >/dev/null 2>&1 || true
         /usr/bin/systemctl kill -s HUP wings.service >/dev/null 2>&1 || true
     endscript
 }`)

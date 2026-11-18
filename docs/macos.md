@@ -18,10 +18,10 @@ and the kernel and remains the recommended platform.
 | Area            | Linux                         | macOS                                                |
 | :-------------- | :---------------------------- | :--------------------------------------------------- |
 | Configuration   | `/etc/aquadactyl/config.yml` | `~/Library/Application Support/Manta/config.yml`     |
-| Data and state  | `/var/lib/pterodactyl`        | `~/Library/Application Support/Manta`                |
-| Logs            | `/var/log/pterodactyl`        | `~/Library/Logs/Manta`                               |
-| Temporary files | `/tmp/pterodactyl`            | `~/Library/Application Support/Manta/tmp`            |
-| Server user     | A `pterodactyl` system user   | The user Manta runs as, nothing is created           |
+| Data and state  | `/var/lib/aquadactyl`        | `~/Library/Application Support/Manta`                |
+| Logs            | `/var/log/aquadactyl`        | `~/Library/Logs/Manta`                               |
+| Temporary files | `/tmp/aquadactyl`            | `~/Library/Application Support/Manta/tmp`            |
+| Server user     | A `aquadactyl` system user   | The user Manta runs as, nothing is created           |
 | Service manager | systemd                       | launchd                                              |
 | Docker socket   | `/var/run/docker.sock`        | `/var/run/docker.sock`, or the socket of the runtime |
 | Host metrics    | CPU, RAM and disk             | CPU, RAM and disk                                    |
@@ -59,16 +59,16 @@ The directory is set in the panel under the node's settings.
 
 1. Download the binary for your Mac and its checksum file from the
    [releases page](https://github.com/Aquadactyl/manta/releases). Use
-   `wings_darwin_arm64` on Apple Silicon and `wings_darwin_amd64` on Intel.
+   `manta_darwin_arm64` on Apple Silicon and `manta_darwin_amd64` on Intel.
 
    ```sh
-   MANTA_VERSION="v1.1-beta.1"
+   MANTA_VERSION="v1.1-beta.2"
    ARCH="$(uname -m | sed 's/x86_64/amd64/')"
 
-   curl -fL -o wings "https://github.com/Aquadactyl/manta/releases/download/${MANTA_VERSION}/wings_darwin_${ARCH}"
+   curl -fL -o manta "https://github.com/Aquadactyl/manta/releases/download/${MANTA_VERSION}/manta_darwin_${ARCH}"
    curl -fL -o checksums.txt "https://github.com/Aquadactyl/manta/releases/download/${MANTA_VERSION}/checksums.txt"
-   grep "wings_darwin_${ARCH}" checksums.txt
-   shasum -a 256 wings
+   grep "manta_darwin_${ARCH}" checksums.txt
+   shasum -a 256 manta
    ```
 
    The two hashes must match.
@@ -77,13 +77,13 @@ The directory is set in the panel under the node's settings.
 
    ```sh
    sudo mkdir -p /usr/local/bin
-   sudo install -m 0755 wings /usr/local/bin/wings
-   wings version
+   sudo install -m 0755 manta /usr/local/bin/manta
+   manta version
    ```
 
 3. In the panel, create the node and copy its configuration to
    `~/Library/Application Support/Manta/config.yml`, or run
-   `wings configure` and answer the prompts. The directory is created for you.
+   `manta configure` and answer the prompts. The directory is created for you.
 
    Set the node's data directory to a path that is shared with the Docker
    runtime, such as `/Users/<you>/Library/Application Support/Manta/volumes`.
@@ -91,7 +91,7 @@ The directory is set in the panel under the node's settings.
 4. Run it:
 
    ```sh
-   wings
+   manta
    ```
 
    A green heart next to the node in the panel means it is connected.
@@ -160,20 +160,20 @@ Stop and unload it with `sudo launchctl bootout system/uk.aquadactyl.manta`.
 - **Performance.** File access from a container goes through the file sharing
   layer, which is slower than on Linux. Large worlds, many small files and
   backups feel it most.
-- **Log rotation.** Manta rotates `~/Library/Logs/Manta/wings.log` itself at
-  10 MiB and keeps seven old files (`wings.log.1` to `wings.log.7`). Set
+- **Log rotation.** Manta rotates `~/Library/Logs/Manta/manta.log` itself at
+  10 MiB and keeps seven old files (`manta.log.1` to `manta.log.7`). Set
   `system.enable_log_rotate: false` to turn this off. Manta then reopens the file
   on `SIGHUP` for a tool that rotates it from the outside, which you can send
   with `launchctl kill SIGHUP "gui/$(id -u)/uk.aquadactyl.manta"`.
 - **CPU burst** and the other cgroup based features only apply on Linux.
 - **Gatekeeper.** Binaries downloaded with `curl` are not quarantined and need
   no approval. If you download one with a browser, run
-  `xattr -d com.apple.quarantine wings` once.
+  `xattr -d com.apple.quarantine manta` once.
 
 ## Building from source
 
 ```sh
-go build -trimpath -o build/wings .
+go build -trimpath -o build/manta .
 ```
 
 Cross-compile for macOS from any host with `GOOS=darwin GOARCH=arm64` (or

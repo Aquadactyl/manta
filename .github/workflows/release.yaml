@@ -90,7 +90,7 @@ jobs:
           CGO_ENABLED: 0
         run: |
           VERSION="${RELEASE_TAG#v}" bash scripts/build-release.sh
-          test "$(dist/wings_linux_amd64 version | head -n 1)" = "manta ${RELEASE_TAG#v}"
+          test "$(dist/manta_linux_amd64 version | head -n 1)" = "manta ${RELEASE_TAG#v}"
 
       - name: write changelog
         run: |

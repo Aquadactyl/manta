@@ -13,7 +13,7 @@ RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build \
     -ldflags="-s -w -X github.com/Aquadactyl/manta/system.Version=$VERSION" \
     -v \
     -trimpath \
-    -o wings \
+    -o manta \
     wings.go
 RUN echo "ID=\"distroless\"" > /etc/os-release
 
@@ -22,9 +22,11 @@ FROM gcr.io/distroless/static:latest
 COPY --from=builder /etc/os-release /etc/os-release
 COPY --from=builder /etc/mime.types /etc/mime.types
 
-COPY --from=builder /app/wings /usr/bin/
+COPY --from=builder /app/manta /usr/bin/manta
+# Compatibility executable for existing container commands.
+COPY --from=builder /app/manta /usr/bin/wings
 
-ENTRYPOINT ["/usr/bin/wings"]
+ENTRYPOINT ["/usr/bin/manta"]
 CMD []
 
 EXPOSE 8080 2022

@@ -340,7 +340,7 @@ func TestInitLogging(t *testing.T) {
 	assert.NotPanics(t, func() {
 		initLogging()
 	})
-	assert.FileExists(t, filepath.Join(tmpDir, "logs", "wings.log"))
+	assert.FileExists(t, filepath.Join(tmpDir, "logs", "manta.log"))
 }
 
 func TestConfigureQuestionsValidation(t *testing.T) {

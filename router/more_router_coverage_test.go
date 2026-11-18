@@ -544,6 +544,9 @@ func TestRouterRemainingCoverage(t *testing.T) {
 			select {
 			case data := <-sink:
 				if events.MustDecode(data).Topic == wserver.InstallCompletedEvent {
+					// The event is published before Install's deferred lock release.
+					// Wait for that release before requesting another installation.
+					require.Eventually(t, func() bool { return !s.IsInstalling() }, 3*time.Second, time.Millisecond)
 					return
 				}
 			case <-time.After(3 * time.Second):

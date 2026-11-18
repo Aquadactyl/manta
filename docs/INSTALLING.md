@@ -2,148 +2,121 @@
 
 ![Manta](../.github/assets/manta-logo.png)
 
-Manta is the Aquadactyl server daemon, maintained by
-[Euphoria Development](https://euphoriadevelopment.uk).
+Manta is the Aquadactyl server daemon, maintained by [Euphoria Development](https://euphoriadevelopment.uk).
+The current prerelease is **v1.1-beta.2**. Test upgrades on a staging node first.
 
-Manta v1.1-beta.1 is a prerelease. Use a staging node before upgrading a production
-fleet. Linux amd64 and arm64 releases are intended for server deployments;
-[macOS](macos.md) supports local development and small hosts through a Docker VM.
+## New Linux installation
 
-## Linux
-
-Install Docker Engine using the [official instructions](https://docs.docker.com/engine/install/),
-then clone the matching release of Manta's tools:
+Install Docker Engine using its [official instructions](https://docs.docker.com/engine/install/), then fetch the matching Manta release tools:
 
 ```bash
-git clone --depth 1 --branch v1.1-beta.1 https://github.com/Aquadactyl/manta.git /opt/manta
+git clone --depth 1 --branch v1.1-beta.2 https://github.com/Aquadactyl/manta.git /opt/manta
 cd /opt/manta
-sudo bash scripts/install.sh v1.1-beta.1
+sudo bash scripts/install.sh v1.1-beta.2
+manta version
+sudo install -d -m 0700 /etc/aquadactyl
+sudo install -d -m 0700 /var/lib/aquadactyl/volumes
 ```
 
-The installer selects amd64/arm64, verifies the release SHA256 and executable
-version, and atomically installs `/usr/local/bin/wings`. This executable runs
-Manta; Linux configuration now defaults to `/etc/aquadactyl/config.yml`.
-Existing command/service names and server-data directories remain compatible.
-Source builds use Go selected by `go.mod`: `go build -trimpath -o build/wings .`.
+The installer verifies the SHA256 checksum and executable version, then atomically installs `/usr/local/bin/manta`. Release assets are `manta_linux_amd64`, `manta_linux_arm64` and the corresponding `manta_darwin_*` files. Legacy asset aliases are supplied for older update tools.
 
-For a new node, create a location and node in **Admin > Nodes**, configure its
-public HTTPS hostname and allocations, then save its generated configuration as
-`/etc/aquadactyl/config.yml` (directory `0700`, file `0600`, owned by root). The
-panel, browser and daemon must be able to reach each other's public addresses.
-Configure a trusted certificate or TLS reverse proxy for the daemon; do not use
-certificate-verification bypasses. Expose only the daemon, SFTP and required
-game ports, keeping Docker's socket private.
-
-Run `sudo /usr/local/bin/wings --config /etc/aquadactyl/config.yml` once to check
-the configuration, then install this service at `/etc/systemd/system/wings.service`:
-
-```ini
-[Unit]
-Description=Manta daemon
-After=docker.service network-online.target
-Requires=docker.service
-Wants=network-online.target
-
-[Service]
-User=root
-WorkingDirectory=/etc/aquadactyl
-ExecStart=/usr/local/bin/wings --config /etc/aquadactyl/config.yml
-Restart=on-failure
-RestartSec=5
-LimitNOFILE=4096
-TimeoutStopSec=180
-
-[Install]
-WantedBy=multi-user.target
-```
+Create a location and node in **Admin > Nodes**, with a public hostname, trusted TLS certificate or TLS reverse proxy, and allocations for game ports. The new node's data directory is `/var/lib/aquadactyl/volumes`. Save the generated configuration to `/etc/aquadactyl/config.yml` and protect it:
 
 ```bash
-sudo systemctl daemon-reload
-sudo systemctl enable --now wings
-sudo systemctl status wings --no-pager
+sudo chmod 0600 /etc/aquadactyl/config.yml
 ```
 
-Check node connectivity and an expendable test server's install, start, console,
-files, SFTP and backup before opening access to users. The daemon requires root
-on Linux and access to Docker, so install only trusted server images and eggs.
-On SELinux hosts configure `docker.selinux_relabel` as described in the README.
+New Panel configurations include `config_version: 1`. Keep this line when writing a new configuration by hand: it selects the Aquadactyl defaults. Older files without this marker keep their original inherited defaults when loaded, even if copied to the new configuration directory.
+
+| New Linux default | Value |
+| --- | --- |
+| Executable | `/usr/local/bin/manta` |
+| Systemd unit | `/etc/systemd/system/manta.service` |
+| Configuration | `/etc/aquadactyl/config.yml` |
+| Data and state | `/var/lib/aquadactyl` |
+| Server files | `/var/lib/aquadactyl/volumes` |
+| Archives / backups | `/var/lib/aquadactyl/archives` / `/var/lib/aquadactyl/backups` |
+| Log | `/var/log/aquadactyl/manta.log` |
+| Temporary / runtime files | `/tmp/aquadactyl` / `/run/manta` |
+| Game-file owner | `aquadactyl` |
+| Docker network / bridge | `aquadactyl_nw` / `aquadactyl0` |
+
+## Start the Manta service
+
+The release includes `deploy/manta.service`. For a new, root-run Linux node:
+
+```bash
+sudo install -m 0644 deploy/manta.service /etc/systemd/system/manta.service
+sudo systemctl daemon-reload
+sudo systemctl enable --now manta
+sudo systemctl status manta --no-pager
+sudo journalctl -u manta -n 50 --no-pager
+```
+
+The unit runs `/usr/local/bin/manta` and allows normal configuration discovery. Only one daemon service should run on a node. Existing services with custom users, flags, limits or Docker dependencies should follow the migration steps below.
+
+Check node connectivity and a test server's install, start, console, files, SFTP and backup. Expose only the API, SFTP and required game ports, keep Docker's socket private, and configure trusted HTTPS. For SELinux hosts see the README. For macOS use the [macOS guide](macos.md).
+
+## Update
+
+Back up configuration and server data. From the reviewed tools checkout:
+
+```bash
+cd /opt/manta
+git fetch origin tag v1.1-beta.2
+git checkout --detach v1.1-beta.2
+sudo bash scripts/install.sh v1.1-beta.2
+sudo systemctl status manta --no-pager
+sudo journalctl -u manta -n 50 --no-pager
+```
+
+The installer retains `manta.previous` and restarts an active service. For an existing legacy service it also updates the old executable, preserves its previous copy, and reports the remaining service migration. It never creates the old executable on a fresh install. A failed service start restores the previous binaries. Check logs and panel connectivity after systemd accepts the start request; later runtime errors still require operator attention.
+
+Consoles and SFTP briefly disconnect during a daemon restart. Existing game containers keep running. Schedule updates outside installations, transfers and backups. For offline installations, download the matching binary and `checksums.txt`, then pass `--from-directory /path/to/downloads`.
+
+## Migrate the service
+
+For nodes previously installed as Wings, first update the executable using the verified installer above. Back up the existing configuration and unit in a protected directory:
+
+```bash
+sudo install -d -m 0700 /var/backups/manta
+sudo systemctl cat wings | sudo tee /var/backups/manta/wings.service >/dev/null
+sudo cp --preserve=mode,ownership --no-clobber /etc/pterodactyl/config.yml /var/backups/manta/config.yml
+sudo install -d -m 0700 /etc/aquadactyl
+sudo cp --preserve=mode,ownership --no-clobber /etc/pterodactyl/config.yml /etc/aquadactyl/config.yml
+sudo install -m 0644 /opt/manta/deploy/manta.service /etc/systemd/system/manta.service
+```
+
+These commands describe a standard legacy config location; use the path in your existing unit if different. If an Aquadactyl file already exists, review and use it; the copy does not overwrite it. Preserve its tokens, certificates, local paths and user. **Do not add the new defaults marker to an old partial config**: leaving it absent preserves omitted legacy values. Manta writes those values explicitly when it next saves the file.
+
+Compare the backed-up unit with `manta.service` before switching. Carry over custom flags, service users, dependencies and limits with `sudo systemctl edit --full manta`; change the executable to `/usr/local/bin/manta` and explicit configuration arguments to the intended file. Match directory/file ownership to a rootless service user where needed.
+
+```bash
+sudo systemctl disable --now wings
+sudo systemctl daemon-reload
+sudo systemctl enable --now manta
+sudo systemctl status manta --no-pager
+sudo journalctl -u manta -n 50 --no-pager
+```
+
+The retired unit and executable can be removed after checking console access, SFTP, backups and a test server. Keep the backups for rollback. This migration changes the service name and config location; it deliberately leaves existing game-file locations and UIDs intact.
+
+## Existing data and Docker deployments
+
+Existing explicit paths, users and network names remain valid. Old unversioned configs retain their omitted legacy defaults, and an existing `wings.db` is reused rather than replaced with an empty activity database. New nodes create `manta.db`.
+
+To relocate existing game data, schedule maintenance, stop all affected game containers and daemon operations, make a verified backup, copy the data with ownership/ACLs preserved, and update both the node's data directory in the panel and `system.data` in the full local config. Existing Docker bind mounts must be recreated to reference the new host path before starting servers. Renaming a directory under running containers is insufficient. There is no automatic bulk data move during an update.
+
+The new Docker example uses `manta`, `MANTA_UID`, `MANTA_GID` and `MANTA_USERNAME` with Aquadactyl mounts. For an existing node retain every host data/certificate/runtime mount required by its config until separately migrating the paths. The container must see bind-mounted game data at the same absolute path as Docker's host. `MANTA_*` environment overrides take precedence over the corresponding legacy `WINGS_*` variables.
 
 ## Configuration location and existing nodes
 
-Since Manta v1.1-beta.1, new Linux nodes use `/etc/aquadactyl/config.yml`.
-Without an explicit `--config` or `--config-path`, Manta can discover an existing
-`/etc/pterodactyl/config.yml` when the new default is absent. If both exist,
-the Aquadactyl file wins. An invalid or unreadable Aquadactyl file reports its
-error rather than silently loading different credentials. Explicit paths are
-always honored, including existing service arguments pointing at the old file.
+Without an explicit `--config` or `--config-path`, Manta discovers `/etc/pterodactyl/config.yml` only if `/etc/aquadactyl/config.yml` is absent. The Aquadactyl file takes precedence when both exist. Invalid or unreadable canonical files fail with their own error, rather than loading another node's credentials. Explicit paths are always honored.
 
-To move a standard root-run Linux node to the new location, keep the original
-file for rollback and copy its complete contents, including local paths and tokens:
+## Rollback
 
-```bash
-sudo install -d -m 0700 /etc/aquadactyl
-sudo cp --preserve=mode,ownership --no-clobber /etc/pterodactyl/config.yml /etc/aquadactyl/config.yml
-sudo systemctl edit --full wings
-```
-
-In the service, set `WorkingDirectory=/etc/aquadactyl` and change any explicit
-`--config` argument to `/etc/aquadactyl/config.yml`. Preserve the existing binary
-path and any other options. Rootless services need directory and file ownership
-that allows their configured service user to read them. Then apply and check it:
-
-```bash
-sudo systemctl daemon-reload
-sudo systemctl restart wings
-sudo systemctl status wings --no-pager
-sudo journalctl -u wings -n 50 --no-pager
-```
-
-If an Aquadactyl configuration already exists, review and use it; the copy command
-does not overwrite it. Game-server data directories are preserved by copying the
-configuration rather than regenerating it. Keep the old file until the new
-configuration and service have been verified.
-
-For Docker, new deployments mount `/etc/aquadactyl` into the container. An existing
-legacy bind mount continues to work through discovery when no explicit command
-overrides it. Before switching a bind mount to the new directory, copy the full
-configuration and preserve access to any certificate or other files it references.
-Existing custom `command: --config ...` values must point at the intended file.
-
-## Update or migrate from Wings
-
-Back up `config.yml` and server data. Keep the previous binary and record its
-version. From the reviewed Manta tools checkout:
-
-```bash
-git fetch origin tag v1.1-beta.1
-git checkout --detach v1.1-beta.1
-sudo bash scripts/install.sh v1.1-beta.1
-sudo systemctl status wings --no-pager
-sudo journalctl -u wings -n 50 --no-pager
-```
-
-The installer checks the download before stopping an active daemon, retains
-`wings.previous`, and restarts an active service. A daemon restart briefly
-disconnects consoles and SFTP; existing game containers keep running. Schedule
-it outside installs, backups and transfers. A failed service start restores the
-previous binary. Verify node health after every update; runtime configuration
-errors may be reported after systemd accepts a start request.
-
-To roll back, stop `wings`, copy `wings.previous` to `/usr/local/bin/wings`, then
-start it and inspect its logs. Reverting the daemon binary does not roll back
-panel migrations or configuration changes.
-
-For an offline deployment, download the binary and `checksums.txt` from the same
-release and pass `--from-directory /path/to/downloads`. Checksums detect download
-corruption; trust in the GitHub release and maintainers is still required.
+Stop `manta`, restore `manta.previous` to `/usr/local/bin/manta`, and restart it. To restore a retired legacy service, stop and disable `manta` before restoring the old binary/config and enabling the old unit. Never run both services together. Reverting a binary does not undo configuration or panel database changes.
 
 ## Maintainer publication
 
-Dispatch the **Release** workflow for the reviewed tag. It uploads a
-`release-VERSION` artifact containing the four platform binaries,
-`checksums.txt` and `RELEASE_CHANGELOG`. Verify checksums, the source version,
-Linux/macOS CI and the binary's `version` output before publishing. A maintainer
-can create the draft with `gh release create VERSION --verify-tag --draft
---prerelease --notes-file RELEASE_CHANGELOG wings_* checksums.txt`, then publish
-with `gh release edit VERSION --draft=false --prerelease`. Build artifacts alone
-do not create a public release. Keep published tags immutable.
+Dispatch the Release workflow for the reviewed source. Verify native Linux/macOS CI, checksums, source version and executable output. Its artifact contains four canonical binaries, four compatibility aliases, `checksums.txt` and `RELEASE_CHANGELOG`. Create and verify a draft prerelease before publishing it; build artifacts alone do not publish a release. Keep published tags immutable.

@@ -26,7 +26,9 @@ jobs:
         uses: actions/checkout@v7.0.1
 
       - name: Verify Linux release installer
-        run: sudo bash scripts/install-test.sh
+        run: |
+          sudo bash scripts/install-test.sh
+          sudo bash scripts/install-service-test.sh
 
       - name: Setup Go
         uses: actions/setup-go@v7.0.0
@@ -47,8 +49,8 @@ jobs:
           SRC_PATH: github.com/Aquadactyl/manta
         run: |
           mkdir -p dist
-          go build -v -trimpath -ldflags="-s -w -X ${SRC_PATH}/system.Version=dev-${GITHUB_SHA:0:7}" -o dist/wings ${SRC_PATH}
-          go build -v -trimpath -ldflags="-X ${SRC_PATH}/system.Version=dev-${GITHUB_SHA:0:7}" -o dist/wings_debug ${SRC_PATH}
+          go build -v -trimpath -ldflags="-s -w -X ${SRC_PATH}/system.Version=dev-${GITHUB_SHA:0:7}" -o dist/manta ${SRC_PATH}
+          go build -v -trimpath -ldflags="-X ${SRC_PATH}/system.Version=dev-${GITHUB_SHA:0:7}" -o dist/manta_debug ${SRC_PATH}
           chmod 755 dist/*
 
       - name: Run tests
@@ -75,15 +77,15 @@ jobs:
         uses: actions/upload-artifact@v7.0.2
         if: ${{ (github.ref == 'refs/heads/main' || github.event_name == 'pull_request') && matrix.go == '1.27.4' }}
         with:
-          name: wings_linux_${{ matrix.goarch }}
-          path: dist/wings
+          name: manta_linux_${{ matrix.goarch }}
+          path: dist/manta
 
       - name: Upload Debug Artifact
         uses: actions/upload-artifact@v7.0.2
         if: ${{ (github.ref == 'refs/heads/main' || github.event_name == 'pull_request') && matrix.go == '1.27.4' }}
         with:
-          name: wings_linux_${{ matrix.goarch }}_debug
-          path: dist/wings_debug
+          name: manta_linux_${{ matrix.goarch }}_debug
+          path: dist/manta_debug
 
   macos:
     name: Tests
@@ -121,8 +123,8 @@ jobs:
           SRC_PATH: github.com/Aquadactyl/manta
         run: |
           mkdir -p dist
-          go build -v -trimpath -ldflags="-s -w -X ${SRC_PATH}/system.Version=dev-${GITHUB_SHA:0:7}" -o dist/wings ${SRC_PATH}
-          go build -v -trimpath -ldflags="-X ${SRC_PATH}/system.Version=dev-${GITHUB_SHA:0:7}" -o dist/wings_debug ${SRC_PATH}
+          go build -v -trimpath -ldflags="-s -w -X ${SRC_PATH}/system.Version=dev-${GITHUB_SHA:0:7}" -o dist/manta ${SRC_PATH}
+          go build -v -trimpath -ldflags="-X ${SRC_PATH}/system.Version=dev-${GITHUB_SHA:0:7}" -o dist/manta_debug ${SRC_PATH}
           chmod 755 dist/*
 
       # GitHub's macOS runners have no Docker daemon, so the packages whose tests
@@ -159,12 +161,12 @@ jobs:
         uses: actions/upload-artifact@v7.0.2
         if: ${{ (github.ref == 'refs/heads/main' || github.event_name == 'pull_request') && matrix.go == '1.27.4' }}
         with:
-          name: wings_darwin_${{ matrix.goarch }}
-          path: dist/wings
+          name: manta_darwin_${{ matrix.goarch }}
+          path: dist/manta
 
       - name: Upload Debug Artifact
         uses: actions/upload-artifact@v7.0.2
         if: ${{ (github.ref == 'refs/heads/main' || github.event_name == 'pull_request') && matrix.go == '1.27.4' }}
         with:
-          name: wings_darwin_${{ matrix.goarch }}_debug
-          path: dist/wings_debug
+          name: manta_darwin_${{ matrix.goarch }}_debug
+          path: dist/manta_debug

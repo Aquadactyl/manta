@@ -552,7 +552,7 @@ func initLogging() {
 	if err := os.MkdirAll(path.Join(dir, "/install"), 0o700); err != nil {
 		fatalfCommand("cmd/root: failed to create install directory path: %s", err)
 	}
-	p := filepath.Join(dir, "/wings.log")
+	p := filepath.Join(dir, "/manta.log")
 	w, err := openLogFile(p)
 	if err != nil {
 		fatalfCommand("cmd/root: failed to create Manta log: %s", err)

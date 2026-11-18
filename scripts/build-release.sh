@@ -8,7 +8,9 @@ for platform in linux darwin; do
     for arch in amd64 arm64; do
         CGO_ENABLED=0 GOOS="${platform}" GOARCH="${arch}" go build -trimpath \
             -ldflags="-s -w -X github.com/Aquadactyl/manta/system.Version=${version}" \
-            -o "${output}/wings_${platform}_${arch}" .
+            -o "${output}/manta_${platform}_${arch}" .
+        # Old update scripts can continue to fetch their established asset name.
+        cp "${output}/manta_${platform}_${arch}" "${output}/wings_${platform}_${arch}"
     done
 done
-(cd "${output}" && sha256sum wings_linux_amd64 wings_linux_arm64 wings_darwin_amd64 wings_darwin_arm64 > checksums.txt)
+(cd "${output}" && sha256sum manta_linux_* manta_darwin_* wings_linux_* wings_darwin_* > checksums.txt)

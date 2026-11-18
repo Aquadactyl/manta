@@ -13,9 +13,9 @@ services:
       - "127.0.0.1:2023:2023"
     environment:
       TZ: Europe/London
-      WINGS_UID: "988"
-      WINGS_GID: "988"
-      WINGS_USERNAME: pterodactyl
+      MANTA_UID: "988"
+      MANTA_GID: "988"
+      MANTA_USERNAME: aquadactyl
     networks:
       panel:
         aliases:

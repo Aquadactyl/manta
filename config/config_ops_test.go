@@ -329,7 +329,7 @@ func TestConfigMoreOperations(t *testing.T) {
 	logrotateDirectory = logrotateDir
 	defer func() { logrotateDirectory = origLogrotate }()
 	assert.NoError(t, EnableLogRotation())
-	assert.FileExists(t, filepath.Join(logrotateDir, "wings"))
+	assert.FileExists(t, filepath.Join(logrotateDir, "manta"))
 	// Second run returns nil when file already exists
 	assert.NoError(t, EnableLogRotation())
 
@@ -651,7 +651,7 @@ func TestConfigRemainingBranches(t *testing.T) {
 	// os.Create failure via dangling symlink into nonexistent parent
 	lrValidDir := filepath.Join(tmp, "lr_valid")
 	require.NoError(t, os.MkdirAll(lrValidDir, 0o755))
-	require.NoError(t, os.Symlink(filepath.Join(tmp, "missing_parent", "wings"), filepath.Join(lrValidDir, "wings")))
+	require.NoError(t, os.Symlink(filepath.Join(tmp, "missing_parent", "wings"), filepath.Join(lrValidDir, "manta")))
 	logrotateDirectory = lrValidDir
 	assert.Error(t, EnableLogRotation())
 
