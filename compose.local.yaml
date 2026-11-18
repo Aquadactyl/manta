@@ -23,7 +23,7 @@ services:
       servers:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - config:/etc/pterodactyl
+      - config:/etc/aquadactyl
       # Sibling game containers must see the same path as the Docker host.
       - "data:${MANTA_DATA_PATH:-/var/lib/docker/volumes/manta-test_data/_data}"
     healthcheck:

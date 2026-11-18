@@ -44,6 +44,8 @@ func logDirectory() string {
 // DefaultLocation is the location of the configuration file when none is given.
 var DefaultLocation = filepath.Join(supportDirectory(), "config.yml")
 
+func legacyConfigLocations() []string { return nil }
+
 // applyPlatformDefaults replaces the defaults that only make sense on Linux.
 func applyPlatformDefaults(c *Configuration) {
 	root := supportDirectory()

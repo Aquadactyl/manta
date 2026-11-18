@@ -64,9 +64,12 @@ func configureCmdRun(cmd *cobra.Command, args []string) {
 	// The configuration is written to --config-path, or to the global --config
 	// path if only that was given.
 	target := configureArgs.ConfigPath
-	if cmd != nil && !cmd.Flags().Changed("config-path") && cmd.Flags().Changed("config") {
+	explicit := cmd != nil && cmd.Flags().Changed("config-path")
+	if cmd != nil && !explicit && cmd.Flags().Changed("config") {
 		target = configPath
+		explicit = true
 	}
+	target = resolveConfigPath(target, explicit)
 
 	if _, err := os.Stat(target); err == nil && !configureArgs.Override {
 		// A failed or interrupted prompt leaves Override false, which aborts below.

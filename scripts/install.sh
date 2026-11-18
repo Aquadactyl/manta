@@ -5,7 +5,7 @@ set -Eeuo pipefail
 main() {
     local tag="${1:-}" offline="" asset work target old active=0 installed=0
     if [[ "${tag}" == --help || "${tag}" == -h ]]; then
-        printf 'Usage: sudo bash scripts/install.sh v1.1-beta [--from-directory DIR]\n'
+        printf 'Usage: sudo bash scripts/install.sh v1.1-beta.1 [--from-directory DIR]\n'
         return
     fi
     [[ ${#tag} -le 100 && "${tag}" =~ ^v(0|[1-9][0-9]*)(\.(0|[1-9][0-9]*)){0,2}(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$ ]] || {

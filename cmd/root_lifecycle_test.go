@@ -482,7 +482,7 @@ func TestInitConfigAppliesDebugFlag(t *testing.T) {
 	cfg.Debug = false
 	require.NoError(t, config.WriteToDisk(cfg))
 	configPath, debug = path, true
-	initConfig()
+	initConfig(nil)
 	require.True(t, config.Get().Debug)
 }
 
@@ -513,7 +513,7 @@ func TestInitConfigReportsInvalidFile(t *testing.T) {
 	require.NoError(t, os.WriteFile(path, []byte("system: ["), 0o600))
 	configPath = path
 	fatalfCommand = func(format string, args ...interface{}) { panic(fmt.Sprintf(format, args...)) }
-	require.Panics(t, initConfig)
+	require.Panics(t, func() { initConfig(nil) })
 }
 
 func TestInitConfigReportsMissingFile(t *testing.T) {
@@ -521,7 +521,7 @@ func TestInitConfigReportsMissingFile(t *testing.T) {
 	t.Cleanup(func() { configPath, exitCommand = oldPath, oldExit })
 	configPath = filepath.Join(t.TempDir(), "missing.yml")
 	exitCommand = func(code int) { panic(code) }
-	require.PanicsWithValue(t, 1, initConfig)
+	require.PanicsWithValue(t, 1, func() { initConfig(nil) })
 }
 
 func TestInitConfigReportsAbsolutePathFailure(t *testing.T) {
@@ -531,7 +531,7 @@ func TestInitConfigReportsAbsolutePathFailure(t *testing.T) {
 	configPath = "relative.yml"
 	filepathAbs = func(string) (string, error) { return "", errors.New("cwd unavailable") }
 	fatalfCommand = func(format string, args ...interface{}) { panic(fmt.Sprintf(format, args...)) }
-	require.Panics(t, initConfig)
+	require.Panics(t, func() { initConfig(nil) })
 }
 
 func TestInitLoggingReportsSetupErrors(t *testing.T) {

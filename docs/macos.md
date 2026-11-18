@@ -17,7 +17,7 @@ and the kernel and remains the recommended platform.
 
 | Area            | Linux                         | macOS                                                |
 | :-------------- | :---------------------------- | :--------------------------------------------------- |
-| Configuration   | `/etc/pterodactyl/config.yml` | `~/Library/Application Support/Manta/config.yml`     |
+| Configuration   | `/etc/aquadactyl/config.yml` | `~/Library/Application Support/Manta/config.yml`     |
 | Data and state  | `/var/lib/pterodactyl`        | `~/Library/Application Support/Manta`                |
 | Logs            | `/var/log/pterodactyl`        | `~/Library/Logs/Manta`                               |
 | Temporary files | `/tmp/pterodactyl`            | `~/Library/Application Support/Manta/tmp`            |
@@ -62,7 +62,7 @@ The directory is set in the panel under the node's settings.
    `wings_darwin_arm64` on Apple Silicon and `wings_darwin_amd64` on Intel.
 
    ```sh
-   MANTA_VERSION="v1.1-beta"
+   MANTA_VERSION="v1.1-beta.1"
    ARCH="$(uname -m | sed 's/x86_64/amd64/')"
 
    curl -fL -o wings "https://github.com/Aquadactyl/manta/releases/download/${MANTA_VERSION}/wings_darwin_${ARCH}"

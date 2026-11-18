@@ -8,6 +8,18 @@ This project follows [Semantic Versioning](http://semver.org) guidelines.
 
 ## Unreleased (Manta)
 
+## v1.1-beta.1
+
+- Use `/etc/aquadactyl/config.yml` for new Linux configurations. Startup,
+  diagnostics and node configuration discover the legacy file only when the new
+  default is absent and no explicit path was selected. Existing local settings
+  are preserved; invalid canonical configurations do not fall back silently.
+- Let Docker use configuration discovery and mount `/etc/aquadactyl` in new
+  examples. Document service and bind-mount migration while retaining the old
+  configuration for rollback.
+- Cross-compile Docker binaries on the build host instead of running the Go
+  compiler under CPU emulation. Keep dependency layers independent of the version.
+
 ## v1.1-beta
 
 - Complete the Manta/Aquadactyl branding in configuration help, diagnostics,

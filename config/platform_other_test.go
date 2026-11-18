@@ -5,6 +5,12 @@ package config
 import "testing"
 
 func TestOtherPlatformDefaults(t *testing.T) {
+	if DefaultLocation != "/etc/aquadactyl/config.yml" {
+		t.Fatalf("unexpected default configuration path: %s", DefaultLocation)
+	}
+	if locations := legacyConfigLocations(); len(locations) != 1 || locations[0] != "/etc/pterodactyl/config.yml" {
+		t.Fatalf("unexpected legacy configuration locations: %v", locations)
+	}
 	c := &Configuration{}
 	applyPlatformDefaults(c)
 	if c.System.RootDirectory != "" {

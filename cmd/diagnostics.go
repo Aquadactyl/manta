@@ -59,7 +59,7 @@ func newDiagnosticsCommand() *cobra.Command {
 		Use:   "diagnostics",
 		Short: "Collect information about this Manta instance to assist in debugging Aquadactyl.",
 		PreRun: func(cmd *cobra.Command, args []string) {
-			initConfig()
+			initConfig(cmd)
 			log.SetHandler(cli.Default)
 		},
 		Run: diagnosticsCmdRun,
