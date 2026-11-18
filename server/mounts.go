@@ -140,7 +140,7 @@ func (s *Server) customMounts() []environment.Mount {
 // inside the container instead. The reason is only logged, as it includes paths
 // on the host.
 func (s *Server) publishSkippedMount(target string) {
-	s.PublishConsoleOutputFromDaemon(fmt.Sprintf("Skipped the mount for %s, ask an administrator to check the Wings logs.", target))
+	s.PublishConsoleOutputFromDaemon(fmt.Sprintf("Skipped the mount for %s, ask an administrator to check the Manta logs.", target))
 }
 
 func isAllowedResolvedMountPath(configured, resolved string) bool {

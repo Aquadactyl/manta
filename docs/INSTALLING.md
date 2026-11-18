@@ -2,6 +2,9 @@
 
 ![Manta](../.github/assets/manta-logo.png)
 
+Manta is the Aquadactyl server daemon, maintained by
+[Euphoria Development](https://euphoriadevelopment.uk).
+
 Manta v1.0-beta is a prerelease. Use a staging node before upgrading a production
 fleet. Linux amd64 and arm64 releases are intended for server deployments;
 [macOS](macos.md) supports local development and small hosts through a Docker VM.
@@ -18,8 +21,10 @@ sudo bash scripts/install.sh v1.0-beta
 ```
 
 The installer selects amd64/arm64, verifies the release SHA256 and executable
-version, and atomically installs `/usr/local/bin/wings`. Keeping the Wings file,
-service and configuration names preserves existing panel integration. Source
+version, and atomically installs `/usr/local/bin/wings`. This executable runs
+Manta; its legacy filename, `wings.service`, `/etc/pterodactyl` configuration path
+and server-data directories preserve existing node compatibility. Do not rename
+them on a running node. Source
 builds use Go selected by `go.mod`: `go build -trimpath -o build/wings .`.
 
 For a new node, create a location and node in **Admin > Nodes**, configure its

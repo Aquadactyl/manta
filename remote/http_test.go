@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/Aquadactyl/manta/system"
 	"github.com/apex/log"
 	"github.com/stretchr/testify/assert"
 )
@@ -25,6 +26,7 @@ func createTestClient(h http.HandlerFunc) (*client, *httptest.Server) {
 func TestRequest(t *testing.T) {
 	c, _ := createTestClient(func(rw http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "application/vnd.pterodactyl.v1+json", r.Header.Get("Accept"))
+		assert.Equal(t, "Aquadactyl Manta/v"+system.Version+" (id:testid)", r.Header.Get("User-Agent"))
 		assert.Equal(t, "application/json", r.Header.Get("Content-Type"))
 		assert.Equal(t, "Bearer testid.testtoken", r.Header.Get("Authorization"))
 		assert.Equal(t, "/test", r.URL.Path)

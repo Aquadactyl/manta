@@ -1,5 +1,8 @@
 # Running Manta on macOS
 
+Manta is the Aquadactyl server daemon, maintained by
+[Euphoria Development](https://euphoriadevelopment.uk).
+
 Manta runs natively on macOS, on both Apple Silicon (`arm64`) and Intel
 (`amd64`). It manages game servers the same way it does on Linux, but macOS has
 no container support of its own: the containers run in the Linux virtual machine

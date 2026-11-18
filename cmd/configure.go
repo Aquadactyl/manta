@@ -41,7 +41,7 @@ var nodeIDRegex = regexp.MustCompile(`^(\d+)$`)
 
 var configureCmd = &cobra.Command{
 	Use:   "configure",
-	Short: "Use a token to configure wings automatically",
+	Short: "Use an Aquadactyl node token to configure Manta automatically",
 	Run:   configureCmdRun,
 }
 
@@ -123,11 +123,11 @@ func configureCmdRun(cmd *cobra.Command, args []string) {
 	}
 
 	if err := writePanelConfiguration(target, configureArgs.PanelURL, b); err != nil {
-		fmt.Println("Failed to configure wings.\n", err.Error())
+		fmt.Println("Failed to configure Manta.\n", err.Error())
 		exitConfigure(1)
 	}
 
-	fmt.Println("Successfully configured wings.")
+	fmt.Println("Successfully configured Manta.")
 }
 
 func configureQuestions() []*survey.Question {

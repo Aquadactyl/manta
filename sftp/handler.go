@@ -115,7 +115,7 @@ func (w quotaWriterAt) Close() error {
 func NewHandler(sc *ssh.ServerConn, srv *server.Server) (*Handler, error) {
 	uuid, ok := sc.Permissions.Extensions["user"]
 	if !ok {
-		return nil, errors.New("sftp: mismatched Wings and Panel versions — Panel 1.10 is required for this version of Wings.")
+		return nil, errors.New("sftp: the panel response is missing user identity; check that your Aquadactyl Panel version is compatible with Manta")
 	}
 
 	events := eventHandler{

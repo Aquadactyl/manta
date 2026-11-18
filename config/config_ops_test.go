@@ -21,6 +21,8 @@ func TestConfigOperations(t *testing.T) {
 	cfg, err := NewAtPath(cfgPath)
 	require.NoError(t, err)
 	assert.Equal(t, cfgPath, cfg.path)
+	assert.Equal(t, "Aquadactyl", cfg.AppName)
+	cfg.AppName = "Custom Panel"
 
 	cfg.AuthenticationToken = "test-token-12345"
 	cfg.AuthenticationTokenID = "test-id-12345"
@@ -59,6 +61,7 @@ func TestConfigOperations(t *testing.T) {
 	assert.Equal(t, 8085, Get().API.Port)
 
 	// 9. WriteToDisk with no path returns error
+	assert.Equal(t, "Custom Panel", Get().AppName)
 	noPathCfg := &Configuration{}
 	assert.Error(t, WriteToDisk(noPathCfg))
 

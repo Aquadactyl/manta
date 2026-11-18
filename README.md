@@ -2,9 +2,18 @@
 
 # Manta
 
-Manta is a server daemon for Aquadactyl Panel, based on Pterodactyl Wings. It runs on Linux and, for development and small hosts, natively on macOS. It manages Docker game servers, exposes the Wings HTTP and WebSocket APIs, provides SFTP access, and handles files, backups, installations, and transfers.
+Manta is the server daemon for [Aquadactyl Panel](https://aquadactyl.uk), maintained by [Euphoria Development](https://euphoriadevelopment.uk). It runs on Linux and, for development and small hosts, natively on macOS. It manages Docker game servers, provides HTTP and WebSocket APIs and SFTP access, and handles files, backups, installations, and transfers.
 
 The API routes, authentication format, executable and configuration paths retain Wings compatibility. The Go module is `github.com/Aquadactyl/manta`. Aquadactyl integration should be verified against your Panel version before replacing a running daemon.
+
+The `wings` command, service and release filenames, `/etc/pterodactyl`, existing
+server-data paths and Docker compatibility labels are deployment identifiers.
+They do not change Manta's project identity or send data to Pterodactyl services.
+Keep them in place when upgrading an existing node.
+
+`wings diagnostics` prints a Manta report locally. Uploading is optional: pass
+`--hastebin-url` with a Hastebin-compatible service you control, review the report
+and confirm the upload. Manta has no default third-party diagnostics destination.
 
 ## Install v1.0-beta
 

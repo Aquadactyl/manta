@@ -73,6 +73,9 @@ func TestBuildDiagnosticsReportReportsMissingCommandsAndLogs(t *testing.T) {
 	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
 	var output strings.Builder
 	buildDiagnosticsReport(&output, dockersystem.VersionResponse{}, dockersystem.Info{}, errors.New("docker unavailable"))
+	require.Contains(t, output.String(), "Manta - Aquadactyl Diagnostics Report")
+	require.Contains(t, output.String(), "Maintained by Euphoria Development")
+	require.NotContains(t, output.String(), "Pterodactyl Wings")
 	require.Contains(t, output.String(), "docker unavailable")
 	require.Contains(t, output.String(), "Couldn't list containers")
 	require.Contains(t, output.String(), "No logs found or an error occurred.")
@@ -171,6 +174,30 @@ func TestGetDockerInfoAPIOutcomes(t *testing.T) {
 }
 
 func TestDiagnosticsCommandRunPromptOutcomes(t *testing.T) {
+	t.Run("no upload service keeps report local", func(t *testing.T) {
+		setupDiagnosticsRunTest(t)
+		diagnosticsArgs.HastebinURL = ""
+		askDiagnosticsQuestions = func(q []*survey.Question, _ interface{}, _ ...survey.AskOpt) error {
+			require.Len(t, q, 2)
+			return nil
+		}
+		collected := false
+		collectDockerInfo = func() (dockersystem.VersionResponse, dockersystem.Info, error) {
+			collected = true
+			return dockersystem.VersionResponse{}, dockersystem.Info{}, errors.New("docker offline")
+		}
+		askDiagnosticsUpload = func(survey.Prompt, interface{}, ...survey.AskOpt) error {
+			t.Fatal("a local report must not prompt to upload")
+			return nil
+		}
+		uploadDiagnostics = func(string, string) (string, error) {
+			t.Fatal("a local report must not be uploaded")
+			return "", nil
+		}
+		diagnosticsCmdRun(nil, nil)
+		require.True(t, collected)
+	})
+
 	t.Run("interrupt returns without upload prompt", func(t *testing.T) {
 		setupDiagnosticsRunTest(t)
 		askDiagnosticsQuestions = func([]*survey.Question, interface{}, ...survey.AskOpt) error { return terminal.InterruptErr }

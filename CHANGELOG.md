@@ -8,6 +8,14 @@ This project follows [Semantic Versioning](http://semver.org) guidelines.
 
 ## Unreleased (Manta)
 
+- Complete the Manta/Aquadactyl branding in configuration help, diagnostics,
+  installation logs, errors, outbound User-Agent headers and the default app name.
+  Identify Euphoria Development as the maintainer and preserve upstream MIT credits.
+- Print diagnostics locally by default instead of selecting an upstream paste
+  service. Optional Hastebin uploads still require an explicit URL and confirmation.
+- Remove the inherited upstream sponsorship configuration and clarify which
+  executable, service, data-path and protocol names remain for node compatibility.
+
 ## v1.0-beta
 
 - Add a Git-distributed Linux release installer with architecture selection,

@@ -120,7 +120,7 @@ var versionCommand = &cobra.Command{
 	Use:   "version",
 	Short: "Prints the current executable version and exits.",
 	Run: func(cmd *cobra.Command, _ []string) {
-		fmt.Printf("manta %s\nCopyright © 2018 - %d Dane Everitt & Contributors\n", system.Version, time.Now().Year())
+		fmt.Printf("manta %s\nAquadactyl daemon · Maintained by Euphoria Development\nCopyright © 2018 - %d Dane Everitt & Contributors\n", system.Version, time.Now().Year())
 	},
 }
 
@@ -319,7 +319,7 @@ func rootCmdRun(cmd *cobra.Command, _ []string) {
 	startRootCronOrFatal(cmd.Context(), manager)
 
 	httpConnections, sftpConnections := connectionLimits()
-	log.WithFields(log.Fields{"http": httpConnections, "sftp": sftpConnections}).Info("limiting the number of open connections, raise the open file limit for Wings to allow more")
+	log.WithFields(log.Fields{"http": httpConnections, "sftp": sftpConnections}).Info("limiting the number of open connections, raise the open file limit for Manta to allow more")
 
 	go func() {
 		// Run the SFTP server.
@@ -549,7 +549,7 @@ func initLogging() {
 	p := filepath.Join(dir, "/wings.log")
 	w, err := openLogFile(p)
 	if err != nil {
-		fatalfCommand("cmd/root: failed to create wings log: %s", err)
+		fatalfCommand("cmd/root: failed to create Manta log: %s", err)
 	}
 	log.SetLevel(log.InfoLevel)
 	if config.Get().Debug {
@@ -569,9 +569,11 @@ func printLogo() {
 |_|  |_|\__,_|_| |_|\__\__,_|
           [blue][bold]Aquadactyl[reset] [bold]%s[reset]
 
+Maintained by Euphoria Development
 Copyright © 2018 - %d Dane Everitt & Contributors
 
 Website:  https://aquadactyl.uk
+ Support: https://euphoriadevelopment.uk
  Source:  https://github.com/Aquadactyl/manta
 License:  https://github.com/Aquadactyl/manta/blob/main/LICENSE
 
