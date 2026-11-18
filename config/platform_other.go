@@ -5,7 +5,11 @@
 package config
 
 // DefaultLocation is the location of the configuration file when none is given.
-const DefaultLocation = "/etc/pterodactyl/config.yml"
+const DefaultLocation = "/etc/aquadactyl/config.yml"
+
+func legacyConfigLocations() []string {
+	return []string{"/etc/pterodactyl/config.yml"}
+}
 
 // applyPlatformDefaults replaces defaults that are specific to a platform. The
 // defaults declared on the configuration are already correct for Linux.

@@ -4,23 +4,26 @@
 
 Manta is the server daemon for [Aquadactyl Panel](https://aquadactyl.uk), maintained by [Euphoria Development](https://euphoriadevelopment.uk). It runs on Linux and, for development and small hosts, natively on macOS. It manages Docker game servers, provides HTTP and WebSocket APIs and SFTP access, and handles files, backups, installations, and transfers.
 
-The API routes, authentication format, executable and configuration paths retain Wings compatibility. The Go module is `github.com/Aquadactyl/manta`. Aquadactyl integration should be verified against your Panel version before replacing a running daemon.
+The API routes, authentication format and existing node interfaces retain Wings compatibility. The Go module is `github.com/Aquadactyl/manta`. Aquadactyl integration should be verified against your Panel version before replacing a running daemon.
 
-The `wings` command, service and release filenames, `/etc/pterodactyl`, existing
-server-data paths and Docker compatibility labels are deployment identifiers.
-They do not change Manta's project identity or send data to Pterodactyl services.
-Keep them in place when upgrading an existing node.
+On Linux the configuration defaults to `/etc/aquadactyl/config.yml`. Existing
+`/etc/pterodactyl/config.yml` files are discovered only when the new default is
+absent and no explicit configuration path was provided. The new path takes
+precedence; explicit paths are always honored. See [configuration migration](docs/INSTALLING.md#configuration-location-and-existing-nodes).
+
+The `wings` command, service/release filenames, server-data paths and Docker
+compatibility labels remain compatible with existing nodes.
 
 `wings diagnostics` prints a Manta report locally. Uploading is optional: pass
 `--hastebin-url` with a Hastebin-compatible service you control, review the report
 and confirm the upload. Manta has no default third-party diagnostics destination.
 
-## Install v1.1-beta
+## Install v1.1-beta.1
 
 ```bash
-git clone --depth 1 --branch v1.1-beta https://github.com/Aquadactyl/manta.git /opt/manta
+git clone --depth 1 --branch v1.1-beta.1 https://github.com/Aquadactyl/manta.git /opt/manta
 cd /opt/manta
-sudo bash scripts/install.sh v1.1-beta
+sudo bash scripts/install.sh v1.1-beta.1
 ```
 
 The Linux installer verifies the checksum and binary version, keeps the previous
@@ -87,7 +90,7 @@ go vet ./...
 Run with the existing node configuration:
 
 ```sh
-./build/wings --config /etc/pterodactyl/config.yml
+./build/wings --config /etc/aquadactyl/config.yml
 ```
 
 The Dockerfile also builds the daemon. Existing deployment assets retain the `wings` executable name.

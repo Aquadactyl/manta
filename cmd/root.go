@@ -41,6 +41,7 @@ import (
 
 var (
 	configPath            = config.DefaultLocation
+	resolveConfigPath     = config.ResolveConfigPath
 	debug                 = false
 	exitCommand           = os.Exit
 	fatalfCommand         = log2.Fatalf
@@ -104,7 +105,7 @@ var rootCommand = &cobra.Command{
 	Use:   "manta",
 	Short: "Runs the API server allowing programmatic control of game servers for Aquadactyl Panel.",
 	PreRun: func(cmd *cobra.Command, args []string) {
-		initConfig()
+		initConfig(cmd)
 		initLogging()
 		if tls, _ := cmd.Flags().GetBool("auto-tls"); tls {
 			if host, _ := cmd.Flags().GetString("tls-hostname"); host == "" {
@@ -518,7 +519,12 @@ func connectionLimits() (int, int) {
 
 // Reads the configuration from the disk and then sets up the global singleton
 // with all the configuration values.
-func initConfig() {
+func initConfig(cmd *cobra.Command) {
+	requested := configPath
+	configPath = resolveConfigPath(configPath, cmd != nil && cmd.Flags().Changed("config"))
+	if configPath != requested {
+		log.WithField("config_file", configPath).Warn("using legacy configuration; see the Manta installation guide to migrate to /etc/aquadactyl")
+	}
 	if !filepath.IsAbs(configPath) {
 		d, err := filepathAbs(configPath)
 		if err != nil {

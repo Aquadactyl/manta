@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   wings:
-    image: ghcr.io/aquadactyl/manta:v1.1-beta
+    image: ghcr.io/aquadactyl/manta:v1.1-beta.1
     restart: always
     networks:
       - wings0
@@ -18,7 +18,7 @@ services:
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock"
       - "/var/lib/docker/containers/:/var/lib/docker/containers/"
-      - "/etc/pterodactyl/:/etc/pterodactyl/"
+      - "/etc/aquadactyl/:/etc/aquadactyl/"
       - "/var/lib/pterodactyl/:/var/lib/pterodactyl/"
       - "/var/log/pterodactyl/:/var/log/pterodactyl/"
       - "/tmp/pterodactyl/:/tmp/pterodactyl/"

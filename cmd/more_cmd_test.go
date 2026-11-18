@@ -138,7 +138,7 @@ func TestInitConfigAndLogging(t *testing.T) {
 	configPath = p
 	debug = true
 
-	initConfig()
+	initConfig(nil)
 	assert.True(t, config.Get().Debug)
 
 	// Test initLogging
@@ -459,7 +459,7 @@ system:
 	debug = true
 
 	assert.NotPanics(t, func() {
-		initConfig()
+		initConfig(nil)
 	})
 	assert.True(t, filepath.IsAbs(configPath))
 	assert.True(t, config.Get().Debug)
@@ -529,7 +529,7 @@ system:
 	oldConfigPath := configPath
 	defer func() { configPath = oldConfigPath }()
 	configPath = cfgFile
-	initConfig()
+	initConfig(nil)
 
 	oldEndpoints := diagnosticsArgs.IncludeEndpoints
 	oldLogs := diagnosticsArgs.IncludeLogs
