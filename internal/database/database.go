@@ -2,7 +2,6 @@ package database
 
 import (
 	"database/sql"
-	"path/filepath"
 	"time"
 
 	"emperror.dev/errors"
@@ -28,7 +27,8 @@ func Initialize() error {
 	if !o.SwapIf(true) {
 		panic("database: attempt to initialize more than once during application lifecycle")
 	}
-	p := filepath.Join(config.Get().System.RootDirectory, "wings.db")
+	root := config.Get().System.RootDirectory
+	p := config.ResolveDatabasePath(root)
 	instance, err := gorm.Open(sqlite.Open(p), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Silent),
 	})

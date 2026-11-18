@@ -3,7 +3,14 @@ package config
 import (
 	"errors"
 	"os"
+	"path/filepath"
 )
+
+// ResolveDatabasePath keeps existing activity data without moving an open database.
+// Fresh nodes use manta.db; existing databases remain at their original location.
+func ResolveDatabasePath(root string) string {
+	return existingConfigPath(filepath.Join(root, "manta.db"), []string{filepath.Join(root, "wings.db")})
+}
 
 // ResolveConfigPath discovers an existing configuration only when the caller
 // has not explicitly selected a path. New installations use DefaultLocation.

@@ -66,7 +66,7 @@ func TestEnsurePterodactylUserPlatformAndCreationPaths(t *testing.T) {
 		t.Setenv("WINGS_UID", "")
 		t.Setenv("WINGS_GID", "")
 		require.NoError(t, EnsurePterodactylUser())
-		require.Equal(t, "pterodactyl", Get().System.Username)
+		require.Equal(t, "coverage-user", Get().System.Username)
 		require.Equal(t, 988, Get().System.User.UID)
 		require.Equal(t, 988, Get().System.User.GID)
 	})

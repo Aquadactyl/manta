@@ -491,7 +491,7 @@ func TestInitLoggingEnablesDebugLevel(t *testing.T) {
 	cfg.System.LogDirectory = t.TempDir()
 	config.Set(cfg)
 	initLogging()
-	require.FileExists(t, filepath.Join(cfg.System.LogDirectory, "wings.log"))
+	require.FileExists(t, filepath.Join(cfg.System.LogDirectory, "manta.log"))
 }
 
 func TestExecuteReportsCommandErrors(t *testing.T) {
@@ -550,7 +550,7 @@ func TestInitLoggingReportsSetupErrors(t *testing.T) {
 
 	t.Run("log file cannot be opened", func(t *testing.T) {
 		dir := t.TempDir()
-		require.NoError(t, os.Mkdir(filepath.Join(dir, "wings.log"), 0o700))
+		require.NoError(t, os.Mkdir(filepath.Join(dir, "manta.log"), 0o700))
 		cfg := &config.Configuration{}
 		cfg.System.LogDirectory = dir
 		config.Set(cfg)

@@ -11,23 +11,24 @@ On Linux the configuration defaults to `/etc/aquadactyl/config.yml`. Existing
 absent and no explicit configuration path was provided. The new path takes
 precedence; explicit paths are always honored. See [configuration migration](docs/INSTALLING.md#configuration-location-and-existing-nodes).
 
-The `wings` command, service/release filenames, server-data paths and Docker
-compatibility labels remain compatible with existing nodes.
+New installs use the `manta` command, `manta.service`, `/var/lib/aquadactyl`,
+`/var/log/aquadactyl`, `/tmp/aquadactyl` and the `aquadactyl` system user.
+Existing nodes retain their configured data, user and network until explicitly migrated.
 
-`wings diagnostics` prints a Manta report locally. Uploading is optional: pass
+`manta diagnostics` prints a Manta report locally. Uploading is optional: pass
 `--hastebin-url` with a Hastebin-compatible service you control, review the report
 and confirm the upload. Manta has no default third-party diagnostics destination.
 
-## Install v1.1-beta.1
+## Install v1.1-beta.2
 
 ```bash
-git clone --depth 1 --branch v1.1-beta.1 https://github.com/Aquadactyl/manta.git /opt/manta
+git clone --depth 1 --branch v1.1-beta.2 https://github.com/Aquadactyl/manta.git /opt/manta
 cd /opt/manta
-sudo bash scripts/install.sh v1.1-beta.1
+sudo bash scripts/install.sh v1.1-beta.2
 ```
 
 The Linux installer verifies the checksum and binary version, keeps the previous
-executable, and restarts an existing active `wings.service`. Configuration and
+executable, and restarts an existing active daemon service. Configuration and
 server data stay in place. See the [installation and update guide](docs/INSTALLING.md)
 for Docker, HTTPS, systemd, migration from Wings and rollback. macOS uses the
 [macOS guide](docs/macos.md). This is a prerelease: test your workload before
@@ -81,7 +82,7 @@ daemon APIs and does not return configuration, credentials or filesystem paths.
 Use Linux or macOS and the Go toolchain selected by `go.mod`:
 
 ```sh
-go build -trimpath -o build/wings .
+go build -trimpath -o build/manta .
 go test ./...
 go test -race ./...
 go vet ./...
@@ -90,10 +91,10 @@ go vet ./...
 Run with the existing node configuration:
 
 ```sh
-./build/wings --config /etc/aquadactyl/config.yml
+./build/manta --config /etc/aquadactyl/config.yml
 ```
 
-The Dockerfile also builds the daemon. Existing deployment assets retain the `wings` executable name.
+The Dockerfile also builds the daemon. Its entrypoint is `/usr/bin/manta`; a legacy executable alias supports existing container commands.
 
 For macOS (Apple Silicon and Intel), see [Running Manta on macOS](docs/macos.md).
 

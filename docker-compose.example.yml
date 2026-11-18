@@ -1,38 +1,38 @@
 version: "3.8"
 
 services:
-  wings:
-    image: ghcr.io/aquadactyl/manta:v1.1-beta.1
+  manta:
+    image: ghcr.io/aquadactyl/manta:v1.1-beta.2
     restart: always
     networks:
-      - wings0
+      - manta0
     ports:
       - "8080:8080"
       - "2022:2022"
     tty: true
     environment:
       TZ: "UTC"
-      WINGS_UID: 988
-      WINGS_GID: 988
-      WINGS_USERNAME: pterodactyl
+      MANTA_UID: 988
+      MANTA_GID: 988
+      MANTA_USERNAME: aquadactyl
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock"
       - "/var/lib/docker/containers/:/var/lib/docker/containers/"
       - "/etc/aquadactyl/:/etc/aquadactyl/"
-      - "/var/lib/pterodactyl/:/var/lib/pterodactyl/"
-      - "/var/log/pterodactyl/:/var/log/pterodactyl/"
-      - "/tmp/pterodactyl/:/tmp/pterodactyl/"
+      - "/var/lib/aquadactyl/:/var/lib/aquadactyl/"
+      - "/var/log/aquadactyl/:/var/log/aquadactyl/"
+      - "/tmp/aquadactyl/:/tmp/aquadactyl/"
       - "/etc/ssl/certs:/etc/ssl/certs:ro"
-      - "/run/wings:/run/wings"
+      - "/run/manta:/run/manta"
       # Required for ssl if you use let's encrypt. uncomment to use.
       #- "/etc/letsencrypt/:/etc/letsencrypt/"
 
 networks:
-  wings0:
-    name: wings0
+  manta0:
+    name: manta0
     driver: bridge
     ipam:
       config:
         - subnet: "172.21.0.0/16"
     driver_opts:
-      com.docker.network.bridge.name: wings0
+      com.docker.network.bridge.name: manta0

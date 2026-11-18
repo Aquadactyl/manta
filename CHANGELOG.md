@@ -8,6 +8,19 @@ This project follows [Semantic Versioning](http://semver.org) guidelines.
 
 ## Unreleased (Manta)
 
+## v1.1-beta.2
+
+- Ship native `manta` binaries, `manta.service`, Aquadactyl data/log/temp paths,
+  the `aquadactyl` game-file user and an Aquadactyl Docker network for new nodes.
+- Mark new configurations with `config_version: 1`. Preserve omitted defaults in
+  old files, explicit custom paths, user IDs and existing activity databases.
+- Add canonical `MANTA_*` environment overrides with legacy fallbacks, update
+  container entrypoints, Compose examples and macOS launchd executables.
+- Verify canonical and legacy service updates, duplicate-service rejection and
+  failed-start rollback. Document migration without silently relocating game data.
+- Publish `manta_*` release assets alongside checksummed legacy aliases for old
+  update tooling, and update all current installation instructions.
+
 ## v1.1-beta.1
 
 - Use `/etc/aquadactyl/config.yml` for new Linux configurations. Startup,

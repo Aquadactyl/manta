@@ -25,6 +25,8 @@ type dockerNetworkInterfaces struct {
 }
 
 type DockerNetworkConfiguration struct {
+	BridgeName string `default:"aquadactyl0" yaml:"bridge_name"`
+
 	// The interface that should be used to create the network. Must not conflict
 	// with any other interfaces in use by Docker or on the system.
 	Interface string `default:"172.18.0.1" json:"interface" yaml:"interface"`
@@ -35,10 +37,10 @@ type DockerNetworkConfiguration struct {
 	// The name of the network to use. If this network already exists it will not
 	// be created. If it is not found, a new network will be created using the interface
 	// defined.
-	Name       string                  `default:"pterodactyl_nw"`
+	Name       string                  `default:"aquadactyl_nw"`
 	ISPN       bool                    `default:"false" yaml:"ispn"`
 	Driver     string                  `default:"bridge"`
-	Mode       string                  `default:"pterodactyl_nw" yaml:"network_mode"`
+	Mode       string                  `default:"aquadactyl_nw" yaml:"network_mode"`
 	IsInternal bool                    `default:"false" yaml:"is_internal"`
 	EnableICC  bool                    `default:"true" yaml:"enable_icc"`
 	NetworkMTU int64                   `default:"1500" yaml:"network_mtu"`

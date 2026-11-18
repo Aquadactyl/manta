@@ -185,9 +185,9 @@ func buildDiagnosticsReport(output *strings.Builder, dockerVersion dockersystem.
 
 	printHeader(output, "Latest Manta Logs")
 	if diagnosticsArgs.IncludeLogs {
-		p := "/var/log/pterodactyl/wings.log"
+		p := "/var/log/aquadactyl/manta.log"
 		if cfg != nil {
-			p = path.Join(cfg.System.LogDirectory, "wings.log")
+			p = path.Join(cfg.System.LogDirectory, "manta.log")
 		}
 		if c, err := exec.Command("tail", "-n", strconv.Itoa(diagnosticsArgs.LogLines), p).Output(); err != nil { //nolint:gosec // fixed binary, no shell; path comes from the operator's config
 			fmt.Fprintln(output, "No logs found or an error occurred.")

@@ -34,7 +34,7 @@ func TestDatabase(t *testing.T) {
 
 	// Initialize
 	require.NoError(t, Initialize())
-	assert.FileExists(t, filepath.Join(tmp, "wings.db"))
+	assert.FileExists(t, filepath.Join(tmp, "manta.db"))
 
 	// Instance returns valid DB
 	instance := Instance()
@@ -70,7 +70,7 @@ func TestDatabase(t *testing.T) {
 
 	// Error path: AutoMigrate error due to conflicting view
 	migDir := t.TempDir()
-	dbPath := filepath.Join(migDir, "wings.db")
+	dbPath := filepath.Join(migDir, "manta.db")
 	sdb, err := sql.Open("sqlite", dbPath)
 	require.NoError(t, err)
 	_, err = sdb.Exec("CREATE VIEW activities AS SELECT 1;")
