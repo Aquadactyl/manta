@@ -5,7 +5,7 @@
 Manta is the Aquadactyl server daemon, maintained by
 [Euphoria Development](https://euphoriadevelopment.uk).
 
-Manta v1.0-beta is a prerelease. Use a staging node before upgrading a production
+Manta v1.1-beta is a prerelease. Use a staging node before upgrading a production
 fleet. Linux amd64 and arm64 releases are intended for server deployments;
 [macOS](macos.md) supports local development and small hosts through a Docker VM.
 
@@ -15,9 +15,9 @@ Install Docker Engine using the [official instructions](https://docs.docker.com/
 then clone the matching release of Manta's tools:
 
 ```bash
-git clone --depth 1 --branch v1.0-beta https://github.com/Aquadactyl/manta.git /opt/manta
+git clone --depth 1 --branch v1.1-beta https://github.com/Aquadactyl/manta.git /opt/manta
 cd /opt/manta
-sudo bash scripts/install.sh v1.0-beta
+sudo bash scripts/install.sh v1.1-beta
 ```
 
 The installer selects amd64/arm64, verifies the release SHA256 and executable
@@ -75,9 +75,9 @@ Back up `config.yml` and server data. Keep the previous binary and record its
 version. From the reviewed Manta tools checkout:
 
 ```bash
-git fetch origin tag v1.0-beta
-git checkout --detach v1.0-beta
-sudo bash scripts/install.sh v1.0-beta
+git fetch origin tag v1.1-beta
+git checkout --detach v1.1-beta
+sudo bash scripts/install.sh v1.1-beta
 sudo systemctl status wings --no-pager
 sudo journalctl -u wings -n 50 --no-pager
 ```
