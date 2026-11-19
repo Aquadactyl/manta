@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability privately
+    url: https://github.com/Aquadactyl/manta/security/advisories/new
+    about: Send suspected vulnerabilities to the maintainers privately. Do not disclose them in public issues.
+  - name: Common issues and troubleshooting
+    url: https://aquadactyl.uk/docs/manta/troubleshooting
+    about: Check symptoms, safe diagnostics and recovery steps before contacting support.
+  - name: Installation and documentation
+    url: https://aquadactyl.uk/docs/manta/installing-manta
+    about: Supported installations, configuration, updates and contributor documentation.
