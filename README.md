@@ -131,3 +131,8 @@ The [resource-event comparison](benchmarks/RESOURCE_EVENTS.md) measures typed st
 ## Upstream
 
 Manta derives from [Pterodactyl Wings](https://github.com/pterodactyl/wings), distributed under the [MIT license](LICENSE). The upstream [Wings documentation](https://docs.pterodactyl.io/v1/wings/) remains useful for the inherited configuration and API behavior.
+
+## Contributing and security
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for bugs, feature requests, development and
+pull request review. Report vulnerabilities privately using [SECURITY.md](SECURITY.md).

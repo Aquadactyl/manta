@@ -1,0 +1,78 @@
+name: Bug report
+description: Report a reproducible Manta defect.
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This is a public report. Use [private security reporting](https://github.com/Aquadactyl/manta/security/advisories/new) for vulnerabilities.
+        Check [common issues](https://aquadactyl.uk/docs/manta/troubleshooting) first. Never post credentials, complete environment/node configuration, cookies or private user data.
+  - type: input
+    id: version
+    attributes:
+      label: Manta version or commit
+      description: Copy the exact version; "latest" is not a version.
+      placeholder: v1.1-beta.3
+    validations:
+      required: true
+  - type: input
+    id: related-version
+    attributes:
+      label: Panel version, if relevant
+      description: Include the other component version when the failure involves a node connection.
+  - type: dropdown
+    id: deployment
+    attributes:
+      label: Deployment
+      options:
+        - Linux (systemd)
+        - Linux (container)
+        - macOS
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Operating system and environment
+      description: Include OS/version, architecture and relevant runtime/proxy/addon versions. Do not include secrets.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Describe the action and smallest repeatable example, including any relevant settings.
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behaviour
+      description: Include the exact error, time/timezone and whether one server, node, account or the whole installation is affected.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Reviewed and redacted diagnostics
+      description: |
+        Run manta diagnostics locally using the documented service user and review its output before sharing a short relevant excerpt.
+        Remove secrets, tokens, webhook URLs, private paths and personal data. Do not upload raw configuration or browser network exports.
+      render: text
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I checked the common issues guide and searched existing issues.
+          required: true
+        - label: I reviewed this public report and removed secrets and private data.
+          required: true
