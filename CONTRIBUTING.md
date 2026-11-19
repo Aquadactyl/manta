@@ -43,12 +43,21 @@ installation behaviour change. Preserve upstream licence and copyright notices.
 ## Pull requests and review
 
 Describe the problem, resulting behaviour, validation and deployment impact in
-the PR template. Keep changes focused and respond to review comments. Merging
-into `main` requires at least one approval from a maintainer listed in
-[CODEOWNERS](.github/CODEOWNERS), all required CI checks and resolved review
-conversations. New changes invalidate previous approvals, and the latest push
-must be approved by someone other than its pusher. These requirements also apply
-to administrators; direct pushes, force pushes and branch deletion are blocked.
+the PR template. Keep changes focused and respond to review comments.
+
+All changes to `main` go through a PR. Required CI must pass against the current
+`main`, review conversations must be resolved, and force pushes and branch
+deletion are blocked. These protections apply to everyone, including administrators.
+
+The separate review rule normally requires independent approval from a maintainer
+listed in [CODEOWNERS](.github/CODEOWNERS). New changes invalidate previous
+approvals, and the latest push must be approved by someone other than its pusher.
+The current code owners may explicitly bypass that review-approval rule when
+merging a PR, including their own. This exemption does not bypass CI, unresolved
+review threads, the PR requirement or other branch protections. GitHub still
+does not allow PR authors to approve their own PRs.
+
+When changing CODEOWNERS, update the review ruleset's exemption list as well.
 
 Workflows from external forks require maintainer approval before running. Starting
 CI is separate from approving a contribution. CI uses GitHub-hosted runners and
