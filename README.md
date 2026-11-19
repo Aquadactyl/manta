@@ -22,10 +22,24 @@ and confirm the upload. Manta has no default third-party diagnostics destination
 ## Install v1.1-beta.2
 
 ```bash
-git clone --depth 1 --branch v1.1-beta.2 https://github.com/Aquadactyl/manta.git /opt/manta
-cd /opt/manta
+git clone --depth 1 --branch v1.1-beta.2 https://github.com/Aquadactyl/manta.git /opt/manta &&
+cd /opt/manta &&
 sudo bash scripts/install.sh v1.1-beta.2
 ```
+
+If `/opt/manta` already exists, update its checkout first:
+
+```bash
+cd /opt/manta &&
+git fetch --no-tags --depth 1 https://github.com/Aquadactyl/manta.git refs/tags/v1.1-beta.2 &&
+git checkout --detach FETCH_HEAD &&
+sudo bash scripts/install.sh v1.1-beta.2 &&
+/usr/local/bin/manta version
+```
+
+Passing a release version to an old installer does not update that script.
+The `&&` chains stop on errors, including a failed clone or checkout. See
+[checkout recovery](docs/INSTALLING.md#existing-or-interrupted-checkout).
 
 The Linux installer verifies the checksum and binary version, keeps the previous
 executable, and restarts an existing active daemon service. Configuration and
