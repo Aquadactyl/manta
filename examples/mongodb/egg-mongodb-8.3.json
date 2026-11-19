@@ -1,0 +1,51 @@
+{
+    "_comment": "MongoDB example for Aquadactyl/Manta. Build the accompanying Dockerfile on the node before importing.",
+    "meta": {
+        "version": "PTDL_v2",
+        "update_url": null
+    },
+    "name": "MongoDB 8.3.17 (Manta)",
+    "author": "repgraphics@euphoriadevelopment.uk",
+    "description": "Version-matched MongoDB installer and runtime. Runs mongod in the foreground and stops gracefully with SIGTERM. Existing databases are never reinitialized by the installer.",
+    "features": [],
+    "docker_images": {
+        "MongoDB 8.3.17": "~manta-mongodb:8.3.17"
+    },
+    "file_denylist": [],
+    "startup": "exec mongod --config /home/container/mongod.conf --dbpath /home/container/mongodb --port \"${SERVER_PORT}\" --bind_ip 0.0.0.0 --auth --logpath /proc/self/fd/1 --logappend",
+    "config": {
+        "files": "{}",
+        "startup": "{\"done\":\"Waiting for connections\"}",
+        "logs": "{}",
+        "stop": "^SIGTERM"
+    },
+    "scripts": {
+        "installation": {
+            "script": "#!/usr/bin/env bash\nset -Eeuo pipefail\n: \"${MONGO_USER:?Set the MongoDB admin username}\"\n: \"${MONGO_USER_PASS:?Set the MongoDB admin password}\"\ncd /mnt/server\nmkdir -p mongodb logs\nif [[ -n \"$(find mongodb -mindepth 1 -maxdepth 1 -print -quit)\" ]]; then\n    echo \"Existing MongoDB data found. Installation stopped without changing it; update the runtime image and startup settings to recover an existing server.\" >&2\n    exit 1\nfi\nif [[ ! -e mongod.conf ]]; then\n    cat > mongod.conf <<'CONFIG'\nstorage:\n  dbPath: /home/container/mongodb\nsecurity:\n  authorization: enabled\nprocessManagement:\n  fork: false\nCONFIG\nfi\nmongod --dbpath /mnt/server/mongodb --port 27017 --bind_ip 127.0.0.1 --logpath /mnt/server/logs/install.log &\nmongo_pid=$!\ncleanup() {\n    kill -TERM \"$mongo_pid\" 2>/dev/null || true\n    wait \"$mongo_pid\" || true\n}\ntrap cleanup EXIT\nready=false\nfor ((attempt=0; attempt<60; attempt++)); do\n    if ! kill -0 \"$mongo_pid\" 2>/dev/null; then\n        cat /mnt/server/logs/install.log >&2\n        echo \"MongoDB exited during installation.\" >&2\n        exit 1\n    fi\n    if mongosh --quiet --norc --host 127.0.0.1 --port 27017 --eval 'quit(db.adminCommand({ping: 1}).ok === 1 ? 0 : 1)' >/dev/null 2>&1; then\n        ready=true\n        break\n    fi\n    sleep 1\ndone\nif [[ \"$ready\" != true ]]; then\n    tail -n 50 /mnt/server/logs/install.log >&2\n    echo \"MongoDB did not become ready within 60 attempts.\" >&2\n    exit 1\nfi\nmongosh --quiet --norc --host 127.0.0.1 --port 27017 --eval 'db.getSiblingDB(\"admin\").createUser({user: process.env.MONGO_USER, pwd: process.env.MONGO_USER_PASS, roles: [\"root\"]})'\nkill -TERM \"$mongo_pid\"\nwait \"$mongo_pid\"\ntrap - EXIT\necho \"MongoDB installation completed.\"\n",
+            "container": "mongo:8.3.17",
+            "entrypoint": "bash"
+        }
+    },
+    "variables": [
+        {
+            "name": "Mongo Admin Username",
+            "description": "The existing admin username when recovering a server.",
+            "env_variable": "MONGO_USER",
+            "default_value": "admin",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string",
+            "field_type": "text"
+        },
+        {
+            "name": "Mongo Admin Password",
+            "description": "Used when initializing a new database. Changing this value does not change an existing database password.",
+            "env_variable": "MONGO_USER_PASS",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string",
+            "field_type": "text"
+        }
+    ]
+}
