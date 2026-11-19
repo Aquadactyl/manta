@@ -303,6 +303,29 @@ func (a *Archive) addToArchive(name, relative string) error {
 		}
 	}
 
+	// Open regular files before writing the header. Paths can change between
+	// Lstat and open, so verify the opened file before reading any bytes.
+	var f *os.File
+	if s.Mode().IsRegular() && s.Size() > 0 {
+		f, err = a.Filesystem.openReadFile(name)
+		if err != nil {
+			if os.IsNotExist(err) {
+				return nil
+			}
+			return errors.WrapIff(err, "failed to open '%s' for copying", relative)
+		}
+		defer f.Close()
+
+		opened, err := f.Stat()
+		if err != nil {
+			return errors.WrapIff(err, "failed to stat '%s' for copying", relative)
+		}
+		if !opened.Mode().IsRegular() || !os.SameFile(s, opened) {
+			return nil
+		}
+		s = opened
+	}
+
 	// Get the tar FileInfoHeader in order to add the file to the archive.
 	header, err := archiveFileInfoHeader(s, filepath.ToSlash(target))
 	if err != nil {
@@ -324,16 +347,6 @@ func (a *Archive) addToArchive(name, relative string) error {
 	bp := pool.Get().(*[]byte)
 	defer pool.Put(bp)
 	buf := *bp
-
-	// Open the file.
-	f, err := a.Filesystem.root.Open(normalize(name))
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil
-		}
-		return errors.WrapIff(err, "failed to open '%s' for copying", header.Name)
-	}
-	defer f.Close()
 
 	// Copy the file's contents to the archive using our buffer.
 	if _, err := io.CopyBuffer(a.w, io.LimitReader(f, header.Size), buf); err != nil {

@@ -46,6 +46,10 @@ func TestNamedPipesAreNeverOpened(t *testing.T) {
 			return fs.Write(p, bytes.NewReader(b), int64(len(b)), 0o644)
 		}},
 		{"Copy", true, func(p string) error { return fs.Copy(p) }},
+		{"ReadDir", true, func(p string) error {
+			_, err := fs.ReadDir(p)
+			return err
+		}},
 		{"DecompressFile", true, func(p string) error { return fs.DecompressFile(context.Background(), "/", p) }},
 		{"SpaceAvailableForDecompression", true, func(p string) error {
 			return fs.SpaceAvailableForDecompression(context.Background(), "/", p)

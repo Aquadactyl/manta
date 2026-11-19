@@ -167,7 +167,7 @@ func (fs *Filesystem) MkdirAll(p string, mode os.FileMode) error {
 }
 
 func (fs *Filesystem) ReadDir(p string) ([]os.DirEntry, error) {
-	f, err := fs.root.Open(normalize(p))
+	f, err := fs.root.OpenFile(normalize(p), os.O_RDONLY|syscall.O_DIRECTORY|syscall.O_NONBLOCK, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -703,7 +703,7 @@ func (fs *Filesystem) SearchFiles(directory, query string, limit int) ([]string,
 
 	root := normalize(directory)
 	paths := make([]string, 0, limit)
-	err := fsys.WalkDir(fs.root.FS(), root, func(walked string, entry fsys.DirEntry, walkErr error) error {
+	err := fs.WalkDir(root, func(walked string, entry fsys.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
 		}
@@ -742,11 +742,30 @@ func (e rootedDirEntry) Info() (os.FileInfo, error) {
 	return e.fs.root.Lstat(filepath.Join(e.parent, e.entry.Name()))
 }
 func (e rootedDirEntry) Open() (*os.File, error) {
-	return e.fs.root.Open(filepath.Join(e.parent, e.entry.Name()))
+	return e.fs.openReadFile(filepath.Join(e.parent, e.entry.Name()))
+}
+
+// Directory walks can encounter paths replaced after they were listed. Open
+// them without blocking even if the directory has become a named pipe.
+type walkFilesystem struct{ root *os.Root }
+
+func (w walkFilesystem) Open(name string) (fsys.File, error) {
+	if !fsys.ValidPath(name) {
+		return nil, &fsys.PathError{Op: "open", Path: name, Err: fsys.ErrInvalid}
+	}
+	f, err := w.root.OpenFile(name, os.O_RDONLY|syscall.O_DIRECTORY|syscall.O_NONBLOCK, 0)
+	if err != nil {
+		return nil, err
+	}
+	return f, nil
+}
+
+func (w walkFilesystem) Stat(name string) (fsys.FileInfo, error) {
+	return fsys.Stat(w.root.FS(), name)
 }
 
 func (fs *Filesystem) WalkDir(root string, fn func(string, fsys.DirEntry, error) error) error {
-	return fsys.WalkDir(fs.root.FS(), normalize(root), fn)
+	return fsys.WalkDir(walkFilesystem{root: fs.root}, normalize(root), fn)
 }
 
 func statDirectoryEntry(e rootedDirEntry) (Stat, error) {
@@ -762,10 +781,14 @@ func statDirectoryEntry(e rootedDirEntry) (Stat, error) {
 		d = "application/octet-stream"
 	}
 	var m *mimetype.MIME
-	if e.Type().IsRegular() {
+	if info.Mode().IsRegular() {
 		f, err := e.Open()
 		if err == nil {
-			m, err = detectFileMIME(f)
+			var opened os.FileInfo
+			opened, err = f.Stat()
+			if err == nil && opened.Mode().IsRegular() {
+				m, err = detectFileMIME(f)
+			}
 			_ = f.Close()
 		}
 		if err != nil {

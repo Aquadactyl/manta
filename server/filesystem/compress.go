@@ -94,6 +94,17 @@ var (
 	newZipReaderForSpaceCheck = zip.NewReader
 )
 
+func statArchiveFile(f filesystemFile) (os.FileInfo, error) {
+	info, err := f.Stat()
+	if err != nil {
+		return nil, err
+	}
+	if !info.Mode().IsRegular() {
+		return nil, newFilesystemError(ErrCodeUnknownArchive, archives.NoMatch)
+	}
+	return info, nil
+}
+
 // SpaceAvailableForDecompression looks through a given archive and determines
 // if decompressing it would put the server over its allocated disk space limit.
 //
@@ -112,6 +123,10 @@ func (fs *Filesystem) SpaceAvailableForDecompression(ctx context.Context, dir st
 	}
 	defer f.Close()
 
+	info, err := statArchiveFile(f)
+	if err != nil {
+		return err
+	}
 	format, _, err := identifyForSpaceCheck(ctx, filepath.Base(file), f)
 	if err != nil && !errors.Is(err, archives.NoMatch) {
 		return err
@@ -120,11 +135,6 @@ func (fs *Filesystem) SpaceAvailableForDecompression(ctx context.Context, dir st
 	if _, err := f.Seek(0, io.SeekStart); err != nil {
 		return err
 	}
-	info, err := f.Stat()
-	if err != nil {
-		return err
-	}
-
 	var size int64
 	add := func(name string, n int64) error {
 		select {
@@ -188,6 +198,9 @@ func (fs *Filesystem) DecompressFile(ctx context.Context, dir string, file strin
 	}
 	defer f.Close()
 
+	if _, err := statArchiveFile(f); err != nil {
+		return err
+	}
 	// Identify the type of archive we are dealing with.
 	format, input, err := archives.Identify(ctx, filepath.Base(file), f)
 	if err != nil {
