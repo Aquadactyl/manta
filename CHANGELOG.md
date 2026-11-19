@@ -8,6 +8,16 @@ This project follows [Semantic Versioning](http://semver.org) guidelines.
 
 ## Unreleased (Manta)
 
+## v1.1-beta.3
+
+- Start server-list pagination at page 1. This fixes startup HTTP 422 failures
+  against Aquadactyl panels that reject page zero, including on empty nodes.
+- Make pagination fixtures enforce the panel contract and cover single-page,
+  multi-page and empty-node responses, exact page coverage, bounded concurrency
+  and cancellation after failures.
+- Update installation, update and Docker instructions to this patched beta.
+  Preserve existing node configuration and server data; no panel migration is needed.
+
 ## v1.1-beta.2
 
 - Ship native `manta` binaries, `manta.service`, Aquadactyl data/log/temp paths,

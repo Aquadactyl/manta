@@ -23,7 +23,7 @@ const (
 // parallel API calls to the endpoint if more than one page of servers is
 // returned.
 func (c *client) GetServers(ctx context.Context, limit int) ([]RawServerData, error) {
-	servers, meta, err := c.getServersPaged(ctx, 0, limit)
+	servers, meta, err := c.getServersPaged(ctx, 1, limit)
 	if err != nil {
 		return nil, err
 	}
