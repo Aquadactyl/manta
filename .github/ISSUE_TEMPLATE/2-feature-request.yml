@@ -1,0 +1,36 @@
+name: Feature request
+description: Suggest an improvement to Manta; prior approval is not required.
+title: "[Feature]: "
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Feature requests are welcome. Describe the problem before proposing an implementation.
+        Use [private reporting](https://github.com/Aquadactyl/manta/security/advisories/new) for security vulnerabilities.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or use case
+      description: Who needs this, and what is difficult today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed improvement
+      description: Explain the desired behaviour and any relevant configuration or permission requirements.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives and additional context
+      description: Include existing workarounds or related issues. Do not share private data.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing requests and removed secrets and private data.
+          required: true

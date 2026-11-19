@@ -1,23 +1,50 @@
-# Security Policy
+# Manta security policy
 
-## Supported Versions
+Manta is the Aquadactyl server daemon, maintained by Euphoria Development and
+derived from Pterodactyl Wings. This policy covers the Aquadactyl/Manta repository.
 
-Aquadactyl only provides security support for the latest `major.minor` versions of the Aquadactyl and Manta software.
-If a security vulnerability is found in an older version but cannot be reproduced on a supported version it will
-not be considered. Additionally, security issues found in unreleased code will be addressed, but do not warrant a
-security advisory.
+## Reporting a vulnerability
 
-For example, if the latest version of Aquadactyl is `1.2.5` then we only support security reports for issues that
-occur on `>= 1.2.x` versions of Aquadactyl software. Aquadactyl and Manta have their own versions, but they generally
-follow each other.
+Use [GitHub private vulnerability reporting](https://github.com/Aquadactyl/manta/security/advisories/new)
+to contact the Manta maintainers. Private reporting is enabled. Do not open a
+public issue or PR containing an exploit, unpatched vulnerability, credentials
+or private user data.
 
-## Reporting a Vulnerability
+Include the exact Manta version or commit, host OS and architecture, deployment
+type, affected endpoint or operation, impact, prerequisites and minimal
+reproduction steps from an environment you control. Review and redact evidence.
+Never attach a full node `config.yml`, node/API tokens, TLS private keys, session
+cookies, server files or a database dump.
 
-Please use our GitHub Security reporting mechanism to quickly alert the team to any security issues you come across.
+Panel vulnerabilities belong in
+[Aquadactyl's private report form](https://github.com/Aquadactyl/aquadactyl/security/advisories/new).
+Use the [public issue forms](https://github.com/Aquadactyl/manta/issues/new/choose)
+for ordinary bugs, requests and help after reading
+[Manta common issues](https://aquadactyl.uk/docs/manta/troubleshooting).
 
-We make every effort to respond as soon as possible, although it may take a day or two for us to sync internally and
-determine the severity of the report and its impact. Please, _do not_ use a public facing channel or GitHub issues to
-report sensitive security issues.
+## Supported releases and disclosure
 
-As part of our process, we will create a security advisory for the affected versions and disclose it publicly, usually
-two to four weeks after releasing a version that addresses it.
+Current releases are public betas. Security fixes target the
+[latest published Manta release](https://github.com/Aquadactyl/manta/releases)
+and the default development branch. Include the original affected version even
+if it is older; when possible, check whether it also occurs in a current release.
+Manta and Panel versions are independent.
+
+Maintainers assess reports privately, coordinate fixes and publication, and use
+GitHub security advisories when appropriate. Keep details private while that
+coordination is in progress. Do not test against installations without their
+operator's permission.
+
+If a report also affects upstream Wings or a dependency, include that information
+so maintainers can coordinate with the relevant project. The
+[upstream security policy](https://github.com/pterodactyl/wings/security/policy)
+belongs to Pterodactyl; it is not Manta's reporting contact.
+
+## Deployment boundaries
+
+Manta controls Docker and game-server files. Keep its node token, configuration,
+Docker socket and TLS keys private, and grant access only to trusted operators.
+Game containers, third-party eggs, extensions and host configuration need their
+own review. Diagnostics may include endpoints and logs: review them before sharing.
+See the installation and troubleshooting guides for native Linux, container and
+macOS configurations.

@@ -1,0 +1,38 @@
+name: Support question
+description: Ask for help after checking the documentation and common issues.
+title: "[Support]: "
+labels: [question]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Read [common issues](https://aquadactyl.uk/docs/manta/troubleshooting) first.
+        This is public. Use [private security reporting](https://github.com/Aquadactyl/manta/security/advisories/new) for suspected vulnerabilities, and never post credentials or complete configuration files.
+  - type: input
+    id: version
+    attributes:
+      label: Installed versions
+      description: Include the exact Panel/Manta versions relevant to your question.
+    validations:
+      required: true
+  - type: textarea
+    id: question
+    attributes:
+      label: What are you trying to do?
+      description: Include deployment type, host OS, expected behaviour and the exact error.
+    validations:
+      required: true
+  - type: textarea
+    id: attempted
+    attributes:
+      label: Checks already performed
+      description: Link the relevant guide and describe your results. Include only reviewed, redacted log excerpts.
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I checked the documentation, searched existing issues and removed secrets and private data.
+          required: true
