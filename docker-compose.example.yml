@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   manta:
-    image: ghcr.io/aquadactyl/manta:v1.1-beta.2
+    image: ghcr.io/aquadactyl/manta:v1.1-beta.3
     restart: always
     networks:
       - manta0

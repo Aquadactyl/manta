@@ -3,16 +3,25 @@
 ![Manta](../.github/assets/manta-logo.png)
 
 Manta is the Aquadactyl server daemon, maintained by [Euphoria Development](https://euphoriadevelopment.uk).
-The current prerelease is **v1.1-beta.2**. Test upgrades on a staging node first.
+The current prerelease is **v1.1-beta.3**. Test upgrades on a staging node first.
+
+## Startup pagination fix
+
+Manta releases through v1.1-beta.2 send an initial server-list request with
+`page=0`. Panels that validate one-based pagination reject it with HTTP 422
+and `The page must be between 1 and 2147483647.`, preventing daemon startup.
+Upgrade the existing checkout and binary to v1.1-beta.3 using the instructions
+below. This fix does not require changes to node configuration, users, or the
+panel database. A local rebuild is no longer needed once this release is installed.
 
 ## New Linux installation
 
 Install Docker Engine using its [official instructions](https://docs.docker.com/engine/install/), then fetch the matching Manta release tools:
 
 ```bash
-git clone --depth 1 --branch v1.1-beta.2 https://github.com/Aquadactyl/manta.git /opt/manta &&
+git clone --depth 1 --branch v1.1-beta.3 https://github.com/Aquadactyl/manta.git /opt/manta &&
 cd /opt/manta &&
-sudo bash scripts/install.sh v1.1-beta.2 &&
+sudo bash scripts/install.sh v1.1-beta.3 &&
 /usr/local/bin/manta version &&
 sudo install -d -m 0700 /etc/aquadactyl &&
 sudo install -d -m 0700 /var/lib/aquadactyl/volumes
@@ -24,10 +33,10 @@ If `/opt/manta` already exists, use this block instead of cloning again:
 
 ```bash
 cd /opt/manta &&
-git fetch --no-tags --depth 1 https://github.com/Aquadactyl/manta.git refs/tags/v1.1-beta.2 &&
+git fetch --no-tags --depth 1 https://github.com/Aquadactyl/manta.git refs/tags/v1.1-beta.3 &&
 git checkout --detach FETCH_HEAD &&
 test -f deploy/manta.service &&
-sudo bash scripts/install.sh v1.1-beta.2 &&
+sudo bash scripts/install.sh v1.1-beta.3 &&
 /usr/local/bin/manta version
 ```
 
@@ -36,7 +45,7 @@ not depend on an existing branch or local tag being current. Git preserves
 untracked configuration files and refuses conflicting changes; review local
 changes if checkout fails. Each `&&` stops the following commands on failure.
 
-An installer argument such as `v1.1-beta.2` selects the binary to download; it does
+An installer argument such as `v1.1-beta.3` selects the binary to download; it does
 not update the installer script itself. Running an older script can still install
 that binary under its old executable name. Switch the checkout first. Continue
 with configuration and service setup below, or use [Migrate the service](#migrate-the-service)
@@ -88,9 +97,9 @@ Back up configuration and server data. From the reviewed tools checkout:
 
 ```bash
 cd /opt/manta &&
-git fetch --no-tags --depth 1 https://github.com/Aquadactyl/manta.git refs/tags/v1.1-beta.2 &&
+git fetch --no-tags --depth 1 https://github.com/Aquadactyl/manta.git refs/tags/v1.1-beta.3 &&
 git checkout --detach FETCH_HEAD &&
-sudo bash scripts/install.sh v1.1-beta.2 &&
+sudo bash scripts/install.sh v1.1-beta.3 &&
 sudo systemctl status manta --no-pager &&
 sudo journalctl -u manta -n 50 --no-pager
 ```
