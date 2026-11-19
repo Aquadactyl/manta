@@ -10,13 +10,37 @@ The current prerelease is **v1.1-beta.2**. Test upgrades on a staging node first
 Install Docker Engine using its [official instructions](https://docs.docker.com/engine/install/), then fetch the matching Manta release tools:
 
 ```bash
-git clone --depth 1 --branch v1.1-beta.2 https://github.com/Aquadactyl/manta.git /opt/manta
-cd /opt/manta
-sudo bash scripts/install.sh v1.1-beta.2
-manta version
-sudo install -d -m 0700 /etc/aquadactyl
+git clone --depth 1 --branch v1.1-beta.2 https://github.com/Aquadactyl/manta.git /opt/manta &&
+cd /opt/manta &&
+sudo bash scripts/install.sh v1.1-beta.2 &&
+/usr/local/bin/manta version &&
+sudo install -d -m 0700 /etc/aquadactyl &&
 sudo install -d -m 0700 /var/lib/aquadactyl/volumes
 ```
+
+### Existing or interrupted checkout
+
+If `/opt/manta` already exists, use this block instead of cloning again:
+
+```bash
+cd /opt/manta &&
+git fetch --no-tags --depth 1 https://github.com/Aquadactyl/manta.git refs/tags/v1.1-beta.2 &&
+git checkout --detach FETCH_HEAD &&
+test -f deploy/manta.service &&
+sudo bash scripts/install.sh v1.1-beta.2 &&
+/usr/local/bin/manta version
+```
+
+The fetch selects the published tag directly from the official repository. It does
+not depend on an existing branch or local tag being current. Git preserves
+untracked configuration files and refuses conflicting changes; review local
+changes if checkout fails. Each `&&` stops the following commands on failure.
+
+An installer argument such as `v1.1-beta.2` selects the binary to download; it does
+not update the installer script itself. Running an older script can still install
+that binary under its old executable name. Switch the checkout first. Continue
+with configuration and service setup below, or use [Migrate the service](#migrate-the-service)
+for an existing daemon.
 
 The installer verifies the SHA256 checksum and executable version, then atomically installs `/usr/local/bin/manta`. Release assets are `manta_linux_amd64`, `manta_linux_arm64` and the corresponding `manta_darwin_*` files. Legacy asset aliases are supplied for older update tools.
 
@@ -46,10 +70,11 @@ New Panel configurations include `config_version: 1`. Keep this line when writin
 The release includes `deploy/manta.service`. For a new, root-run Linux node:
 
 ```bash
-sudo install -m 0644 deploy/manta.service /etc/systemd/system/manta.service
-sudo systemctl daemon-reload
-sudo systemctl enable --now manta
-sudo systemctl status manta --no-pager
+sudo test -r /etc/aquadactyl/config.yml &&
+sudo install -m 0644 /opt/manta/deploy/manta.service /etc/systemd/system/manta.service &&
+sudo systemctl daemon-reload &&
+sudo systemctl enable --now manta &&
+sudo systemctl status manta --no-pager &&
 sudo journalctl -u manta -n 50 --no-pager
 ```
 
@@ -62,11 +87,11 @@ Check node connectivity and a test server's install, start, console, files, SFTP
 Back up configuration and server data. From the reviewed tools checkout:
 
 ```bash
-cd /opt/manta
-git fetch origin tag v1.1-beta.2
-git checkout --detach v1.1-beta.2
-sudo bash scripts/install.sh v1.1-beta.2
-sudo systemctl status manta --no-pager
+cd /opt/manta &&
+git fetch --no-tags --depth 1 https://github.com/Aquadactyl/manta.git refs/tags/v1.1-beta.2 &&
+git checkout --detach FETCH_HEAD &&
+sudo bash scripts/install.sh v1.1-beta.2 &&
+sudo systemctl status manta --no-pager &&
 sudo journalctl -u manta -n 50 --no-pager
 ```
 
