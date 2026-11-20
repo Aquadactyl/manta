@@ -207,7 +207,7 @@ func (fs *Filesystem) DirectorySize(root string) (int64, error) {
 	var hardLinks []uint64
 
 	var size atomic.Int64
-	err := walkDirectoryForSize(fs.root.FS(), name, func(path string, d fsys.DirEntry, err error) error {
+	err := walkDirectoryForSize(walkFilesystem{root: fs.root}, name, func(path string, d fsys.DirEntry, err error) error {
 		// Files can be removed while the walk is running, which is not an error.
 		if errors.Is(err, os.ErrNotExist) {
 			return nil
@@ -262,7 +262,7 @@ func (fs *Filesystem) containsHardLinks(root string) bool {
 		return ok && stat.Nlink > 1
 	}
 	found := false
-	_ = walkDirectoryForSize(fs.root.FS(), name, func(path string, entry fsys.DirEntry, err error) error {
+	_ = walkDirectoryForSize(walkFilesystem{root: fs.root}, name, func(path string, entry fsys.DirEntry, err error) error {
 		if err != nil || !entry.Type().IsRegular() {
 			return nil
 		}

@@ -53,6 +53,10 @@ func TestSpaceAvailableForDecompressionFileAndIdentifyErrors(t *testing.T) {
 	fs, err := New(t.TempDir(), 1024, nil)
 	require.NoError(t, err)
 	defer fs.Close()
+	path := filepath.Join(fs.Path(), "archive.bin")
+	require.NoError(t, os.WriteFile(path, []byte("archive"), 0o600))
+	regularInfo, err := os.Stat(path)
+	require.NoError(t, err)
 
 	oldOpen, oldIdentify, oldZipReader := filesystemOpen, identifyForSpaceCheck, newZipReaderForSpaceCheck
 	t.Cleanup(func() {
@@ -67,7 +71,7 @@ func TestSpaceAvailableForDecompressionFileAndIdentifyErrors(t *testing.T) {
 
 	t.Run("identify error", func(t *testing.T) {
 		want := errors.New("identify failed")
-		f := &spaceCheckFile{}
+		f := &spaceCheckFile{info: regularInfo}
 		filesystemOpen = func(*Filesystem, string) (filesystemFile, error) { return f, nil }
 		identifyForSpaceCheck = func(context.Context, string, io.Reader) (archives.Format, io.Reader, error) {
 			return nil, nil, want
@@ -78,7 +82,7 @@ func TestSpaceAvailableForDecompressionFileAndIdentifyErrors(t *testing.T) {
 
 	t.Run("seek error", func(t *testing.T) {
 		want := errors.New("seek failed")
-		f := &spaceCheckFile{seekErr: want}
+		f := &spaceCheckFile{info: regularInfo, seekErr: want}
 		filesystemOpen = func(*Filesystem, string) (filesystemFile, error) { return f, nil }
 		identifyForSpaceCheck = func(context.Context, string, io.Reader) (archives.Format, io.Reader, error) {
 			return nil, nil, archives.NoMatch
