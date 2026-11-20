@@ -19,21 +19,21 @@ Existing nodes retain their configured data, user and network until explicitly m
 `--hastebin-url` with a Hastebin-compatible service you control, review the report
 and confirm the upload. Manta has no default third-party diagnostics destination.
 
-## Install v1.1-beta.3
+## Install v1.1-beta.4
 
 ```bash
-git clone --depth 1 --branch v1.1-beta.3 https://github.com/Aquadactyl/manta.git /opt/manta &&
+git clone --depth 1 --branch v1.1-beta.4 https://github.com/Aquadactyl/manta.git /opt/manta &&
 cd /opt/manta &&
-sudo bash scripts/install.sh v1.1-beta.3
+sudo bash scripts/install.sh v1.1-beta.4
 ```
 
 If `/opt/manta` already exists, update its checkout first:
 
 ```bash
 cd /opt/manta &&
-git fetch --no-tags --depth 1 https://github.com/Aquadactyl/manta.git refs/tags/v1.1-beta.3 &&
+git fetch --no-tags --depth 1 https://github.com/Aquadactyl/manta.git refs/tags/v1.1-beta.4 &&
 git checkout --detach FETCH_HEAD &&
-sudo bash scripts/install.sh v1.1-beta.3 &&
+sudo bash scripts/install.sh v1.1-beta.4 &&
 /usr/local/bin/manta version
 ```
 
