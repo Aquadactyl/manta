@@ -70,6 +70,7 @@ func TestGetSystemInformationAPI(t *testing.T) {
 	withDockerServer(t, "", 0)
 	info, err := GetSystemInformation()
 	require.NoError(t, err)
+	require.Equal(t, "manta", info.Product)
 	require.Equal(t, Version, info.Version)
 	require.Equal(t, "test-docker", info.Docker.Version)
 	require.Equal(t, "overlay2", info.Docker.Storage.Driver)
