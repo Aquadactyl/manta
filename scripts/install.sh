@@ -5,11 +5,11 @@ set -Eeuo pipefail
 main() {
     local tag="${1:-}" offline="" asset work target old active="" installed=0 legacy legacy_updated=0 had_target=0
     if [[ "${tag}" == --help || "${tag}" == -h ]]; then
-        printf 'Usage: sudo bash scripts/install.sh v1.1-beta.4 [--from-directory DIR]\n'
+        printf 'Usage: sudo bash scripts/install.sh v1.2-beta [--from-directory DIR]\n'
         return
     fi
     [[ ${#tag} -le 100 && "${tag}" =~ ^v(0|[1-9][0-9]*)(\.(0|[1-9][0-9]*)){0,2}(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$ ]] || {
-        echo 'Specify an exact release tag such as v1.1-beta.4.' >&2; return 64;
+        echo 'Specify an exact release tag such as v1.2-beta.' >&2; return 64;
     }
     [[ ${EUID} -eq 0 ]] || { echo 'Run as root on Linux.' >&2; return 77; }
     [[ "$(uname -s)" == Linux ]] || { echo 'For macOS use docs/macos.md.' >&2; return 69; }

@@ -1,6 +1,7 @@
 package router
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -21,6 +22,7 @@ func useTestSystemInformation(t *testing.T) {
 	old := readSystemInformation
 	readSystemInformation = func() (*system.Information, error) {
 		return &system.Information{
+			Product: "manta",
 			Version: "test-version",
 			System: system.System{
 				Architecture:  "test-arch",
@@ -32,6 +34,23 @@ func useTestSystemInformation(t *testing.T) {
 		}, nil
 	}
 	t.Cleanup(func() { readSystemInformation = old })
+}
+
+func TestSystemInformationIdentifiesMantaInBothAPIVersions(t *testing.T) {
+	useTestSystemInformation(t)
+	for _, query := range []string{"", "?v=2"} {
+		t.Run(query, func(t *testing.T) {
+			recorder := httptest.NewRecorder()
+			c, _ := gin.CreateTestContext(recorder)
+			c.Request = httptest.NewRequest(http.MethodGet, "/api/system"+query, nil)
+			getSystemInformation(c)
+			require.Equal(t, http.StatusOK, recorder.Code)
+			var info map[string]any
+			require.NoError(t, json.Unmarshal(recorder.Body.Bytes(), &info))
+			require.Equal(t, "manta", info["product"])
+			require.Equal(t, "test-version", info["version"])
+		})
+	}
 }
 
 func TestPostUpdateConfigurationRejectsInvalidTokenAndWriteFailures(t *testing.T) {

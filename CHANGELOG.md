@@ -8,6 +8,11 @@ This project follows [Semantic Versioning](http://semver.org) guidelines.
 
 ## Unreleased (Manta)
 
+## v1.2-beta
+
+- Include `product: manta` in both system-information API versions so panels can
+  select Manta update checks without inferring the product from a version number.
+
 ## v1.1-beta.4
 
 - Use nonblocking directory and file opens during walks, searches, archive reads
