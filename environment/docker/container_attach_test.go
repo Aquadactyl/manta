@@ -55,8 +55,14 @@ func TestAttachDoesNothingWhenAlreadyAttached(t *testing.T) {
 
 func TestAttachConsumesOutputAndClearsStoppedStream(t *testing.T) {
 	config.Set(&config.Configuration{})
-	oldAttach := dockerContainerAttach
-	t.Cleanup(func() { dockerContainerAttach = oldAttach })
+	oldAttach, oldPoll := dockerContainerAttach, pollContainerResources
+	t.Cleanup(func() { dockerContainerAttach, pollContainerResources = oldAttach, oldPoll })
+	pollStopped := make(chan struct{})
+	pollContainerResources = func(_ *Environment, ctx context.Context) error {
+		defer close(pollStopped)
+		<-ctx.Done()
+		return ctx.Err()
+	}
 	clientSide, serverSide := net.Pipe()
 	t.Cleanup(func() { _ = serverSide.Close() })
 	dockerContainerAttach = func(context.Context, *client.Client, string, client.ContainerAttachOptions) (client.HijackedResponse, error) {
@@ -80,6 +86,14 @@ func TestAttachConsumesOutputAndClearsStoppedStream(t *testing.T) {
 		_ = serverSide.Close()
 	}()
 	require.NoError(t, env.Attach(context.Background()))
+	t.Cleanup(func() {
+		_ = serverSide.Close()
+		select {
+		case <-pollStopped:
+		case <-time.After(time.Second):
+			t.Error("resource poller did not stop")
+		}
+	})
 
 	select {
 	case line := <-output:
@@ -107,7 +121,9 @@ func TestAttachScannerErrorKeepsStreamWhenReattachSucceeds(t *testing.T) {
 		return client.HijackedResponse{Conn: clientSide, Reader: bufio.NewReader(attachTestReader{err: want})}, nil
 	}
 	pollStarted := make(chan struct{})
+	pollStopped := make(chan struct{})
 	pollContainerResources = func(_ *Environment, ctx context.Context) error {
+		defer close(pollStopped)
 		close(pollStarted)
 		<-ctx.Done()
 		return ctx.Err()
@@ -119,6 +135,13 @@ func TestAttachScannerErrorKeepsStreamWhenReattachSucceeds(t *testing.T) {
 	}
 	env := &Environment{ID: "container-id", st: system.NewAtomicString(environment.ProcessRunningState)}
 	require.NoError(t, env.Attach(context.Background()))
+	t.Cleanup(func() {
+		select {
+		case <-pollStopped:
+		case <-time.After(time.Second):
+			t.Error("resource poller did not stop")
+		}
+	})
 	select {
 	case <-pollStarted:
 	case <-time.After(time.Second):
