@@ -101,6 +101,13 @@ Check node connectivity and a test server's install, start, console, files, SFTP
 
 ## Update
 
+The system-information API identifies new builds with `product: manta`.
+Aquadactyl can also recognize older betas such as `1.1-beta.3` through their
+existing host-usage capability. In **Admin > Settings > Updates**, keep automatic
+detection or explicitly select **Manta** for an ambiguous build, save and queue a
+check. Manta checks use `Aquadactyl/manta`; Wings checks use `pterodactyl/wings`.
+Beta installations include versioned prereleases from their own repository.
+
 Back up configuration and server data. From the reviewed tools checkout:
 
 ```bash

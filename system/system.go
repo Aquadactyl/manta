@@ -9,6 +9,7 @@ import (
 )
 
 type Information struct {
+	Product      string            `json:"product"`
 	Version      string            `json:"version"`
 	Docker       DockerInformation `json:"docker"`
 	System       System            `json:"system"`
@@ -85,6 +86,7 @@ func GetSystemInformation() (*Information, error) {
 	}
 
 	return &Information{
+		Product:      "manta",
 		Capabilities: map[string]bool{"system_usage": HostUsageSupported},
 		Version:      Version,
 		Docker: DockerInformation{
