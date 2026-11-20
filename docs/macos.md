@@ -62,7 +62,7 @@ The directory is set in the panel under the node's settings.
    `manta_darwin_arm64` on Apple Silicon and `manta_darwin_amd64` on Intel.
 
    ```sh
-   MANTA_VERSION="v1.1-beta.3"
+   MANTA_VERSION="v1.1-beta.4"
    ARCH="$(uname -m | sed 's/x86_64/amd64/')"
 
    curl -fL -o manta "https://github.com/Aquadactyl/manta/releases/download/${MANTA_VERSION}/manta_darwin_${ARCH}"

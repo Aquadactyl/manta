@@ -8,6 +8,19 @@ This project follows [Semantic Versioning](http://semver.org) guidelines.
 
 ## Unreleased (Manta)
 
+## v1.1-beta.4
+
+- Use nonblocking directory and file opens during walks, searches, archive reads
+  and MIME detection. Reject special files before reading them so a path changed
+  into a named pipe cannot block these operations.
+- Recheck opened archive files and their identity before writing tar headers.
+  Extend named-pipe and archive error regression coverage.
+- Add public contribution forms and private security-report links. Keep required
+  CI and branch protections mandatory, with a separate review-only exemption
+  for the current code owners.
+- Refresh Linux/macOS installation and update examples. Existing node
+  configuration and server data are preserved; no panel migration is required.
+
 ## v1.1-beta.3
 
 - Start server-list pagination at page 1. This fixes startup HTTP 422 failures
