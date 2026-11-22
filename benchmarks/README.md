@@ -8,6 +8,12 @@ The next [lookup and allocation pass](SCALABILITY.md) adds a UUID index and defe
 
 The latest [stats and console pass](TELEMETRY.md) reduces periodic resource-decoding allocations and running-console inspection work. Its raw data are under `results/telemetry/`; rebuild it with `python benchmarks/summarize_telemetry.py`. `check-telemetry.php` checks authenticated resource reporting through the local Panel without printing credentials.
 
+The [directory-listing follow-up](LISTING.md) measures descriptor-relative metadata
+collection against the previous Manta revision, including nested folders and
+distinct contents. This is a component comparison, separate from the live Wings
+results. Raw samples are in `results/listing-20261122.json`; rebuild its table with
+`python benchmarks/summarize_listing.py`.
+
 The existing benchmark stack contains two dedicated nodes, four game servers, matching cached game binaries, and local installer eggs. It leaves the original user servers outside the measured requests. All provisioned servers are owned by the existing `repgraphics` administrator.
 
 | Component                   | Docker name                                              |
