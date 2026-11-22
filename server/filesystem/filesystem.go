@@ -7,6 +7,7 @@ import (
 	fsys "io/fs"
 	"os"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strconv"
 	"strings"
@@ -19,6 +20,7 @@ import (
 	"github.com/apex/log"
 	"github.com/gabriel-vasile/mimetype"
 	ignore "github.com/sabhiram/go-gitignore"
+	"golang.org/x/sys/unix"
 
 	"github.com/Aquadactyl/manta/config"
 )
@@ -167,7 +169,7 @@ func (fs *Filesystem) MkdirAll(p string, mode os.FileMode) error {
 }
 
 func (fs *Filesystem) ReadDir(p string) ([]os.DirEntry, error) {
-	f, err := fs.root.OpenFile(normalize(p), os.O_RDONLY|syscall.O_DIRECTORY|syscall.O_NONBLOCK, 0)
+	f, err := fs.openDirectory(p)
 	if err != nil {
 		return nil, err
 	}
@@ -177,11 +179,19 @@ func (fs *Filesystem) ReadDir(p string) ([]os.DirEntry, error) {
 
 // ReadDirStat returns FileInfo for each entry in the directory at path.
 func (fs *Filesystem) ReadDirStat(path string) ([]os.FileInfo, error) {
-	f, err := fs.root.OpenFile(normalize(path), os.O_RDONLY|syscall.O_DIRECTORY|syscall.O_NONBLOCK, 0)
+	f, err := fs.openDirectory(path)
 	if err != nil {
 		return nil, err
 	}
 	defer f.Close()
+	return directoryInfo(f)
+}
+
+func (fs *Filesystem) openDirectory(path string) (*os.File, error) {
+	return fs.root.OpenFile(normalize(path), os.O_RDONLY|syscall.O_DIRECTORY|syscall.O_NONBLOCK, 0)
+}
+
+func directoryInfo(f *os.File) ([]os.FileInfo, error) {
 	// Readdir gathers metadata relative to the open directory descriptor. It
 	// avoids resolving the parent through os.Root again for every entry, while
 	// retaining no-follow metadata even if a parent is renamed during a listing.
@@ -664,14 +674,18 @@ func (fs *Filesystem) Delete(p string) error {
 // ListDirectory lists the contents of a given directory and returns stat
 // information about each file and folder within it.
 func (fs *Filesystem) ListDirectory(p string) ([]Stat, error) {
-	entries, err := fs.ReadDirStat(p)
+	directory, err := fs.openDirectory(p)
+	if err != nil {
+		return nil, err
+	}
+	defer directory.Close()
+	entries, err := directoryInfo(directory)
 	if err != nil {
 		return nil, err
 	}
 	out := make([]Stat, 0, len(entries))
-	parent := normalize(p)
 	for _, entry := range entries {
-		out = append(out, fs.statDirectoryEntry(parent, entry))
+		out = append(out, statDirectoryEntry(directory, entry))
 	}
 
 	// Put folders first and sort each group alphabetically in one pass.
@@ -749,7 +763,31 @@ func (fs *Filesystem) WalkDir(root string, fn func(string, fsys.DirEntry, error)
 	return fsys.WalkDir(walkFilesystem{root: fs.root}, normalize(root), fn)
 }
 
-func (fs *Filesystem) statDirectoryEntry(parent string, info os.FileInfo) Stat {
+// openDirectoryEntry accepts only a single basename from directory enumeration.
+// The parent descriptor was opened through os.Root with O_DIRECTORY/O_NONBLOCK.
+// O_NOFOLLOW prevents a replaced entry from redirecting the probe through links.
+func openDirectoryEntry(directory *os.File, name string) (*os.File, error) {
+	if name == "" || name == "." || name == ".." || strings.ContainsAny(name, "/\x00") {
+		return nil, &os.PathError{Op: "openat", Path: name, Err: fsys.ErrInvalid}
+	}
+	var fd int
+	var err error
+	for {
+		fd, err = unix.Openat(int(directory.Fd()), name, unix.O_RDONLY|unix.O_NONBLOCK|unix.O_NOFOLLOW|unix.O_CLOEXEC|unix.O_NOCTTY, 0)
+		if err != unix.EINTR {
+			break
+		}
+	}
+	// Keep the owning descriptor alive across the syscall. Only ListDirectory
+	// closes it, after every probe has finished.
+	runtime.KeepAlive(directory)
+	if err != nil {
+		return nil, &os.PathError{Op: "openat", Path: name, Err: err}
+	}
+	return os.NewFile(uintptr(fd), name), nil
+}
+
+func statDirectoryEntry(directory *os.File, info os.FileInfo) Stat {
 	var d string
 	if info.IsDir() {
 		d = "inode/directory"
@@ -758,11 +796,7 @@ func (fs *Filesystem) statDirectoryEntry(parent string, info os.FileInfo) Stat {
 	}
 	var m *mimetype.MIME
 	if info.Mode().IsRegular() {
-		p := info.Name()
-		if parent != "." {
-			p = filepath.Join(parent, p)
-		}
-		f, err := fs.openReadFile(p)
+		f, err := openDirectoryEntry(directory, info.Name())
 		if err == nil {
 			var opened os.FileInfo
 			opened, err = f.Stat()
