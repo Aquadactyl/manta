@@ -19,23 +19,27 @@ Existing nodes retain their configured data, user and network until explicitly m
 `--hastebin-url` with a Hastebin-compatible service you control, review the report
 and confirm the upload. Manta has no default third-party diagnostics destination.
 
-Beta tags now advance the minor version: `v1.2-beta`, followed by `v1.3-beta`.
+Beta tags now advance the minor version: `v1.3-beta`, followed by `v1.4-beta`.
 
-## Install v1.2-beta
+v1.3-beta reduces directory-listing traversal and allocation work while retaining
+root confinement and nonblocking inspection. See the [release notes](CHANGELOG.md#v13-beta)
+and [matched component measurements](benchmarks/LISTING.md) for results and limits.
+
+## Install v1.3-beta
 
 ```bash
-git clone --depth 1 --branch v1.2-beta https://github.com/Aquadactyl/manta.git /opt/manta &&
+git clone --depth 1 --branch v1.3-beta https://github.com/Aquadactyl/manta.git /opt/manta &&
 cd /opt/manta &&
-sudo bash scripts/install.sh v1.2-beta
+sudo bash scripts/install.sh v1.3-beta
 ```
 
 If `/opt/manta` already exists, update its checkout first:
 
 ```bash
 cd /opt/manta &&
-git fetch --no-tags --depth 1 https://github.com/Aquadactyl/manta.git refs/tags/v1.2-beta &&
+git fetch --no-tags --depth 1 https://github.com/Aquadactyl/manta.git refs/tags/v1.3-beta &&
 git checkout --detach FETCH_HEAD &&
-sudo bash scripts/install.sh v1.2-beta &&
+sudo bash scripts/install.sh v1.3-beta &&
 /usr/local/bin/manta version
 ```
 
