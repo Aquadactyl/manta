@@ -8,6 +8,18 @@ This project follows [Semantic Versioning](http://semver.org) guidelines.
 
 ## Unreleased (Manta)
 
+- Keep the root-confined directory descriptor open for MIME probes and open only
+  single basenames relative to it, avoiding repeated parent-path traversal.
+  Preserve no-follow, nonblocking probes, snapshot identity checks and generic
+  fallback when entries are replaced. File contents and listings remain uncached.
+- Add regression tests for renamed/replaced parent directories, directory
+  symlinks, named-pipe paths and invalid probe names. Full Linux tests, race checks,
+  vet and lint pass locally; native platform checks run in CI.
+- A matched component measurement against v1.3-beta's implementation records
+  41.3% less time and 44.4% fewer allocations for 1,000-file nested reads.
+  Root-list timing changes are small. Retain every case and sample, including
+  the root JSON allocation tradeoff, in benchmarks/DIRECTORY-HANDLES.md.
+
 ## v1.3-beta
 
 - Collect directory metadata relative to the already-open directory descriptor,

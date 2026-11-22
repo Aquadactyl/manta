@@ -20,6 +20,9 @@ func TestListingReplacedRegularFile(t *testing.T) {
 			entries, err := fs.ReadDirStat(".")
 			require.NoError(t, err)
 			require.Len(t, entries, 1)
+			directory, err := fs.openDirectory(".")
+			require.NoError(t, err)
+			defer directory.Close()
 			if kind == "internal_symlink" {
 				// Allocate the target before unlinking entry so this test cannot
 				// accidentally reuse entry's inode on a fast temporary filesystem.
@@ -40,7 +43,7 @@ func TestListingReplacedRegularFile(t *testing.T) {
 			}
 			done := make(chan Stat, 1)
 			go func() {
-				done <- fs.statDirectoryEntry(".", entries[0])
+				done <- statDirectoryEntry(directory, entries[0])
 			}()
 			select {
 			case st := <-done:

@@ -1,5 +1,9 @@
 # Directory-listing follow-up
 
+This is the historical measurement shipped with v1.3-beta. The subsequent
+unreleased [directory-handle follow-up](DIRECTORY-HANDLES.md) has its own baseline
+and report; its percentages must not be added to these results.
+
 Measured on 22 November 2026 against Manta revision
 `80f84fbda9a7513c995d5a0456085df5adcd9c71`. The candidate uses the implementation
 patch identified by SHA-256
