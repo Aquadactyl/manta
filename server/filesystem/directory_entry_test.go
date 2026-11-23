@@ -15,11 +15,13 @@ func TestStatDirectoryEntryUsesRootedMetadataAndMIME(t *testing.T) {
 	defer fs.Close()
 	require.NoError(t, os.WriteFile(filepath.Join(root, "entry.txt"), []byte("plain text"), 0o644))
 
-	entries, err := fs.ReadDir(".")
+	entries, err := fs.ReadDirStat(".")
 	require.NoError(t, err)
 	require.Len(t, entries, 1)
-	stat, err := statDirectoryEntry(rootedDirEntry{fs: fs, parent: ".", entry: entries[0]})
+	directory, err := fs.openDirectory(".")
 	require.NoError(t, err)
+	defer directory.Close()
+	stat := statDirectoryEntry(directory, entries[0])
 	require.Equal(t, "entry.txt", stat.Name())
 	require.Contains(t, stat.Mimetype, "text/plain")
 }

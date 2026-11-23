@@ -7,6 +7,7 @@ import (
 	fsys "io/fs"
 	"os"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strconv"
 	"strings"
@@ -19,6 +20,7 @@ import (
 	"github.com/apex/log"
 	"github.com/gabriel-vasile/mimetype"
 	ignore "github.com/sabhiram/go-gitignore"
+	"golang.org/x/sys/unix"
 
 	"github.com/Aquadactyl/manta/config"
 )
@@ -167,7 +169,7 @@ func (fs *Filesystem) MkdirAll(p string, mode os.FileMode) error {
 }
 
 func (fs *Filesystem) ReadDir(p string) ([]os.DirEntry, error) {
-	f, err := fs.root.OpenFile(normalize(p), os.O_RDONLY|syscall.O_DIRECTORY|syscall.O_NONBLOCK, 0)
+	f, err := fs.openDirectory(p)
 	if err != nil {
 		return nil, err
 	}
@@ -177,17 +179,25 @@ func (fs *Filesystem) ReadDir(p string) ([]os.DirEntry, error) {
 
 // ReadDirStat returns FileInfo for each entry in the directory at path.
 func (fs *Filesystem) ReadDirStat(path string) ([]os.FileInfo, error) {
-	entries, err := fs.ReadDir(path)
+	f, err := fs.openDirectory(path)
 	if err != nil {
 		return nil, err
 	}
-	infos := make([]os.FileInfo, 0, len(entries))
-	for _, entry := range entries {
-		info, err := fs.root.Lstat(filepath.Join(normalize(path), entry.Name()))
-		if err != nil {
-			return nil, err
-		}
-		infos = append(infos, info)
+	defer f.Close()
+	return directoryInfo(f)
+}
+
+func (fs *Filesystem) openDirectory(path string) (*os.File, error) {
+	return fs.root.OpenFile(normalize(path), os.O_RDONLY|syscall.O_DIRECTORY|syscall.O_NONBLOCK, 0)
+}
+
+func directoryInfo(f *os.File) ([]os.FileInfo, error) {
+	// Readdir gathers metadata relative to the open directory descriptor. It
+	// avoids resolving the parent through os.Root again for every entry, while
+	// retaining no-follow metadata even if a parent is renamed during a listing.
+	infos, err := f.Readdir(-1)
+	if err != nil {
+		return nil, err
 	}
 	return infos, nil
 }
@@ -664,17 +674,18 @@ func (fs *Filesystem) Delete(p string) error {
 // ListDirectory lists the contents of a given directory and returns stat
 // information about each file and folder within it.
 func (fs *Filesystem) ListDirectory(p string) ([]Stat, error) {
-	entries, err := fs.ReadDir(p)
+	directory, err := fs.openDirectory(p)
+	if err != nil {
+		return nil, err
+	}
+	defer directory.Close()
+	entries, err := directoryInfo(directory)
 	if err != nil {
 		return nil, err
 	}
 	out := make([]Stat, 0, len(entries))
 	for _, entry := range entries {
-		st, err := statDirectoryEntry(rootedDirEntry{fs: fs, parent: normalize(p), entry: entry})
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, st)
+		out = append(out, statDirectoryEntry(directory, entry))
 	}
 
 	// Put folders first and sort each group alphabetically in one pass.
@@ -729,22 +740,6 @@ func (fs *Filesystem) SearchFiles(directory, query string, limit int) ([]string,
 	return paths, nil
 }
 
-type rootedDirEntry struct {
-	fs     *Filesystem
-	parent string
-	entry  os.DirEntry
-}
-
-func (e rootedDirEntry) Name() string      { return e.entry.Name() }
-func (e rootedDirEntry) IsDir() bool       { return e.entry.IsDir() }
-func (e rootedDirEntry) Type() os.FileMode { return e.entry.Type() }
-func (e rootedDirEntry) Info() (os.FileInfo, error) {
-	return e.fs.root.Lstat(filepath.Join(e.parent, e.entry.Name()))
-}
-func (e rootedDirEntry) Open() (*os.File, error) {
-	return e.fs.openReadFile(filepath.Join(e.parent, e.entry.Name()))
-}
-
 // Directory walks can encounter paths replaced after they were listed. Open
 // them without blocking even if the directory has become a named pipe.
 type walkFilesystem struct{ root *os.Root }
@@ -768,25 +763,44 @@ func (fs *Filesystem) WalkDir(root string, fn func(string, fsys.DirEntry, error)
 	return fsys.WalkDir(walkFilesystem{root: fs.root}, normalize(root), fn)
 }
 
-func statDirectoryEntry(e rootedDirEntry) (Stat, error) {
-	info, err := e.Info()
-	if err != nil {
-		return Stat{}, err
+// openDirectoryEntry accepts only a single basename from directory enumeration.
+// The parent descriptor was opened through os.Root with O_DIRECTORY/O_NONBLOCK.
+// O_NOFOLLOW prevents a replaced entry from redirecting the probe through links.
+func openDirectoryEntry(directory *os.File, name string) (*os.File, error) {
+	if name == "" || name == "." || name == ".." || strings.ContainsAny(name, "/\x00") {
+		return nil, &os.PathError{Op: "openat", Path: name, Err: fsys.ErrInvalid}
 	}
+	var fd int
+	var err error
+	for {
+		fd, err = unix.Openat(int(directory.Fd()), name, unix.O_RDONLY|unix.O_NONBLOCK|unix.O_NOFOLLOW|unix.O_CLOEXEC|unix.O_NOCTTY, 0)
+		if err != unix.EINTR {
+			break
+		}
+	}
+	// Keep the owning descriptor alive across the syscall. Only ListDirectory
+	// closes it, after every probe has finished.
+	runtime.KeepAlive(directory)
+	if err != nil {
+		return nil, &os.PathError{Op: "openat", Path: name, Err: err}
+	}
+	return os.NewFile(uintptr(fd), name), nil
+}
 
+func statDirectoryEntry(directory *os.File, info os.FileInfo) Stat {
 	var d string
-	if e.Type().IsDir() {
+	if info.IsDir() {
 		d = "inode/directory"
 	} else {
 		d = "application/octet-stream"
 	}
 	var m *mimetype.MIME
 	if info.Mode().IsRegular() {
-		f, err := e.Open()
+		f, err := openDirectoryEntry(directory, info.Name())
 		if err == nil {
 			var opened os.FileInfo
 			opened, err = f.Stat()
-			if err == nil && opened.Mode().IsRegular() {
+			if err == nil && opened.Mode().IsRegular() && os.SameFile(info, opened) {
 				m, err = detectFileMIME(f)
 			}
 			_ = f.Close()
@@ -800,7 +814,7 @@ func statDirectoryEntry(e rootedDirEntry) (Stat, error) {
 	if m != nil {
 		st.Mimetype = m.String()
 	}
-	return st, nil
+	return st
 }
 
 func (fs *Filesystem) Chtimes(path string, atime, mtime time.Time) error {

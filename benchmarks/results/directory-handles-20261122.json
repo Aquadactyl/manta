@@ -1,0 +1,92 @@
+{
+  "schemaVersion": 1,
+  "measuredOn": "2026-11-22",
+  "startedAt": "2026-11-22T17:48:39.898Z",
+  "baseline": "ac7370966e660abde757c544737f8139a3c3f858",
+  "patchSha256": "ae46c46d810ef88054c966b4e59fac3be227704cda6a3f43e1c493b2a492ad02",
+  "methodology": "Same unmodified upstream source and dependencies except the filesystem implementation patch. Identical benchmark sources copied into both trees. Go test binaries built with trimpath before timing. One discarded single-iteration warm-up per variant, then five 500 ms benchmark batches each, sequential in alternating order. Fixtures live on Linux temporary storage in the same Docker container. Root fixture uses identical 256-byte text; nested fixture uses plugins/example/config; unique fixture uses distinct 256-byte text. No competing test/build workloads; unrelated existing workstation services remain running. These are component benchmarks, not live HTTP latency or game/player capacity.",
+  "environment": {
+    "go": "go version go1.27.4 linux/amd64",
+    "kernel": "6.18.58.1-microsoft-standard-WSL2",
+    "cpu": "28",
+    "image": "sha256:4fa7c968ba93f1635670522dbb01a2c78150443e1385746924566079f36570ea",
+    "quota": 2000000000,
+    "memoryBytes": 2147483648,
+    "gomaxprocs": 2
+  },
+  "runs": [
+    {
+      "variant": "baseline",
+      "round": 0,
+      "warmup": true,
+      "output": "goos: linux\ngoarch: amd64\npkg: github.com/Aquadactyl/manta/server/filesystem\ncpu: Intel(R) Core(TM) i7-14700KF\nBenchmarkDirectoryListing/entries_10/read-2    \t       1\t    140782 ns/op\t   22952 B/op\t     142 allocs/op\nBenchmarkDirectoryListing/entries_10/read_and_json-2         \t       1\t    238917 ns/op\t   36400 B/op\t     341 allocs/op\nBenchmarkDirectoryListing/entries_1000/read-2                \t       1\t   6835719 ns/op\t  969368 B/op\t   12028 allocs/op\nBenchmarkDirectoryListing/entries_1000/read_and_json-2       \t       1\t   7187167 ns/op\t 2612136 B/op\t   19066 allocs/op\nBenchmarkDirectoryListingNested/read-2                       \t       1\t   9907329 ns/op\t 1137496 B/op\t   18032 allocs/op\nBenchmarkDirectoryListingNested/api_json-2                   \t       1\t  10109414 ns/op\t 2434200 B/op\t   22072 allocs/op\nBenchmarkDirectoryListingUnique/read-2                       \t       1\t   6741310 ns/op\t  953368 B/op\t   12028 allocs/op\nBenchmarkDirectoryListingUnique/api_json-2                   \t       1\t   6956798 ns/op\t 2249488 B/op\t   16056 allocs/op\nPASS"
+    },
+    {
+      "variant": "optimized",
+      "round": 0,
+      "warmup": true,
+      "output": "goos: linux\ngoarch: amd64\npkg: github.com/Aquadactyl/manta/server/filesystem\ncpu: Intel(R) Core(TM) i7-14700KF\nBenchmarkDirectoryListing/entries_10/read-2    \t       1\t    170875 ns/op\t   22152 B/op\t     122 allocs/op\nBenchmarkDirectoryListing/entries_10/read_and_json-2         \t       1\t    220844 ns/op\t   35936 B/op\t     324 allocs/op\nBenchmarkDirectoryListing/entries_1000/read-2                \t       1\t   6692685 ns/op\t  873368 B/op\t   10028 allocs/op\nBenchmarkDirectoryListing/entries_1000/read_and_json-2       \t       1\t   6743059 ns/op\t 2516136 B/op\t   17066 allocs/op\nBenchmarkDirectoryListingNested/read-2                       \t       1\t   6628438 ns/op\t  873496 B/op\t   10032 allocs/op\nBenchmarkDirectoryListingNested/api_json-2                   \t       1\t   6397402 ns/op\t 2170200 B/op\t   14072 allocs/op\nBenchmarkDirectoryListingUnique/read-2                       \t       1\t   6631568 ns/op\t  873368 B/op\t   10028 allocs/op\nBenchmarkDirectoryListingUnique/api_json-2                   \t       1\t   6510775 ns/op\t 2181864 B/op\t   14060 allocs/op\nPASS"
+    },
+    {
+      "variant": "optimized",
+      "round": 1,
+      "warmup": false,
+      "output": "goos: linux\ngoarch: amd64\npkg: github.com/Aquadactyl/manta/server/filesystem\ncpu: Intel(R) Core(TM) i7-14700KF\nBenchmarkDirectoryListing/entries_10/read-2    \t   12436\t     48167 ns/op\t    8964 B/op\t     112 allocs/op\nBenchmarkDirectoryListing/entries_10/read_and_json-2         \t    9446\t     59110 ns/op\t   16476 B/op\t     185 allocs/op\nBenchmarkDirectoryListing/entries_1000/read-2                \t     115\t   5162151 ns/op\t  861920 B/op\t   10020 allocs/op\nBenchmarkDirectoryListing/entries_1000/read_and_json-2       \t      87\t   6502195 ns/op\t 2477422 B/op\t   17054 allocs/op\nBenchmarkDirectoryListingNested/read-2                       \t     114\t   5183498 ns/op\t  861588 B/op\t   10024 allocs/op\nBenchmarkDirectoryListingNested/api_json-2                   \t     100\t   5659252 ns/op\t 1435193 B/op\t   14035 allocs/op\nBenchmarkDirectoryListingUnique/read-2                       \t     112\t   5260989 ns/op\t  861658 B/op\t   10020 allocs/op\nBenchmarkDirectoryListingUnique/api_json-2                   \t      90\t   5908591 ns/op\t 1475039 B/op\t   14032 allocs/op\nPASS"
+    },
+    {
+      "variant": "baseline",
+      "round": 1,
+      "warmup": false,
+      "output": "goos: linux\ngoarch: amd64\npkg: github.com/Aquadactyl/manta/server/filesystem\ncpu: Intel(R) Core(TM) i7-14700KF\nBenchmarkDirectoryListing/entries_10/read-2    \t   12078\t     49570 ns/op\t    9770 B/op\t     132 allocs/op\nBenchmarkDirectoryListing/entries_10/read_and_json-2         \t    9862\t     60755 ns/op\t   17287 B/op\t     205 allocs/op\nBenchmarkDirectoryListing/entries_1000/read-2                \t     115\t   5209823 ns/op\t  958259 B/op\t   12020 allocs/op\nBenchmarkDirectoryListing/entries_1000/read_and_json-2       \t      93\t   6505123 ns/op\t 2420601 B/op\t   19051 allocs/op\nBenchmarkDirectoryListingNested/read-2                       \t      60\t   8781491 ns/op\t 1126749 B/op\t   18025 allocs/op\nBenchmarkDirectoryListingNested/api_json-2                   \t      62\t   9439282 ns/op\t 1776145 B/op\t   22039 allocs/op\nBenchmarkDirectoryListingUnique/read-2                       \t     112\t   5269421 ns/op\t  941862 B/op\t   12020 allocs/op\nBenchmarkDirectoryListingUnique/api_json-2                   \t     100\t   5929293 ns/op\t 1616251 B/op\t   16035 allocs/op\nPASS"
+    },
+    {
+      "variant": "baseline",
+      "round": 2,
+      "warmup": false,
+      "output": "goos: linux\ngoarch: amd64\npkg: github.com/Aquadactyl/manta/server/filesystem\ncpu: Intel(R) Core(TM) i7-14700KF\nBenchmarkDirectoryListing/entries_10/read-2    \t   12115\t     49437 ns/op\t    9770 B/op\t     132 allocs/op\nBenchmarkDirectoryListing/entries_10/read_and_json-2         \t    9535\t     60633 ns/op\t   17280 B/op\t     205 allocs/op\nBenchmarkDirectoryListing/entries_1000/read-2                \t     112\t   5261455 ns/op\t  958166 B/op\t   12020 allocs/op\nBenchmarkDirectoryListing/entries_1000/read_and_json-2       \t      94\t   6688036 ns/op\t 2449039 B/op\t   19051 allocs/op\nBenchmarkDirectoryListingNested/read-2                       \t      57\t   8975244 ns/op\t 1126430 B/op\t   18024 allocs/op\nBenchmarkDirectoryListingNested/api_json-2                   \t      60\t   9386378 ns/op\t 1769332 B/op\t   22038 allocs/op\nBenchmarkDirectoryListingUnique/read-2                       \t     112\t   5281352 ns/op\t  941643 B/op\t   12020 allocs/op\nBenchmarkDirectoryListingUnique/api_json-2                   \t     100\t   5913248 ns/op\t 1634604 B/op\t   16036 allocs/op\nPASS"
+    },
+    {
+      "variant": "optimized",
+      "round": 2,
+      "warmup": false,
+      "output": "goos: linux\ngoarch: amd64\npkg: github.com/Aquadactyl/manta/server/filesystem\ncpu: Intel(R) Core(TM) i7-14700KF\nBenchmarkDirectoryListing/entries_10/read-2    \t   12376\t     48506 ns/op\t    8966 B/op\t     112 allocs/op\nBenchmarkDirectoryListing/entries_10/read_and_json-2         \t   10000\t     59205 ns/op\t   16482 B/op\t     185 allocs/op\nBenchmarkDirectoryListing/entries_1000/read-2                \t     114\t   5239253 ns/op\t  861746 B/op\t   10020 allocs/op\nBenchmarkDirectoryListing/entries_1000/read_and_json-2       \t      90\t   6422217 ns/op\t 2499708 B/op\t   17054 allocs/op\nBenchmarkDirectoryListingNested/read-2                       \t     116\t   5081289 ns/op\t  861570 B/op\t   10024 allocs/op\nBenchmarkDirectoryListingNested/api_json-2                   \t      98\t   5705882 ns/op\t 1448099 B/op\t   14035 allocs/op\nBenchmarkDirectoryListingUnique/read-2                       \t     115\t   5179649 ns/op\t  861627 B/op\t   10020 allocs/op\nBenchmarkDirectoryListingUnique/api_json-2                   \t      98\t   5697165 ns/op\t 1438946 B/op\t   14031 allocs/op\nPASS"
+    },
+    {
+      "variant": "optimized",
+      "round": 3,
+      "warmup": false,
+      "output": "goos: linux\ngoarch: amd64\npkg: github.com/Aquadactyl/manta/server/filesystem\ncpu: Intel(R) Core(TM) i7-14700KF\nBenchmarkDirectoryListing/entries_10/read-2    \t   12303\t     48754 ns/op\t    8966 B/op\t     112 allocs/op\nBenchmarkDirectoryListing/entries_10/read_and_json-2         \t    9236\t     59438 ns/op\t   16473 B/op\t     185 allocs/op\nBenchmarkDirectoryListing/entries_1000/read-2                \t     116\t   5140979 ns/op\t  861590 B/op\t   10020 allocs/op\nBenchmarkDirectoryListing/entries_1000/read_and_json-2       \t      86\t   6371258 ns/op\t 2495744 B/op\t   17053 allocs/op\nBenchmarkDirectoryListingNested/read-2                       \t     114\t   5270529 ns/op\t  861663 B/op\t   10024 allocs/op\nBenchmarkDirectoryListingNested/api_json-2                   \t      94\t   5722419 ns/op\t 1446510 B/op\t   14036 allocs/op\nBenchmarkDirectoryListingUnique/read-2                       \t     116\t   5124015 ns/op\t  861696 B/op\t   10020 allocs/op\nBenchmarkDirectoryListingUnique/api_json-2                   \t     100\t   5847878 ns/op\t 1527330 B/op\t   14035 allocs/op\nPASS"
+    },
+    {
+      "variant": "baseline",
+      "round": 3,
+      "warmup": false,
+      "output": "goos: linux\ngoarch: amd64\npkg: github.com/Aquadactyl/manta/server/filesystem\ncpu: Intel(R) Core(TM) i7-14700KF\nBenchmarkDirectoryListing/entries_10/read-2    \t   12006\t     50090 ns/op\t    9767 B/op\t     132 allocs/op\nBenchmarkDirectoryListing/entries_10/read_and_json-2         \t    9722\t     60725 ns/op\t   17283 B/op\t     205 allocs/op\nBenchmarkDirectoryListing/entries_1000/read-2                \t     114\t   5238026 ns/op\t  957996 B/op\t   12020 allocs/op\nBenchmarkDirectoryListing/entries_1000/read_and_json-2       \t      85\t   6910508 ns/op\t 2455968 B/op\t   19052 allocs/op\nBenchmarkDirectoryListingNested/read-2                       \t      66\t   8943771 ns/op\t 1126498 B/op\t   18024 allocs/op\nBenchmarkDirectoryListingNested/api_json-2                   \t      58\t   9366086 ns/op\t 1794228 B/op\t   22039 allocs/op\nBenchmarkDirectoryListingUnique/read-2                       \t     110\t   5411424 ns/op\t  941635 B/op\t   12020 allocs/op\nBenchmarkDirectoryListingUnique/api_json-2                   \t      93\t   5938333 ns/op\t 1528449 B/op\t   16032 allocs/op\nPASS"
+    },
+    {
+      "variant": "baseline",
+      "round": 4,
+      "warmup": false,
+      "output": "goos: linux\ngoarch: amd64\npkg: github.com/Aquadactyl/manta/server/filesystem\ncpu: Intel(R) Core(TM) i7-14700KF\nBenchmarkDirectoryListing/entries_10/read-2    \t   12157\t     49381 ns/op\t    9767 B/op\t     132 allocs/op\nBenchmarkDirectoryListing/entries_10/read_and_json-2         \t    9500\t     60305 ns/op\t   17281 B/op\t     205 allocs/op\nBenchmarkDirectoryListing/entries_1000/read-2                \t     114\t   5233692 ns/op\t  958023 B/op\t   12020 allocs/op\nBenchmarkDirectoryListing/entries_1000/read_and_json-2       \t      97\t   6589841 ns/op\t 2464773 B/op\t   19052 allocs/op\nBenchmarkDirectoryListingNested/read-2                       \t      60\t   8756208 ns/op\t 1126479 B/op\t   18024 allocs/op\nBenchmarkDirectoryListingNested/api_json-2                   \t      64\t   9586503 ns/op\t 1825579 B/op\t   22040 allocs/op\nBenchmarkDirectoryListingUnique/read-2                       \t     111\t   5318496 ns/op\t  941912 B/op\t   12020 allocs/op\nBenchmarkDirectoryListingUnique/api_json-2                   \t     100\t   5876990 ns/op\t 1680376 B/op\t   16037 allocs/op\nPASS"
+    },
+    {
+      "variant": "optimized",
+      "round": 4,
+      "warmup": false,
+      "output": "goos: linux\ngoarch: amd64\npkg: github.com/Aquadactyl/manta/server/filesystem\ncpu: Intel(R) Core(TM) i7-14700KF\nBenchmarkDirectoryListing/entries_10/read-2    \t   12375\t     48542 ns/op\t    8967 B/op\t     112 allocs/op\nBenchmarkDirectoryListing/entries_10/read_and_json-2         \t    9895\t     59537 ns/op\t   16486 B/op\t     185 allocs/op\nBenchmarkDirectoryListing/entries_1000/read-2                \t     115\t   5137468 ns/op\t  861421 B/op\t   10020 allocs/op\nBenchmarkDirectoryListing/entries_1000/read_and_json-2       \t      85\t   6456981 ns/op\t 2444985 B/op\t   17053 allocs/op\nBenchmarkDirectoryListingNested/read-2                       \t     116\t   5148084 ns/op\t  861965 B/op\t   10024 allocs/op\nBenchmarkDirectoryListingNested/api_json-2                   \t      99\t   5689511 ns/op\t 1446078 B/op\t   14035 allocs/op\nBenchmarkDirectoryListingUnique/read-2                       \t     115\t   5167641 ns/op\t  861554 B/op\t   10020 allocs/op\nBenchmarkDirectoryListingUnique/api_json-2                   \t     100\t   5851233 ns/op\t 1490634 B/op\t   14033 allocs/op\nPASS"
+    },
+    {
+      "variant": "optimized",
+      "round": 5,
+      "warmup": false,
+      "output": "goos: linux\ngoarch: amd64\npkg: github.com/Aquadactyl/manta/server/filesystem\ncpu: Intel(R) Core(TM) i7-14700KF\nBenchmarkDirectoryListing/entries_10/read-2    \t   12446\t     48175 ns/op\t    8965 B/op\t     112 allocs/op\nBenchmarkDirectoryListing/entries_10/read_and_json-2         \t   10000\t     59682 ns/op\t   16478 B/op\t     185 allocs/op\nBenchmarkDirectoryListing/entries_1000/read-2                \t     116\t   5103923 ns/op\t  861941 B/op\t   10020 allocs/op\nBenchmarkDirectoryListing/entries_1000/read_and_json-2       \t      88\t   6424266 ns/op\t 2479566 B/op\t   17055 allocs/op\nBenchmarkDirectoryListingNested/read-2                       \t     115\t   5155684 ns/op\t  861832 B/op\t   10024 allocs/op\nBenchmarkDirectoryListingNested/api_json-2                   \t     100\t   5773790 ns/op\t 1462879 B/op\t   14036 allocs/op\nBenchmarkDirectoryListingUnique/read-2                       \t     114\t   5193349 ns/op\t  861931 B/op\t   10020 allocs/op\nBenchmarkDirectoryListingUnique/api_json-2                   \t     100\t   5737028 ns/op\t 1453597 B/op\t   14032 allocs/op\nPASS"
+    },
+    {
+      "variant": "baseline",
+      "round": 5,
+      "warmup": false,
+      "output": "goos: linux\ngoarch: amd64\npkg: github.com/Aquadactyl/manta/server/filesystem\ncpu: Intel(R) Core(TM) i7-14700KF\nBenchmarkDirectoryListing/entries_10/read-2    \t   12062\t     49674 ns/op\t    9770 B/op\t     132 allocs/op\nBenchmarkDirectoryListing/entries_10/read_and_json-2         \t    9385\t     60592 ns/op\t   17284 B/op\t     205 allocs/op\nBenchmarkDirectoryListing/entries_1000/read-2                \t     111\t   5335514 ns/op\t  957887 B/op\t   12020 allocs/op\nBenchmarkDirectoryListing/entries_1000/read_and_json-2       \t      91\t   6527433 ns/op\t 2504741 B/op\t   19053 allocs/op\nBenchmarkDirectoryListingNested/read-2                       \t      58\t   8723538 ns/op\t 1126610 B/op\t   18024 allocs/op\nBenchmarkDirectoryListingNested/api_json-2                   \t      58\t   9340255 ns/op\t 1682406 B/op\t   22035 allocs/op\nBenchmarkDirectoryListingUnique/read-2                       \t     114\t   5239189 ns/op\t  941697 B/op\t   12020 allocs/op\nBenchmarkDirectoryListingUnique/api_json-2                   \t      98\t   5965113 ns/op\t 1659414 B/op\t   16037 allocs/op\nPASS"
+    }
+  ],
+  "completedAt": "2026-11-22T17:49:29.648Z"
+}
