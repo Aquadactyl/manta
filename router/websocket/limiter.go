@@ -15,10 +15,11 @@ type LimiterBucket struct {
 
 func (h *Handler) IsThrottled(e Event) bool {
 	l := h.limiter.For(e)
+	name := limiterName(e)
 
 	h.limiter.mu.Lock()
 	if l.Allow() {
-		h.limiter.throttles[e] = false
+		h.limiter.throttles[name] = false
 		h.limiter.mu.Unlock()
 
 		return false
@@ -26,8 +27,10 @@ func (h *Handler) IsThrottled(e Event) bool {
 
 	// If not allowed, track the throttling and send an event over the wire
 	// if one wasn't already sent in the same throttling period.
-	notify := !h.limiter.throttles[e]
-	h.limiter.throttles[e] = true
+	// Match the bounded bucket keys. Arbitrary client event names must not
+	// create an ever-growing map or bypass shared-bucket notification limits.
+	notify := !h.limiter.throttles[name]
+	h.limiter.throttles[name] = true
 	h.limiter.mu.Unlock()
 
 	if notify {
@@ -60,6 +63,11 @@ func (l *LimiterBucket) For(e Event) *rate.Limiter {
 	l.mu.RUnlock()
 	l.mu.Lock()
 	defer l.mu.Unlock()
+	// Another message may have installed the shared bucket while this caller
+	// waited for the write lock. Replacing it would reset its remaining tokens.
+	if v, ok := l.limits[name]; ok {
+		return v
+	}
 
 	limit, burst := limitValuesFor(e)
 	l.limits[name] = rate.NewLimiter(limit, burst)

@@ -159,13 +159,22 @@ type Download struct {
 // New starts a new tracked download which allows for cancellation later on by calling
 // the Downloader.Cancel function.
 func New(s *server.Server, r DownloadRequest) *Download {
+	dl, _ := NewWithLimit(s, r, 0)
+	return dl
+}
+
+// NewWithLimit atomically reserves a server's download slot before work starts.
+// A nonpositive limit preserves New's unrestricted internal integration API.
+func NewWithLimit(s *server.Server, r DownloadRequest, limit int) (*Download, bool) {
 	dl := Download{
 		Identifier: uuid.Must(uuid.NewRandom()).String(),
 		req:        r,
 		server:     s,
 	}
-	instance.track(&dl)
-	return &dl
+	if !instance.trackLimited(&dl, limit) {
+		return nil, false
+	}
+	return &dl, true
 }
 
 // ByServer returns all the tracked downloads for a given server instance.
@@ -364,18 +373,20 @@ type Downloader struct {
 	serverCache   map[string][]string
 }
 
-// track tracks a download in the internal cache for this instance.
-func (d *Downloader) track(dl *Download) {
+// trackLimited checks capacity and inserts the reservation under one lock.
+func (d *Downloader) trackLimited(dl *Download, limit int) bool {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	sid := dl.server.ID()
-	if _, ok := d.downloadCache[dl.Identifier]; !ok {
-		d.downloadCache[dl.Identifier] = dl
-		if _, ok := d.serverCache[sid]; !ok {
-			d.serverCache[sid] = []string{}
-		}
-		d.serverCache[sid] = append(d.serverCache[sid], dl.Identifier)
+	if _, ok := d.downloadCache[dl.Identifier]; ok {
+		return true
 	}
+	if limit > 0 && len(d.serverCache[sid]) >= limit {
+		return false
+	}
+	d.downloadCache[dl.Identifier] = dl
+	d.serverCache[sid] = append(d.serverCache[sid], dl.Identifier)
+	return true
 }
 
 // find finds a given download entry using the provided ID and returns it.

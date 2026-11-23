@@ -1,5 +1,10 @@
 # Local game-server comparison
 
+The unreleased [archive-selection follow-up](ARCHIVE-SELECTION.md) measures large
+file selections separately from ordinary full backups and the live Wings
+comparison. All cases and raw samples are retained, including the one-file case
+and additional allocation cost.
+
 Read [REPORT.md](REPORT.md) for the measured results and limitations. Raw data and derived tables are in [results/](results/).
 
 The [performance follow-up](OPTIMIZATION.md) compares targeted request/event optimizations with the previous Manta build. Its raw data are under `results/optimization/`; rebuild that summary with `python benchmarks/summarize_optimization.py`. The original Wings results remain separate.

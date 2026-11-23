@@ -56,6 +56,10 @@ updating production nodes.
 
 ## Performance and security
 
+The latest unreleased [daemon hardening follow-up](docs/HARDENING.md) bounds
+control-channel work and strengthens archive, transfer and cancellation handling.
+Its selected-file archive measurements are separate from full backup throughput.
+
 Manta includes filesystem containment, container restrictions, bounded SFTP and WebSocket connections, and checks against internal network destinations for user-requested downloads. The latest hardening adds:
 
 - A 4 MiB limit for JSON control requests, including chunked bodies; file uploads, raw file writes, and transfers keep their existing streaming paths.

@@ -21,13 +21,18 @@ import (
 // closed.
 type blockingConn struct {
 	net.Conn
-	blocked   atomic.Bool
-	closeOnce sync.Once
-	closed    chan struct{}
+	blocked      atomic.Bool
+	closeOnce    sync.Once
+	closed       chan struct{}
+	writeBlocked chan struct{}
 }
 
 func (c *blockingConn) Write(p []byte) (int, error) {
 	if c.blocked.Load() {
+		select {
+		case c.writeBlocked <- struct{}{}:
+		default:
+		}
 		<-c.closed
 		return 0, net.ErrClosed
 	}
@@ -49,7 +54,7 @@ func (l *blockingListener) Accept() (net.Conn, error) {
 	if err != nil {
 		return nil, err
 	}
-	sc := &blockingConn{Conn: conn, closed: make(chan struct{})}
+	sc := &blockingConn{Conn: conn, closed: make(chan struct{}), writeBlocked: make(chan struct{}, 1)}
 	l.accepted <- sc
 	return sc, nil
 }
@@ -114,21 +119,15 @@ func TestUnauthenticatedSocketIsClosedAfterTimeout(t *testing.T) {
 	serverSide := <-listener.accepted
 	t.Cleanup(func() { _ = serverSide.Close() })
 
-	// Ten messages pass the per-connection limiter. Each is answered with a JWT
-	// error, and the per-event limiter adds one throttling notice.
-	for i := 0; i < 10; i++ {
-		require.NoError(t, conn.WriteJSON(websocket.Message{Event: websocket.SendStatsEvent}))
-	}
-	require.NoError(t, conn.SetReadDeadline(time.Now().Add(2*time.Second)))
-	for i := 0; i < 5; i++ {
-		var m websocket.Message
-		require.NoError(t, conn.ReadJSON(&m), "reply %d", i)
-	}
-
-	// Block writes to the client, then send one more message, which is answered
-	// with a throttling notice.
+	// Ensure a reply is actually blocked before testing the authentication
+	// deadline. Do not assume a fixed number of replies from concurrent workers.
 	serverSide.blocked.Store(true)
 	require.NoError(t, conn.WriteJSON(websocket.Message{Event: websocket.SendStatsEvent}))
+	select {
+	case <-serverSide.writeBlocked:
+	case <-time.After(time.Second):
+		t.Fatal("server reply did not reach the blocked writer")
+	}
 
 	require.NoError(t, conn.SetReadDeadline(time.Now().Add(3*time.Second)))
 	_, _, err = conn.ReadMessage()
