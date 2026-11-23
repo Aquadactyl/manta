@@ -41,7 +41,7 @@ require (
 	github.com/mholt/archives v0.1.5
 	github.com/moby/moby/api v1.57.0
 	github.com/moby/moby/client v0.6.3
-	github.com/moby/moby/v2 v2.0.0-beta.30
+	github.com/moby/moby/v2 v2.0.0-beta.31
 	github.com/pkg/sftp v1.13.12
 	github.com/sabhiram/go-gitignore v0.0.0-20210923224102-525f6e181f06
 	github.com/spf13/cobra v1.10.2
