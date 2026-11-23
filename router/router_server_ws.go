@@ -3,6 +3,7 @@ package router
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"sync"
 	"time"
@@ -22,6 +23,26 @@ var expectedCloseCodes = []int{
 	ws.CloseNormalClosure,
 	ws.CloseNoStatusReceived,
 	ws.CloseServiceRestart,
+}
+
+// The wire limit applies before decompression. Bound the decoded message too,
+// before allocating the full payload or attempting JSON parsing.
+const maxDecodedWebsocketMessage = 32 << 10
+const maxInboundWebsocketHandlers = 4
+
+func readWebsocketMessage(conn *ws.Conn) (int, []byte, error) {
+	kind, reader, err := conn.NextReader()
+	if err != nil {
+		return kind, nil, err
+	}
+	payload, err := io.ReadAll(io.LimitReader(reader, maxDecodedWebsocketMessage+1))
+	if err != nil {
+		return kind, nil, err
+	}
+	if len(payload) > maxDecodedWebsocketMessage {
+		return kind, nil, ws.ErrReadLimit
+	}
+	return kind, payload, nil
 }
 
 var (
@@ -61,12 +82,20 @@ func setWebsocketCloseForTest(close func(*ws.Conn) error) func() {
 // and passes events along between, allowing at most maxConnections authenticated
 // connections to a server, each of which must authenticate within authTimeout.
 func getServerWebsocket(maxConnections int, authTimeout time.Duration) gin.HandlerFunc {
+	pending := &websocketAdmission{maxTotal: 512, maxPerIP: 64}
 	return func(c *gin.Context) {
-		handleServerWebsocket(c, maxConnections, authTimeout)
+		release, ok := pending.acquire(c.ClientIP())
+		if !ok {
+			c.Header("Retry-After", "1")
+			c.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{"error": "Too many pending websocket connections."})
+			return
+		}
+		defer release()
+		handleServerWebsocket(c, maxConnections, authTimeout, release)
 	}
 }
 
-func handleServerWebsocket(c *gin.Context, maxConnections int, authTimeout time.Duration) {
+func handleServerWebsocket(c *gin.Context, maxConnections int, authTimeout time.Duration, releasePending func()) {
 	manager := middleware.ExtractManager(c)
 	s, _ := manager.Get(c.Param("server"))
 
@@ -121,6 +150,7 @@ func handleServerWebsocket(c *gin.Context, maxConnections int, authTimeout time.
 			cancel()
 			return errTooManyWebsockets
 		}
+		releasePending()
 		return nil
 	})
 	handler.Logger().Debug("opening connection to server websocket")
@@ -173,11 +203,14 @@ func handleServerWebsocket(c *gin.Context, maxConnections int, authTimeout time.
 	// 10 per 200ms).
 	var throttled bool
 	rl := rate.NewLimiter(rate.Every(time.Millisecond*200), 10)
+	activeHandlers := make(chan struct{}, maxInboundWebsocketHandlers)
 
 	for {
-		t, p, err := handler.Connection.ReadMessage()
+		t, p, err := readWebsocketMessage(handler.Connection)
 		if err != nil {
-			if ws.IsUnexpectedCloseError(err, expectedCloseCodes...) {
+			if errors.Is(err, ws.ErrReadLimit) {
+				_ = handler.SendClose(ws.CloseMessageTooBig, "message exceeds allowed size")
+			} else if ws.IsUnexpectedCloseError(err, expectedCloseCodes...) {
 				handler.Logger().WithField("error", err).Warn("error handling websocket message for server")
 			}
 			break
@@ -191,13 +224,9 @@ func handleServerWebsocket(c *gin.Context, maxConnections int, authTimeout time.
 			continue
 		}
 
-		throttled = false
-
-		// If the message isn't a format we expect, or the length of the message is far larger
-		// than we'd ever expect, drop it. The websocket upgrader logic does enforce a maximum
-		// _compressed_ message size of 4Kb but that could decompress to a much larger amount
-		// of data.
-		if t != ws.TextMessage || len(p) > 32_768 {
+		// Ignore other message types. The reader enforces both the existing
+		// compressed wire limit and the decoded limit before parsing JSON.
+		if t != ws.TextMessage {
 			continue
 		}
 
@@ -209,7 +238,21 @@ func handleServerWebsocket(c *gin.Context, maxConnections int, authTimeout time.
 			continue
 		}
 
+		// Slow operations must not accumulate an unbounded number of goroutines.
+		// Keep the existing throttled event so clients can retry after the burst.
+		select {
+		case activeHandlers <- struct{}{}:
+			throttled = false
+		default:
+			if !throttled {
+				throttled = true
+				_ = handler.SendThrottled("global")
+			}
+			continue
+		}
+
 		go func(msg websocket.Message) {
+			defer func() { <-activeHandlers }()
 			// Close this connection if handling the message panics.
 			defer func() {
 				if r := recover(); r != nil {
@@ -218,6 +261,9 @@ func handleServerWebsocket(c *gin.Context, maxConnections int, authTimeout time.
 				}
 			}()
 			if err := handler.HandleInbound(ctx, msg); err != nil {
+				if ctx.Err() != nil {
+					return
+				}
 				if errors.Is(err, server.ErrSuspended) {
 					cancel()
 				} else {

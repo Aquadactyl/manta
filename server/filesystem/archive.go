@@ -112,7 +112,7 @@ func (a *Archive) Create(ctx context.Context, dst string) error {
 type walkFunc func(name, relative string, d os.DirEntry) error
 
 // Stream streams the creation of the archive to the given writer.
-func (a *Archive) Stream(ctx context.Context, w io.Writer) error {
+func (a *Archive) Stream(ctx context.Context, w io.Writer) (err error) {
 	if a.Filesystem == nil {
 		return errors.New("filesystem: archive.Filesystem is unset")
 	}
@@ -177,11 +177,19 @@ func (a *Archive) Stream(ctx context.Context, w io.Writer) error {
 	// Create a new gzip writer around the file.
 	gw, _ := pgzip.NewWriterLevel(w, compressionLevel)
 	_ = gw.SetConcurrency(1<<20, 1)
-	defer gw.Close()
+	defer func() {
+		if closeErr := gw.Close(); err == nil {
+			err = closeErr
+		}
+	}()
 
 	// Create a new tar writer around the gzip writer.
 	tw := tar.NewWriter(gw)
-	defer tw.Close()
+	defer func() {
+		if closeErr := tw.Close(); err == nil {
+			err = closeErr
+		}
+	}()
 
 	a.w = NewTarProgress(tw, a.Progress)
 
@@ -249,21 +257,23 @@ var SkipThis = errors.New("skip this")
 
 // Pushes only files defined in the Files key to the final archive.
 func (a *Archive) withFilesCallback() walkFunc {
+	// Compile once per archive, rather than scanning every selected path for
+	// every visited file. Only exact paths and their descendants are included;
+	// retain literal path semantics and directory component boundaries.
+	selected := make(map[string]struct{}, len(a.Files))
+	for _, file := range a.Files {
+		selected[strings.TrimSuffix(file, "/")] = struct{}{}
+	}
 	return a.callback(func(_, relative string, _ fs.DirEntry) error {
-		for _, f := range a.Files {
-			// Allow exact file matches, otherwise check if file is within a parent directory.
-			//
-			// The slashes are added in the prefix checks to prevent partial name matches from being
-			// included in the archive.
-			if f != relative && !strings.HasPrefix(strings.TrimSuffix(relative, "/")+"/", strings.TrimSuffix(f, "/")+"/") {
-				continue
+		for name := strings.TrimSuffix(relative, "/"); name != ""; {
+			if _, ok := selected[name]; ok {
+				return nil
 			}
-
-			// Once we have a match return a nil value here so that the loop stops and the
-			// call to this function will correctly include the file in the archive. If there
-			// are no matches we'll never make it to this line, and the final error returned
-			// will be skipped by the callback.
-			return nil
+			slash := strings.LastIndexByte(name, '/')
+			if slash < 0 {
+				break
+			}
+			name = name[:slash]
 		}
 
 		return SkipThis

@@ -384,20 +384,20 @@ func postServerPullRemoteFile(c *gin.Context) {
 		middleware.CaptureAndAbort(c, err)
 		return
 	}
-	// Do not allow more than three simultaneous remote file downloads at one time.
-	if len(downloader.ByServer(s.ID())) >= 3 {
+	// Reserve the slot atomically: concurrent requests must not each observe
+	// spare capacity and then start more than three downloads.
+	dl, ok := downloader.NewWithLimit(s, downloader.DownloadRequest{
+		Directory: data.RootPath,
+		URL:       u,
+		FileName:  data.FileName,
+		UseHeader: data.UseHeader,
+	}, 3)
+	if !ok {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
 			"error": "This server has reached its limit of 3 simultaneous remote file downloads at once. Please wait for one to complete before trying again.",
 		})
 		return
 	}
-
-	dl := downloader.New(s, downloader.DownloadRequest{
-		Directory: data.RootPath,
-		URL:       u,
-		FileName:  data.FileName,
-		UseHeader: data.UseHeader,
-	})
 
 	download := func() error {
 		s.Log().WithField("download_id", dl.Identifier).WithField("url", system.LogURL(u.String())).Info("starting pull of remote file to disk")

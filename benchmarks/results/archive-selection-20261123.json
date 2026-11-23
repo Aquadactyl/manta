@@ -1,0 +1,99 @@
+{
+  "schemaVersion": 1,
+  "baseline": "59fd2a957ab2bcc74c1040c0cf714d09dd31a3cc",
+  "measuredOn": "2026-11-23",
+  "startedAt": "2026-11-23T16:40:05.456Z",
+  "patchSha256": "4e4576e03334bd4172af4f835a7fa1270eefadc54e5e56fd9bb0c061f3ab6325",
+  "environment": {
+    "go": "go version go1.27.4 linux/amd64",
+    "cpus": 2,
+    "memoryBytes": 2147483648,
+    "gomaxprocs": 2,
+    "kernel": "6.18.58.1-microsoft-standard-WSL2"
+  },
+  "methodology": "Identical benchmark sources, compiled test binaries built with trimpath before timing. Linux temporary fixtures in one Debian Bookworm Docker container, warm filesystem caches. One discarded single-iteration warm-up per variant, then five 500-ms batches each in alternating order. Filter misses exclude setup and archive I/O; all full streams include selection setup, traversal, tar and gzip finalization. See fixture definitions below. Unrelated workstation services remain running; no competing scan, test or build jobs during measured batches. These are local component results, not HTTP, full backup throughput or game capacity benchmarks.",
+  "runs": [
+    {
+      "variant": "candidate",
+      "round": 0,
+      "warmup": true,
+      "output": "goos: linux\ngoarch: amd64\npkg: github.com/Aquadactyl/manta/server/filesystem\ncpu: Intel(R) Core(TM) i7-14700KF\nBenchmarkArchiveSelectedExisting/selected_500-2         \t       1\t   5127145 ns/op\t 6258648 B/op\t   15616 allocs/op\nBenchmarkArchiveSelectedExisting/selected_1000-2        \t       1\t   6241444 ns/op\t 6774024 B/op\t   24094 allocs/op\nBenchmarkArchiveSelection/selected_1/filter_miss-2      \t       1\t       865.0 ns/op\t       0 B/op\t       0 allocs/op\nBenchmarkArchiveSelection/selected_1000/filter_miss-2   \t       1\t       690.0 ns/op\t       0 B/op\t       0 allocs/op\nBenchmarkArchiveSelectedStream/selected_1-2             \t       1\t   1426783 ns/op\t 4605688 B/op\t    7103 allocs/op\nBenchmarkArchiveSelectedStream/selected_1000-2          \t       1\t   1294488 ns/op\t 4676488 B/op\t    7106 allocs/op\nPASS\n"
+    },
+    {
+      "variant": "base",
+      "round": 0,
+      "warmup": true,
+      "output": "goos: linux\ngoarch: amd64\npkg: github.com/Aquadactyl/manta/server/filesystem\ncpu: Intel(R) Core(TM) i7-14700KF\nBenchmarkArchiveSelectedExisting/selected_500-2         \t       1\t  15837552 ns/op\t 6230696 B/op\t   15608 allocs/op\nBenchmarkArchiveSelectedExisting/selected_1000-2        \t       1\t  21466314 ns/op\t 6751840 B/op\t   24091 allocs/op\nBenchmarkArchiveSelection/selected_1/filter_miss-2      \t       1\t      1017 ns/op\t       0 B/op\t       0 allocs/op\nBenchmarkArchiveSelection/selected_1000/filter_miss-2   \t       1\t     23602 ns/op\t       0 B/op\t       0 allocs/op\nBenchmarkArchiveSelectedStream/selected_1-2             \t       1\t   1788813 ns/op\t 4605800 B/op\t    7101 allocs/op\nBenchmarkArchiveSelectedStream/selected_1000-2          \t       1\t  23948622 ns/op\t 4622008 B/op\t    7102 allocs/op\nPASS\n"
+    },
+    {
+      "variant": "base",
+      "round": 1,
+      "warmup": false,
+      "output": "goos: linux\ngoarch: amd64\npkg: github.com/Aquadactyl/manta/server/filesystem\ncpu: Intel(R) Core(TM) i7-14700KF\nBenchmarkArchiveSelectedExisting/selected_500-2         \t      38\t  14349566 ns/op\t 6183457 B/op\t   15580 allocs/op\nBenchmarkArchiveSelectedExisting/selected_1000-2        \t      27\t  20252461 ns/op\t 6685735 B/op\t   24079 allocs/op\nBenchmarkArchiveSelection/selected_1/filter_miss-2      \t19120068\t        31.09 ns/op\t       0 B/op\t       0 allocs/op\nBenchmarkArchiveSelection/selected_1000/filter_miss-2   \t   25846\t     23219 ns/op\t       0 B/op\t       0 allocs/op\nBenchmarkArchiveSelectedStream/selected_1-2             \t     488\t   1165056 ns/op\t 4564317 B/op\t    7091 allocs/op\nBenchmarkArchiveSelectedStream/selected_1000-2          \t      25\t  23944123 ns/op\t 4580113 B/op\t    7091 allocs/op\nPASS\n"
+    },
+    {
+      "variant": "candidate",
+      "round": 1,
+      "warmup": false,
+      "output": "goos: linux\ngoarch: amd64\npkg: github.com/Aquadactyl/manta/server/filesystem\ncpu: Intel(R) Core(TM) i7-14700KF\nBenchmarkArchiveSelectedExisting/selected_500-2         \t     187\t   3217819 ns/op\t 6210280 B/op\t   15582 allocs/op\nBenchmarkArchiveSelectedExisting/selected_1000-2        \t     100\t   5146112 ns/op\t 6744942 B/op\t   24086 allocs/op\nBenchmarkArchiveSelection/selected_1/filter_miss-2      \t17256178\t        33.73 ns/op\t       0 B/op\t       0 allocs/op\nBenchmarkArchiveSelection/selected_1000/filter_miss-2   \t21782850\t        27.95 ns/op\t       0 B/op\t       0 allocs/op\nBenchmarkArchiveSelectedStream/selected_1-2             \t     496\t   1151759 ns/op\t 4564904 B/op\t    7093 allocs/op\nBenchmarkArchiveSelectedStream/selected_1000-2          \t     495\t   1200947 ns/op\t 4636747 B/op\t    7097 allocs/op\nPASS\n"
+    },
+    {
+      "variant": "candidate",
+      "round": 2,
+      "warmup": false,
+      "output": "goos: linux\ngoarch: amd64\npkg: github.com/Aquadactyl/manta/server/filesystem\ncpu: Intel(R) Core(TM) i7-14700KF\nBenchmarkArchiveSelectedExisting/selected_500-2         \t     180\t   3266906 ns/op\t 6208397 B/op\t   15582 allocs/op\nBenchmarkArchiveSelectedExisting/selected_1000-2        \t     100\t   5221281 ns/op\t 6743563 B/op\t   24086 allocs/op\nBenchmarkArchiveSelection/selected_1/filter_miss-2      \t17135004\t        33.42 ns/op\t       0 B/op\t       0 allocs/op\nBenchmarkArchiveSelection/selected_1000/filter_miss-2   \t23018686\t        25.98 ns/op\t       0 B/op\t       0 allocs/op\nBenchmarkArchiveSelectedStream/selected_1-2             \t     495\t   1145394 ns/op\t 4564291 B/op\t    7092 allocs/op\nBenchmarkArchiveSelectedStream/selected_1000-2          \t     481\t   1172557 ns/op\t 4635712 B/op\t    7096 allocs/op\nPASS\n"
+    },
+    {
+      "variant": "base",
+      "round": 2,
+      "warmup": false,
+      "output": "goos: linux\ngoarch: amd64\npkg: github.com/Aquadactyl/manta/server/filesystem\ncpu: Intel(R) Core(TM) i7-14700KF\nBenchmarkArchiveSelectedExisting/selected_500-2         \t      37\t  14411239 ns/op\t 6183510 B/op\t   15579 allocs/op\nBenchmarkArchiveSelectedExisting/selected_1000-2        \t      27\t  20473626 ns/op\t 6686464 B/op\t   24081 allocs/op\nBenchmarkArchiveSelection/selected_1/filter_miss-2      \t18877322\t        29.66 ns/op\t       0 B/op\t       0 allocs/op\nBenchmarkArchiveSelection/selected_1000/filter_miss-2   \t   26467\t     22867 ns/op\t       0 B/op\t       0 allocs/op\nBenchmarkArchiveSelectedStream/selected_1-2             \t     483\t   1171116 ns/op\t 4564011 B/op\t    7090 allocs/op\nBenchmarkArchiveSelectedStream/selected_1000-2          \t      24\t  24026373 ns/op\t 4580142 B/op\t    7091 allocs/op\nPASS\n"
+    },
+    {
+      "variant": "base",
+      "round": 3,
+      "warmup": false,
+      "output": "goos: linux\ngoarch: amd64\npkg: github.com/Aquadactyl/manta/server/filesystem\ncpu: Intel(R) Core(TM) i7-14700KF\nBenchmarkArchiveSelectedExisting/selected_500-2         \t      38\t  14320799 ns/op\t 6184519 B/op\t   15580 allocs/op\nBenchmarkArchiveSelectedExisting/selected_1000-2        \t      27\t  20339016 ns/op\t 6690586 B/op\t   24080 allocs/op\nBenchmarkArchiveSelection/selected_1/filter_miss-2      \t19139576\t        31.03 ns/op\t       0 B/op\t       0 allocs/op\nBenchmarkArchiveSelection/selected_1000/filter_miss-2   \t   25863\t     23569 ns/op\t       0 B/op\t       0 allocs/op\nBenchmarkArchiveSelectedStream/selected_1-2             \t     484\t   1170807 ns/op\t 4564387 B/op\t    7091 allocs/op\nBenchmarkArchiveSelectedStream/selected_1000-2          \t      25\t  23933910 ns/op\t 4580108 B/op\t    7091 allocs/op\nPASS\n"
+    },
+    {
+      "variant": "candidate",
+      "round": 3,
+      "warmup": false,
+      "output": "goos: linux\ngoarch: amd64\npkg: github.com/Aquadactyl/manta/server/filesystem\ncpu: Intel(R) Core(TM) i7-14700KF\nBenchmarkArchiveSelectedExisting/selected_500-2         \t     183\t   3210792 ns/op\t 6209256 B/op\t   15582 allocs/op\nBenchmarkArchiveSelectedExisting/selected_1000-2        \t     115\t   5167725 ns/op\t 6744502 B/op\t   24086 allocs/op\nBenchmarkArchiveSelection/selected_1/filter_miss-2      \t17720848\t        34.50 ns/op\t       0 B/op\t       0 allocs/op\nBenchmarkArchiveSelection/selected_1000/filter_miss-2   \t22767021\t        26.89 ns/op\t       0 B/op\t       0 allocs/op\nBenchmarkArchiveSelectedStream/selected_1-2             \t     500\t   1142406 ns/op\t 4564907 B/op\t    7093 allocs/op\nBenchmarkArchiveSelectedStream/selected_1000-2          \t     513\t   1178422 ns/op\t 4635945 B/op\t    7097 allocs/op\nPASS\n"
+    },
+    {
+      "variant": "candidate",
+      "round": 4,
+      "warmup": false,
+      "output": "goos: linux\ngoarch: amd64\npkg: github.com/Aquadactyl/manta/server/filesystem\ncpu: Intel(R) Core(TM) i7-14700KF\nBenchmarkArchiveSelectedExisting/selected_500-2         \t     183\t   3221935 ns/op\t 6208352 B/op\t   15582 allocs/op\nBenchmarkArchiveSelectedExisting/selected_1000-2        \t     100\t   5338483 ns/op\t 6745606 B/op\t   24086 allocs/op\nBenchmarkArchiveSelection/selected_1/filter_miss-2      \t18748388\t        33.53 ns/op\t       0 B/op\t       0 allocs/op\nBenchmarkArchiveSelection/selected_1000/filter_miss-2   \t23573236\t        25.95 ns/op\t       0 B/op\t       0 allocs/op\nBenchmarkArchiveSelectedStream/selected_1-2             \t     469\t   1170232 ns/op\t 4565116 B/op\t    7093 allocs/op\nBenchmarkArchiveSelectedStream/selected_1000-2          \t     499\t   1188401 ns/op\t 4635985 B/op\t    7097 allocs/op\nPASS\n"
+    },
+    {
+      "variant": "base",
+      "round": 4,
+      "warmup": false,
+      "output": "goos: linux\ngoarch: amd64\npkg: github.com/Aquadactyl/manta/server/filesystem\ncpu: Intel(R) Core(TM) i7-14700KF\nBenchmarkArchiveSelectedExisting/selected_500-2         \t      38\t  14288941 ns/op\t 6184495 B/op\t   15580 allocs/op\nBenchmarkArchiveSelectedExisting/selected_1000-2        \t      27\t  20281090 ns/op\t 6688284 B/op\t   24081 allocs/op\nBenchmarkArchiveSelection/selected_1/filter_miss-2      \t18645532\t        31.20 ns/op\t       0 B/op\t       0 allocs/op\nBenchmarkArchiveSelection/selected_1000/filter_miss-2   \t   25537\t     23490 ns/op\t       0 B/op\t       0 allocs/op\nBenchmarkArchiveSelectedStream/selected_1-2             \t     484\t   1172353 ns/op\t 4564489 B/op\t    7090 allocs/op\nBenchmarkArchiveSelectedStream/selected_1000-2          \t      25\t  24004291 ns/op\t 4587425 B/op\t    7092 allocs/op\nPASS\n"
+    },
+    {
+      "variant": "base",
+      "round": 5,
+      "warmup": false,
+      "output": "goos: linux\ngoarch: amd64\npkg: github.com/Aquadactyl/manta/server/filesystem\ncpu: Intel(R) Core(TM) i7-14700KF\nBenchmarkArchiveSelectedExisting/selected_500-2         \t      38\t  14532574 ns/op\t 6181448 B/op\t   15579 allocs/op\nBenchmarkArchiveSelectedExisting/selected_1000-2        \t      27\t  20442321 ns/op\t 6702946 B/op\t   24083 allocs/op\nBenchmarkArchiveSelection/selected_1/filter_miss-2      \t18941161\t        31.16 ns/op\t       0 B/op\t       0 allocs/op\nBenchmarkArchiveSelection/selected_1000/filter_miss-2   \t   25477\t     23494 ns/op\t       0 B/op\t       0 allocs/op\nBenchmarkArchiveSelectedStream/selected_1-2             \t     472\t   1188714 ns/op\t 4564189 B/op\t    7090 allocs/op\nBenchmarkArchiveSelectedStream/selected_1000-2          \t      24\t  24087721 ns/op\t 4580088 B/op\t    7090 allocs/op\nPASS\n"
+    },
+    {
+      "variant": "candidate",
+      "round": 5,
+      "warmup": false,
+      "output": "goos: linux\ngoarch: amd64\npkg: github.com/Aquadactyl/manta/server/filesystem\ncpu: Intel(R) Core(TM) i7-14700KF\nBenchmarkArchiveSelectedExisting/selected_500-2         \t     181\t   3296412 ns/op\t 6208817 B/op\t   15582 allocs/op\nBenchmarkArchiveSelectedExisting/selected_1000-2        \t     100\t   5863795 ns/op\t 6744401 B/op\t   24086 allocs/op\nBenchmarkArchiveSelection/selected_1/filter_miss-2      \t17317303\t        33.32 ns/op\t       0 B/op\t       0 allocs/op\nBenchmarkArchiveSelection/selected_1000/filter_miss-2   \t22625230\t        27.16 ns/op\t       0 B/op\t       0 allocs/op\nBenchmarkArchiveSelectedStream/selected_1-2             \t     483\t   1183652 ns/op\t 4565715 B/op\t    7093 allocs/op\nBenchmarkArchiveSelectedStream/selected_1000-2          \t     500\t   1183755 ns/op\t 4635985 B/op\t    7097 allocs/op\nPASS\n"
+    }
+  ],
+  "completedAt": "2026-11-23T16:40:41.779Z",
+  "fixtures": {
+    "BenchmarkArchiveSelection": "One filter miss in plugins/other/config.yml against 1 or 1000 selected plugins/selected-N/config.yml paths. Selection setup excluded; zero file or archive I/O inside timed loop.",
+    "BenchmarkArchiveSelectedExisting": "1000 regular root files with unique filename contents. Select 500 evenly spaced existing names or all 1000 existing names. Full streamed tar/gzip archive including per-Archive selection setup.",
+    "BenchmarkArchiveSelectedStream": "1000 regular root files containing four-byte data. Select one existing file, or that same existing file plus 999 missing names. Full streamed tar/gzip archive including per-Archive selection setup."
+  },
+  "benchmarkSha256": {
+    "server/filesystem/archive_selection_benchmark_test.go": "d73e9de4de464e38be52aedf2c72c06f83598d0932afa101472617102cdf81d2",
+    "server/filesystem/archive_existing_benchmark_test.go": "e42fb4ab4b668e197d1326cb7167269eec551e7f380d1e9429275003b78b2e58"
+  }
+}

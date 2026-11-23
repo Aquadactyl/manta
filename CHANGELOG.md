@@ -8,6 +8,21 @@ This project follows [Semantic Versioning](http://semver.org) guidelines.
 
 ## Unreleased (Manta)
 
+- Bound decoded WebSocket messages before JSON allocation, pending connection
+  admission and concurrent inbound work. Keep unknown-event limiter state bounded
+  and preserve shared rate-limit buckets during concurrent initialization.
+- Reserve remote-download capacity atomically, preserving the existing limit of
+  three downloads per server even when requests arrive together.
+- Propagate tar/gzip finalization failures and cancellation during log retrieval
+  and S3 upload-URL requests. Bound transfer acknowledgement responses to 1 MiB
+  without changing the streamed archive size.
+- Index selected archive paths once per operation. Matched warm local fixtures
+  selecting 500/1,000 existing small files use 77.5%/74.3% less time; the one-file
+  case is effectively unchanged. Retain all cases, allocations and limitations
+  in benchmarks/ARCHIVE-SELECTION.md. Ordinary full backups do not use this filter.
+- Add regression and concurrency tests and a pinned govulncheck step to the
+  mandatory lint job. Operator details and audit scope are in docs/HARDENING.md.
+
 - Keep the root-confined directory descriptor open for MIME probes and open only
   single basenames relative to it, avoiding repeated parent-path traversal.
   Preserve no-follow, nonblocking probes, snapshot identity checks and generic

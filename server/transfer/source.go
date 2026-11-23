@@ -30,6 +30,11 @@ var transferNewRequest = http.NewRequestWithContext
 var transferGetArchive = func(t *Transfer) (*Archive, error) { return t.Archive() }
 var transferProgressInterval = 5 * time.Second
 
+// The destination returns a small acknowledgement, not the archive itself.
+const maxTransferResponseSize = 1 << 20
+
+var errTransferResponseTooLarge = errors.New("transfer: destination response exceeds 1 MiB")
+
 func watchArchiveStreamCancellation(ctx context.Context, src *io.PipeReader, streamFinished <-chan struct{}) <-chan struct{} {
 	done := make(chan struct{})
 	go func() {
@@ -222,9 +227,15 @@ func (t *Transfer) PushArchiveToTarget(targetURL, token string) ([]byte, error) 
 		}
 		t.Log().Debug("received response from destination")
 
-		v, err := io.ReadAll(res.Body)
+		if res.ContentLength > maxTransferResponseSize {
+			return nil, errTransferResponseTooLarge
+		}
+		v, err := io.ReadAll(io.LimitReader(res.Body, maxTransferResponseSize+1))
 		if err != nil {
 			return nil, fmt.Errorf("failed to read response body: %w", err)
+		}
+		if len(v) > maxTransferResponseSize {
+			return nil, errTransferResponseTooLarge
 		}
 
 		return v, nil
