@@ -75,9 +75,36 @@ func (e blockedWebsocketLogEnvironment) IsRunning(ctx context.Context) (bool, er
 }
 
 func TestWebsocketCancelsLogRetrievalOnDisconnect(t *testing.T) {
+	checkWebsocketLogCancellation(t, false)
+}
+
+func TestWebsocketCancelsLogBodyOnDisconnect(t *testing.T) {
+	checkWebsocketLogCancellation(t, true)
+}
+
+type blockedWebsocketLogBodyEnvironment struct{ blockedWebsocketLogEnvironment }
+
+func (e blockedWebsocketLogBodyEnvironment) IsRunning(context.Context) (bool, error) {
+	return true, nil
+}
+
+func (e blockedWebsocketLogBodyEnvironment) ReadlogContext(ctx context.Context, _ int) ([]string, error) {
+	_, err := e.blockedWebsocketLogEnvironment.IsRunning(ctx)
+	return nil, err
+}
+
+func (e blockedWebsocketLogBodyEnvironment) Readlog(int) ([]string, error) {
+	panic("legacy log reader must not be used")
+}
+
+func checkWebsocketLogCancellation(t *testing.T, body bool) {
+	t.Helper()
 	url, s := startWebsocketTestServerFor(t)
 	env := blockedWebsocketLogEnvironment{started: make(chan struct{}, 10), stopped: make(chan struct{}, 10)}
 	s.Environment = env
+	if body {
+		s.Environment = blockedWebsocketLogBodyEnvironment{env}
+	}
 	conn, err := dialWebsocket(t, url)
 	require.NoError(t, err)
 	require.True(t, authenticate(t, conn))

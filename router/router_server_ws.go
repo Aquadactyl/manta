@@ -261,6 +261,9 @@ func handleServerWebsocket(c *gin.Context, maxConnections int, authTimeout time.
 				}
 			}()
 			if err := handler.HandleInbound(ctx, msg); err != nil {
+				if ctx.Err() != nil {
+					return
+				}
 				if errors.Is(err, server.ErrSuspended) {
 					cancel()
 				} else {

@@ -486,7 +486,13 @@ func (e *Environment) SendCommand(c string) error {
 // is running or not, it will simply try to read the last X bytes of the file
 // and return them.
 func (e *Environment) Readlog(lines int) ([]string, error) {
-	r, err := e.client.ContainerLogs(context.Background(), e.ID, client.ContainerLogsOptions{
+	return e.ReadlogContext(context.Background(), lines)
+}
+
+// ReadlogContext releases the Docker request and body when its caller leaves.
+// Keep Readlog as a compatibility wrapper for existing internal integrations.
+func (e *Environment) ReadlogContext(ctx context.Context, lines int) ([]string, error) {
+	r, err := e.client.ContainerLogs(ctx, e.ID, client.ContainerLogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,
 		Tail:       strconv.Itoa(lines),
@@ -500,6 +506,12 @@ func (e *Environment) Readlog(lines int) ([]string, error) {
 	scanner := bufio.NewScanner(r)
 	for scanner.Scan() {
 		out = append(out, scanner.Text())
+	}
+	// Docker may close its connection on cancellation and surface a network
+	// error (or EOF). Preserve the caller's cancellation instead of treating
+	// partial logs as successful or reporting an unexpected transport failure.
+	if err := ctx.Err(); err != nil {
+		return nil, err
 	}
 	if err := scanner.Err(); err != nil {
 		return nil, errors.WithStack(err)

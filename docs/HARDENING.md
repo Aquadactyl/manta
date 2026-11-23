@@ -22,8 +22,11 @@ configuration. Installation instructions continue to target published releases.
 - Limit both rate buckets and throttle-notification state to the fixed event
   groups. Unrecognized event names share the default group. Concurrent initial
   lookups reuse the same bucket instead of resetting its tokens.
-- Cancel console-log lookup when the WebSocket disconnects. Its existing
-  five-second timeout still applies.
+- Cancel Docker console-log lookup when the WebSocket disconnects, including
+  requests waiting for headers and reads waiting for a response body. The
+  WebSocket's five-second lookup deadline now covers the log stream too. Retain
+  the existing `Readlog` interface; integrations can optionally implement
+  `ReadlogContext`, and older providers keep their own cancellation behaviour.
 
 Client IPs follow Gin's configured trusted-proxy handling. Configure only actual
 proxies in `api.trusted_proxies` so forwarded client addresses have the intended

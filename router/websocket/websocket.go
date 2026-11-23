@@ -506,7 +506,7 @@ func (h *Handler) HandleInbound(ctx context.Context, m Message) error {
 				return nil
 			}
 
-			logs, err := h.server.Environment.Readlog(config.Get().System.WebsocketLogCount)
+			logs, err := environment.ReadLogs(ctx, h.server.Environment, config.Get().System.WebsocketLogCount)
 			if err != nil {
 				return err
 			}
